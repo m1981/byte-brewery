@@ -1,0 +1,24 @@
+.idea
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyz
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+.coverage
+all.txt
+
+# Obfuscated or compiled Python files
+*.so
+*.exe
+obfuscated_code/
+
+# Streamlit secrets
+frontend/.streamlit/secrets.toml
+
+# Docker ignore
+.dockerignore
