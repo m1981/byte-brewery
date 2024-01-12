@@ -11,6 +11,7 @@ handle_file() {
     # Echo the contents of the current file to stdout
     cat "$file"
     # Echo the code block end marker to stdout
+    echo -e "\n"
     echo '```'
     # Add a newline for spacing between files entries
     echo -e "\n"
@@ -18,10 +19,10 @@ handle_file() {
 
 # Check if any arguments were passed
 if [ "$#" -eq 0 ]; then
-    echo "No files specified. Usage: $0 file1 [file2 ...] > output.md" >&2
-    echo ""
-    echo "Concatenate one or more files into Markdown format and print to stdout." >&2
-    echo "To write to a file, redirect stdout to a file using the > operator." >&2
+    echo "Concatenate Source Files For GPT"
+	echo "--------------------------------"
+    echo "No files specified." >&2
+	echo "Usage: $0 file1 [file2 ...] > output.md" >&2
     exit 1
 fi
 
