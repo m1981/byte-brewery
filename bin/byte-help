@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# The tools directory is located relative to the script directory
+TOOLS_DIR="$SCRIPT_DIR"
+
+# Get the absolute path of this script 
+CURRENT_SCRIPT="$(realpath "$0")"
+
+# Check if the tools directory exists
+if [ ! -d "$TOOLS_DIR" ]; then
+  echo "The directory $TOOLS_DIR does not exist."
+  exit 1
+fi
+
+# Loop through every executable file in the tools directory
+for SCRIPT in "$TOOLS_DIR"/*; do
+  # Get the absolute path of the tool script
+  TOOL_SCRIPT="$(realpath "$SCRIPT")"
+
+  if [ -x "$TOOL_SCRIPT" ] && [ -f "$TOOL_SCRIPT" ] && [ "$TOOL_SCRIPT" != "$CURRENT_SCRIPT" ]; then
+	echo
+    "$SCRIPT" || true # Execute the script without parameters
+    echo
+  fi
+done
