@@ -381,12 +381,6 @@ class TestBuildFullCommand(unittest.TestCase):
 class ShowInfoTestCase(unittest.TestCase):
 
     @patch('builtins.print')
-    def test_show_info_without_env_file(self, mock_print):
-        command = ['cp -n "${ENV_FILE}" "${LARADOCK_DIR}/.env"']
-        dce.InfoDisplayer.show_info(None, command, None, {})
-        mock_print.assert_any_call(f"\nExecuting:\n{command}\n")
-
-    @patch('builtins.print')
     @patch.dict(os.environ, {'ENV_FILE': '/actual/path/to/.env', 'LARADOCK_DIR': '/var/www/laradock'}, clear=True)
     def test_show_info_with_expanded_variables(self, mock_print):
         command = ['cp -n "${ENV_FILE}" "${LARADOCK_DIR}/.env"']
@@ -399,11 +393,15 @@ class ShowInfoTestCase(unittest.TestCase):
     @patch.dict(os.environ, {}, clear=True)
     def test_show_info_with_undefined_variables(self, mock_print):
         command = ['cp -n "${ENV_FILE}" "${LARADOCK_DIR}/.env"']
-        dce.InfoDisplayer.show_info(None, command, None, {})
+
+        with self.assertRaises(EnvironmentError) as context:
+            dce.InfoDisplayer.show_info(None, command, None, {})
+
+        self.assertEqual(str(context.exception), "Undefined environment variables detected, terminating execution.")
+
+        # Check that warnings were printed for each undefined variable
         mock_print.assert_any_call("Warning: The environment variable ENV_FILE is not defined.")
         mock_print.assert_any_call("Warning: The environment variable LARADOCK_DIR is not defined.")
-        mock_print.assert_any_call(f"Real path (with undefined vars kept as placeholders):\n{' '.join(command)}")
-
 
 
 if __name__ == "__main__":

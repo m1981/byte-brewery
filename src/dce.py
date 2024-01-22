@@ -74,8 +74,13 @@ class InfoDisplayer:
 
         # Check each variable in the command if it is set in the environment
         undefined_vars = [var for var in matches if os.getenv(var) is None]
-        for var in undefined_vars:
-            print(f"Warning: The environment variable {var} is not defined.")
+        if undefined_vars:
+            for var in undefined_vars:
+                print(f"Warning: The environment variable {var} is not defined.")
+            raise EnvironmentError("Undefined environment variables detected, terminating execution.")
+
+        expanded_command = os.path.expandvars(command_str)
+        print(f"Real path:\n{expanded_command}")
 
         expanded_command = os.path.expandvars(command_str)
         if undefined_vars:
