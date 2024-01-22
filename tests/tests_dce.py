@@ -284,23 +284,99 @@ class TestSubCommandHandling(unittest.TestCase):
             }
         }
 
-    @patch.object(dce.UserInteractions, 'get_user_choice')
-    def test_sub_command_handling(self, mock_get_user_choice):
-        # Mock the `get_user_choice` to choose 'build' first, then 'production'
-        mock_get_user_choice.side_effect = ['build', 'production']
 
-        service = self.mock_config['services']['backend']
-        args = ['utility.py', 'backend']
 
-        # Call the function under test
-        command_choice, command_data = dce.determine_command_choice(service, args, self.user_interactions)
+class TestCommandSelection(unittest.TestCase):
 
-        # Assert the correct command_choice is selected based on the mock inputs
-        self.assertEqual(command_choice, 'production')
-        self.assertEqual(command_data, {'command': 'prod_build_command'})
+    def test_get_command_from_args_when_present(self):
+        commands = {'start': {}, 'stop': {}, 'restart': {}}
+        args = ['script_name', 'service_name', 'start']
+        arg_index = 2
+        prompt_message = "Please select a command"
 
-        # Verify that `UserInteractions.get_user_choice` was called exactly 2 times
-        self.assertEqual(mock_get_user_choice.call_count, 2)
+        selected_command = dce.get_command_from_args_or_prompt(commands, args, arg_index, prompt_message, None)
+        self.assertEqual(selected_command, 'start')
+
+    @patch('builtins.input', lambda *args: '3')  # '3' because 'stop' would be the third option after sorting ['restart', 'start', 'stop']
+    def test_get_command_from_prompt_when_args_absent(self):
+        commands = {'start': {}, 'stop': {}, 'restart': {}}
+        args = ['script_name', 'service_name']
+        arg_index = 2
+        prompt_message = "Please select a command"
+
+        user_interactions =  dce.UserInteractions()  # Assuming this is a correctly implemented class available in the context
+        selected_command =  dce.get_command_from_args_or_prompt(commands, args, arg_index, prompt_message, user_interactions)
+        self.assertEqual(selected_command, 'stop')
+
+# Now we write a test for the determine_command_choice function
+class TestDetermineCommandChoice(unittest.TestCase):
+
+    def setUp(self):
+        self.service = {
+            'commands': {
+                'build': {
+                    'development': {'command': 'dev build'},
+                    'testing': {'command': 'test build'}
+                },
+                'deploy': {'command': 'deploy'}
+            }
+        }
+
+    def test_command_choice_directly_from_args(self):
+        args = ['script_name', 'service_name', 'deploy']
+        user_interactions = dce.UserInteractions()  # We will not be using this in the test
+
+        command_choice, command_data = dce.determine_command_choice(self.service, args, user_interactions)
+        self.assertEqual(command_choice, 'deploy')
+        self.assertEqual(command_data, {'command': 'deploy'})
+
+    @patch('builtins.input', side_effect=['1', '1']) # Assuming '1' corresponds to 'development' in a sorted list of subcommands ['development', 'testing']
+    def test_command_choice_from_args_with_subcommand_prompt(self, mock_inputs):
+        args = ['script_name', 'service_name', 'build']
+        user_interactions = dce.UserInteractions()
+
+        command_choice, command_data =  dce.determine_command_choice(self.service, args, user_interactions)
+        self.assertEqual(command_choice, 'build')  # This should now be 'build' as it's the main choice
+        self.assertEqual(command_data, {'command': 'dev build'})
+
+
+class TestBuildFullCommand(unittest.TestCase):
+
+    def setUp(self):
+        self.service_with_docker = {
+            'path': 'docker/backend',
+            'env_file': 'docker/backend/env.local',
+        }
+
+    def test_non_docker_command(self):
+        command = "echo Hello World"
+        full_command = dce.build_full_command({}, command)
+        self.assertEqual(full_command, command)
+
+    def test_docker_compose_command(self):
+        command = "compose_ci.yml up"
+        expected_command = f"docker-compose --env-file {self.service_with_docker['env_file']} -f {self.service_with_docker['path']}/{command}"
+        full_command = dce.build_full_command(self.service_with_docker, command)
+        self.assertEqual(full_command, expected_command)
+
+    def test_prepend_docker_compose_command_list(self):
+        commands = ["compose_ci.yml up", "compose_ci.yml down"]
+        expected_commands = [
+            f"docker-compose --env-file {self.service_with_docker['env_file']} -f {self.service_with_docker['path']}/{cmd}"
+            for cmd in commands
+        ]
+        full_commands = dce.build_full_command(self.service_with_docker, commands)
+        self.assertEqual(full_commands, expected_commands)
+
+    def test_skip_already_prefixed_command_list(self):
+        commands = ["docker-compose --env-file custom.env up", "compose_ci.yml down"]
+        expected_commands = [
+            commands[0],  # The first command should remain unchanged
+            f"docker-compose --env-file {self.service_with_docker['env_file']} -f {self.service_with_docker['path']}/{commands[1]}"
+        ]
+        full_commands = dce.build_full_command(self.service_with_docker, commands)
+        self.assertEqual(full_commands, expected_commands)
+
 
 if __name__ == "__main__":
     unittest.main()
