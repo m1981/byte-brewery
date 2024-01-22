@@ -55,31 +55,31 @@ class InfoDisplayer:
         return match.group(1) if match else 'Executing'
 
     @staticmethod
-    def show_info(service_choice, full_command, env_file, env_vars):
-        action = InfoDisplayer.extract_docker_compose_action(full_command)
-        env_from_file = EnvironmentFileParser.parse(env_file)
-        overwritten_vars = set(env_from_file) & set(env_vars)
-        env_from_file.update(env_vars)
-
-        print(f"\n{action.capitalize()}...")
-        component = full_command.split()[-1]  # Assuming the component/service is the last argument
-        print(f"    {component} ({service_choice})")
-        print("Vars:")
-        for key, value in sorted(env_from_file.items()):
-            # Annotate overwritten variables with (O)
-            overwritten = " (O)" if key in overwritten_vars else ""
-            additional_text = " (Overwritten)" if overwritten else ""
-            print(f"{overwritten}   {key}={value}{additional_text}")
-        #for
-        print(f"CMD: {full_command}")
-        print()
+    def show_info(service_choice, command, env_file, env_vars):
+        if env_file:  # Only parse an env_file if it's provided
+            env_from_file = EnvironmentFileParser.parse(env_file)
+            overwritten_vars = set(env_from_file) & set(env_vars)
+            env_from_file.update(env_vars)
+            for key, value in sorted(env_from_file.items()):
+                overwritten = " (Overwritten)" if key in overwritten_vars else ""
+                print(f"{key}={value}{overwritten}")
+        print(f"Executing: {command}")
 
 class CommandRunner:
-    def run(self, command, env_vars=None):
+    def run(self, command_or_commands, env_vars=None):
         if env_vars:
             for key, value in env_vars.items():
                 os.environ[key] = value
+        if isinstance(command_or_commands, list):
+            for cmd in command_or_commands:
+                self._execute_command(cmd)
+        else:
+            self._execute_command(command_or_commands)
+
+    @staticmethod
+    def _execute_command(command):
         subprocess.run(command, shell=True)
+
 
 
 def determine_service_choice(config, args, user_interactions):
@@ -117,33 +117,39 @@ def determine_command_choice(service, args, user_interactions):
 
 
 def extract_command_data(command_config):
-    # If command_config is a dictionary, it may contain nested command groups
     if isinstance(command_config, dict):
         if 'command' in command_config:
-            # Direct command with additional env vars
             return command_config.get('env', {}), command_config['command']
-        elif all(isinstance(value, dict) for key, value in command_config.items()):  # Assumes nested command groups
-            # we need to provide additional logic to prompt for subcommands here
-            raise ValueError("Unable to extract command data for nested command groups without a user prompt.")
-    else:
-        # Command_config is a string, it's a direct command without additional env vars.
+        elif 'commands' in command_config:
+            return command_config.get('env', {}), command_config['commands']
+        else:
+            raise ValueError("Invalid command configuration found.")
+    elif isinstance(command_config, str):
+        # Direct command string means no additional env vars
         return {}, command_config
+    else:
+        raise ValueError("Command configuration must be a string or a dict.")
+
 
 def main(command_runner, config_loader, user_interactions, info_displayer):
     config = config_loader.load(CONFIG_FILE)
     service_choice = determine_service_choice(config, sys.argv, user_interactions)
     service = config['services'][service_choice]
 
-    # The output of determine_command_choice has changed;
-    # we now receive both command_choice and the relevant command_data.
     command_choice, command_data = determine_command_choice(service, sys.argv, user_interactions)
 
     env_vars, command = extract_command_data(command_data)
-    assert command is not None, "Command was not properly established from the configuration."
 
-    full_command = f"docker-compose --env-file {service['env_file']} -f {service['path']}/{command}"
-    info_displayer.show_info(service_choice, full_command, service['env_file'], env_vars)
-    command_runner.run(full_command, env_vars)
+    if 'docker-compose' in command or isinstance(command, list) and any('docker-compose' in cmd for cmd in command):
+        # Only prepend the docker-compose specifics if it's a docker-compose command
+        assert 'env_file' in service and 'path' in service, "Docker-compose commands require 'env_file' and 'path'."
+        full_command_or_commands = f"docker-compose --env-file {service['env_file']} -f {service['path']}/{command}"
+    else:
+        full_command_or_commands = command  # arbitrary commands, no adjustments needed
+
+    info_displayer.show_info(service_choice, full_command_or_commands, service.get('env_file', ''), env_vars)
+    command_runner.run(full_command_or_commands, env_vars)
+
 
 if __name__ == "__main__":
     command_runner = CommandRunner()
@@ -151,44 +157,3 @@ if __name__ == "__main__":
     user_interactions = UserInteractions()
     info_displayer = InfoDisplayer()
     main(command_runner, config_loader, user_interactions, info_displayer)
-
-
-
-# Reference JSON
-# {
-#   "services": {
-#     "backend": {
-#       "path": "docker/backend",
-#       "env_file": "docker/backend/env.local",
-#       "commands": {
-#         "console": "compose_ci.yml run --service-ports console",
-#         "down": "compose_ci.yml down",
-#         "tests-ut": "compose_ci.yml run tests-ut",
-#         "tests-int": "compose_ci.yml run tests-int",
-#         "precommit": "compose_ci.yml run precommit",
-#         "dev-server": "compose_ci.yml up --remove-orphans dev-server",
-#         "down": "compose_ci.yml down",
-#         "build": {
-#           "development": {
-#             "env": {
-#               "BUILD_TARGET": "development"
-#             },
-#             "command": "compose_ci_build.yml build --progress plain"
-#           },
-#           "testing": {
-#             "env": {
-#               "BUILD_TARGET": "testing"
-#             },
-#             "command": "compose_ci_build.yml build --progress plain"
-#           },
-#           "production": {
-#             "env": {
-#               "BUILD_TARGET": "production"
-#             },
-#             "command": "compose_ci_build.yml build --progress plain"
-#           }
-#         }
-#       }
-#     }
-#   }
-# }
