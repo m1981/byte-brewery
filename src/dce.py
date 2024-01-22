@@ -63,7 +63,7 @@ class InfoDisplayer:
             for key, value in sorted(env_from_file.items()):
                 overwritten = " (Overwritten)" if key in overwritten_vars else ""
                 print(f"{key}={value}{overwritten}")
-        print(f"Executing: {command}")
+        print(f"\nExecuting:\n{command}\n")
 
 class CommandRunner:
     def run(self, command_or_commands, env_vars=None):
@@ -93,27 +93,25 @@ def determine_service_choice(config, args, user_interactions):
     return service_choice
 
 
+def get_command_from_args_or_prompt(commands, args, arg_index, prompt_message, user_interactions):
+    if len(args) > arg_index and args[arg_index] in commands:
+        return args[arg_index]
+    return user_interactions.get_user_choice(list(commands.keys()), prompt_message)
+
 def determine_command_choice(service, args, user_interactions):
     commands = service['commands']
-    if len(args) < 3 or args[2] not in commands:
-        command_choice = user_interactions.get_user_choice(list(commands.keys()), "Select a command:")
-        if not command_choice:
-            print("No valid command provided.")
-            sys.exit(1)
-    else:
-        command_choice = args[2]
+    command_choice = get_command_from_args_or_prompt(commands, args, 2, "Select a command:", user_interactions)
 
-    # If the command choice is itself a command group (e.g., 'build')
-    if isinstance(commands[command_choice], dict) and all(
-            isinstance(value, dict) for key, value in commands[command_choice].items()
-    ):
-        sub_commands = commands[command_choice]
-        command_choice = user_interactions.get_user_choice(list(sub_commands.keys()), "Select a command:")
-        command_data = sub_commands[command_choice]
-    else:
-        command_data = commands[command_choice]
+    command_data = commands[command_choice]
+
+    # Check if selected command is a command group with sub-commands
+    if isinstance(command_data, dict) and all(isinstance(value, dict) for value in command_data.values()):
+        sub_commands = command_data
+        sub_command_choice = get_command_from_args_or_prompt(sub_commands, args, 3, "Select a sub-command:", user_interactions)
+        command_data = sub_commands[sub_command_choice]
 
     return command_choice, command_data
+
 
 
 def extract_command_data(command_config):
@@ -130,6 +128,25 @@ def extract_command_data(command_config):
     else:
         raise ValueError("Command configuration must be a string or a dict.")
 
+def build_full_command(service, command_data):
+    if 'path' not in service or 'env_file' not in service:
+        return command_data  # This handles non Docker-compose commands directly
+
+    # Get service settings for Docker Compose
+    path_prefix = service['path']
+    env_file_argument = f"--env-file {service['env_file']} -f"
+
+    # Helper function to prepend Docker Compose parts if necessary
+    def prepend_docker_compose(cmd):
+        return f"docker-compose {env_file_argument} {path_prefix}/{cmd}" if 'docker-compose' not in cmd else cmd
+
+    # Apply Docker Compose parts to the command or commands
+    if isinstance(command_data, list):
+        return [prepend_docker_compose(cmd) for cmd in command_data]
+    else:
+        return prepend_docker_compose(command_data)
+
+
 
 def main(command_runner, config_loader, user_interactions, info_displayer):
     config = config_loader.load(CONFIG_FILE)
@@ -140,12 +157,7 @@ def main(command_runner, config_loader, user_interactions, info_displayer):
 
     env_vars, command = extract_command_data(command_data)
 
-    if 'docker-compose' in command or isinstance(command, list) and any('docker-compose' in cmd for cmd in command):
-        # Only prepend the docker-compose specifics if it's a docker-compose command
-        assert 'env_file' in service and 'path' in service, "Docker-compose commands require 'env_file' and 'path'."
-        full_command_or_commands = f"docker-compose --env-file {service['env_file']} -f {service['path']}/{command}"
-    else:
-        full_command_or_commands = command  # arbitrary commands, no adjustments needed
+    full_command_or_commands = build_full_command(service, command)
 
     info_displayer.show_info(service_choice, full_command_or_commands, service.get('env_file', ''), env_vars)
     command_runner.run(full_command_or_commands, env_vars)
@@ -154,6 +166,8 @@ def main(command_runner, config_loader, user_interactions, info_displayer):
 if __name__ == "__main__":
     command_runner = CommandRunner()
     config_loader = ConfigLoader()
+    print("DEBUG: sys.argv:", sys.argv)
+
     user_interactions = UserInteractions()
     info_displayer = InfoDisplayer()
     main(command_runner, config_loader, user_interactions, info_displayer)
