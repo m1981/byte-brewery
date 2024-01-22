@@ -1,0 +1,54 @@
+{
+    "services": {
+        "laradock": {
+            "path": "path_to_docker_compose_files",
+            "commands": {
+                "laravel-livewire": {
+                    "command": "docker exec laradock_workspace_1 bash -c \"composer require livewire/livewire\""
+                },
+                "tailwind-install": {
+                    "commands": [
+                        "docker run --rm -v \"$(PROJECT_DIR)\":/app -w /app node npm install tailwindcss postcss autoprefixer",
+                        "docker run --rm -v \"$(PROJECT_DIR)\":/app -w /app node npx tailwindcss init"
+                    ]
+                },
+                "laravel-breeze": {
+                    "command": "docker exec laradock_workspace_1 bash -c \"composer require laravel/breeze --dev\""
+                }
+            }
+        },
+        "backend": {
+            "path": "docker/backend",
+            "env_file": "docker/backend/env.local",
+            "commands": {
+                "console": "compose_ci.yml run --service-ports console",
+                "down": "compose_ci.yml down",
+                "tests-ut": "compose_ci.yml run tests-ut",
+                "tests-int": "compose_ci.yml run tests-int",
+                "precommit": "compose_ci.yml run precommit",
+                "dev-server": "compose_ci.yml up --remove-orphans dev-server",
+                "build": {
+                    "development": {
+                        "env": {
+                            "BUILD_TARGET": "development"
+                        },
+                        "command": "compose_ci_build.yml build --progress plain"
+                    },
+                    "testing": {
+                        "env": {
+                            "BUILD_TARGET": "testing"
+                        },
+                        "command": "compose_ci_build.yml build --progress plain"
+                    },
+                    "production": {
+                        "env": {
+                            "BUILD_TARGET": "production"
+                        },
+                        "command": "compose_ci_build.yml build --progress plain"
+                    }
+                }
+            }
+        }
+    }
+}
+
