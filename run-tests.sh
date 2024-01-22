@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [ "${1-}" = "coverage" ]; then
-    coverage run -m pytest tests/* --maxfail 3
+    coverage run -m pytest tests/test* --maxfail 3
     coverage html
     coverage report
 else

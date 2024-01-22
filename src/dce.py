@@ -56,14 +56,35 @@ class InfoDisplayer:
 
     @staticmethod
     def show_info(service_choice, command, env_file, env_vars):
-        if env_file:  # Only parse an env_file if it's provided
+        # Existing functionality to handle the env file
+        if env_file:
             env_from_file = EnvironmentFileParser.parse(env_file)
             overwritten_vars = set(env_from_file) & set(env_vars)
             env_from_file.update(env_vars)
             for key, value in sorted(env_from_file.items()):
                 overwritten = " (Overwritten)" if key in overwritten_vars else ""
                 print(f"{key}={value}{overwritten}")
+
+        # Printing the original command
         print(f"\nExecuting:\n{command}\n")
+
+        # Searching and expanding the command with actual environment variables from the OS
+        command_str = ' '.join(command)
+        matches = re.findall(r'\$\{(.*?)\}', command_str)
+
+        # Check each variable in the command if it is set in the environment
+        undefined_vars = [var for var in matches if os.getenv(var) is None]
+        for var in undefined_vars:
+            print(f"Warning: The environment variable {var} is not defined.")
+
+        expanded_command = os.path.expandvars(command_str)
+        if undefined_vars:
+            print(f"Real path (with undefined vars kept as placeholders):\n{expanded_command}")
+        else:
+            print(f"Real path:\n{expanded_command}")
+
+
+
 
 class CommandRunner:
     def run(self, command_or_commands, env_vars=None):
