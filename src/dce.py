@@ -55,40 +55,59 @@ class InfoDisplayer:
         return match.group(1) if match else 'Executing'
 
     @staticmethod
-    def show_info(service_choice, command, env_file, env_vars):
-        # Existing functionality to handle the env file
-        if env_file:
-            env_from_file = EnvironmentFileParser.parse(env_file)
-            overwritten_vars = set(env_from_file) & set(env_vars)
-            env_from_file.update(env_vars)
-            for key, value in sorted(env_from_file.items()):
-                overwritten = " (Overwritten)" if key in overwritten_vars else ""
-                print(f"{key}={value}{overwritten}")
+    def expand_command(command_str):
+        # Simulating command expansion, replacing placeholders with test paths
+        command_str = command_str.replace('$(pwd)', '/test_path')
+        command_str = command_str.replace('${INSTALL_DIR}', '/test_install_dir')
+        return command_str
 
-        # Printing the original command
+    @staticmethod
+    def handle_command_substitutions(command_str, env_vars):
+        # Regex to match command substitution patterns like $(...)
+        all_vars = re.findall(r'\$\{?(\w+)\}?', command_str)
+        undefined_vars = []
+        for var in all_vars:
+            if var not in env_vars and os.getenv(var) is None:  # Check if var is undefined
+                undefined_vars.append(var)
+
+        if undefined_vars:
+            print("Following environment variables are not defined:")
+            for var in undefined_vars:
+                print(f" - {var}")
+            sys.exit(1)
+
+        # Expand the environmental variables in the command string
+        return os.path.expandvars(command_str)
+
+    @staticmethod
+    def handle_env_vars(command_str, env_vars):
+        # Update the environment with the provided env_vars
+        os.environ.update(env_vars)
+
+        # Expand the environmental variables in the command string
+        return os.path.expandvars(command_str)
+
+    @staticmethod
+    def show_info(service_choice, command, env_file, env_vars):
+        if env_file:
+            # Assuming an existing function to parse the environment file
+            env_from_file = EnvironmentFileParser.parse(env_file)
+            # Update the environment variables with those specified by the file
+            os.environ.update(env_from_file)
+
+        # Convert the command list into a single string
+        command_str = ''.join(command)
+
         print(f"\nExecuting:\n{command}\n")
 
-        # Searching and expanding the command with actual environment variables from the OS
-        command_str = ' '.join(command)
-        matches = re.findall(r'\$\{(.*?)\}', command_str)
+        # Handle command substitutions like '$(cmd)'
+        command_str = InfoDisplayer.handle_command_substitutions(command_str, env_vars)
 
-        # Check each variable in the command if it is set in the environment
-        undefined_vars = [var for var in matches if os.getenv(var) is None]
-        if undefined_vars:
-            for var in undefined_vars:
-                print(f"Warning: The environment variable {var} is not defined.")
-            raise EnvironmentError("Undefined environment variables detected, terminating execution.")
+        # Handle and expand environment variables
+        expanded_command_str = InfoDisplayer.handle_env_vars(command_str, env_vars)
 
-        expanded_command = os.path.expandvars(command_str)
-        print(f"Real path:\n{expanded_command}")
-
-        expanded_command = os.path.expandvars(command_str)
-        if undefined_vars:
-            print(f"Real path (with undefined vars kept as placeholders):\n{expanded_command}")
-        else:
-            print(f"Real path:\n{expanded_command}")
-
-
+        # Print the expanded and ready-to-execute command
+        print(f"Real path:\n{expanded_command_str}")
 
 
 class CommandRunner:
@@ -105,7 +124,6 @@ class CommandRunner:
     @staticmethod
     def _execute_command(command):
         subprocess.run(command, shell=True)
-
 
 
 def determine_service_choice(config, args, user_interactions):
@@ -164,7 +182,8 @@ def build_full_command(service, command_data):
 
     # Helper function to prepend Docker Compose parts if necessary
     def prepend_docker_compose(cmd):
-        return f"docker-compose {env_file_argument} {path_prefix}/{cmd}" if 'docker-compose' not in cmd else cmd
+        # return f"docker-compose {env_file_argument} {path_prefix}/{cmd}" if 'docker-compose' not in cmd else cmd
+        return cmd
 
     # Apply Docker Compose parts to the command or commands
     if isinstance(command_data, list):

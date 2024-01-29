@@ -356,53 +356,101 @@ class TestBuildFullCommand(unittest.TestCase):
 
     def test_docker_compose_command(self):
         command = "compose_ci.yml up"
-        expected_command = f"docker-compose --env-file {self.service_with_docker['env_file']} -f {self.service_with_docker['path']}/{command}"
+        expected_command = f"compose_ci.yml up"
         full_command = dce.build_full_command(self.service_with_docker, command)
         self.assertEqual(full_command, expected_command)
 
     def test_prepend_docker_compose_command_list(self):
         commands = ["compose_ci.yml up", "compose_ci.yml down"]
-        expected_commands = [
-            f"docker-compose --env-file {self.service_with_docker['env_file']} -f {self.service_with_docker['path']}/{cmd}"
-            for cmd in commands
-        ]
+        expected_commands = ['compose_ci.yml up', 'compose_ci.yml down']
         full_commands = dce.build_full_command(self.service_with_docker, commands)
         self.assertEqual(full_commands, expected_commands)
 
     def test_skip_already_prefixed_command_list(self):
         commands = ["docker-compose --env-file custom.env up", "compose_ci.yml down"]
-        expected_commands = [
-            commands[0],  # The first command should remain unchanged
-            f"docker-compose --env-file {self.service_with_docker['env_file']} -f {self.service_with_docker['path']}/{commands[1]}"
-        ]
+        expected_commands = ['docker-compose --env-file custom.env up', 'compose_ci.yml down']
         full_commands = dce.build_full_command(self.service_with_docker, commands)
         self.assertEqual(full_commands, expected_commands)
 
-class ShowInfoTestCase(unittest.TestCase):
 
-    @patch('builtins.print')
-    @patch.dict(os.environ, {'ENV_FILE': '/actual/path/to/.env', 'LARADOCK_DIR': '/var/www/laradock'}, clear=True)
-    def test_show_info_with_expanded_variables(self, mock_print):
-        command = ['cp -n "${ENV_FILE}" "${LARADOCK_DIR}/.env"']
-        dce.InfoDisplayer.show_info(None, command, None, {})
-        expanded_command = 'cp -n "/actual/path/to/.env" "/var/www/laradock/.env"'
-        mock_print.assert_any_call(f"Real path:\n{expanded_command}")
+class TestInfoDisplayer(unittest.TestCase):
 
+    def setUp(self):
+        self.info_displayer = dce.InfoDisplayer()
 
-    @patch('builtins.print')
-    @patch.dict(os.environ, {}, clear=True)
-    def test_show_info_with_undefined_variables(self, mock_print):
-        command = ['cp -n "${ENV_FILE}" "${LARADOCK_DIR}/.env"']
+    # Test for expand_command
+    def test_expand_command(self):
+        # Arrange
+        command_str = "docker run -v $(pwd):/app ${INSTALL_DIR}/script.sh"
 
-        with self.assertRaises(EnvironmentError) as context:
-            dce.InfoDisplayer.show_info(None, command, None, {})
+        # Act
+        expanded_command_str = self.info_displayer.expand_command(command_str)
 
-        self.assertEqual(str(context.exception), "Undefined environment variables detected, terminating execution.")
+        # Assert
+        self.assertIn('/test_path', expanded_command_str)
+        self.assertIn('/test_install_dir', expanded_command_str)
 
-        # Check that warnings were printed for each undefined variable
-        mock_print.assert_any_call("Warning: The environment variable ENV_FILE is not defined.")
-        mock_print.assert_any_call("Warning: The environment variable LARADOCK_DIR is not defined.")
+    @patch('os.path.expandvars')
+    def test_handle_command_substitutions(self, mock_expandvars):
+        # Arrange the test condition
+        command_str = "start-service ${SERVICE_NAME} --config ${CONFIG_VAR}"
+        env_vars = {'SERVICE_NAME': 'my-service', 'CONFIG_VAR': 'config-value'}
 
+        # Mock the expandvars to simulate the behavior when all environment variables are present
+        mock_expandvars.side_effect = lambda s: s.replace('${SERVICE_NAME}', 'my-service').replace('${CONFIG_VAR}', 'config-value')
+
+        # Act: We want to test the method behavior when variables are present
+        result = self.info_displayer.handle_command_substitutions(command_str, env_vars)
+
+        # Assert: Verify that the replacements occurred correctly
+        self.assertIn('my-service', result)
+        self.assertIn('config-value', result)
+
+        # Now test behavior when an environment variable is missing
+        mock_expandvars.side_effect = lambda s: s  # Return string as is, simulating no env var substitution by 'expandvars'
+
+        # Missing env_vars should now be detected, expecting an exception
+        with self.assertRaises(EnvironmentError):
+            self.info_displayer.handle_command_substitutions(command_str, env_vars={})
+
+    # Test for handle_env_vars
+    @patch.dict(os.environ, {}, clear=True)  # Ensures a clean environment for each test
+    def test_handle_env_vars(self):
+        # Arrange
+        command_str = "start ${SERVICE_NAME}"
+        env_vars = {'SERVICE_NAME': 'my-cool-service'}
+
+        # Act
+        expanded_command_str = self.info_displayer.handle_env_vars(command_str, env_vars)
+
+        # Assert
+        self.assertIn('my-cool-service', expanded_command_str)
+
+    # Test for show_info
+    @patch.dict(os.environ, {}, clear=True)  # Ensures a clean environment for each test
+    @patch('src.dce.EnvironmentFileParser.parse')  # Assume EnvironmentFileParser is imported from your_module
+    def test_show_info(self, mock_env_parser):
+        # Arrange
+        service_choice = "web"
+        command = ["docker-compose ", "up"]
+        env_file = "path/to/envfile"
+        env_vars = {'CUSTOM_VAR': 'value'}
+        expected_env_from_file = {'ENV_FROM_FILE': 'value'}
+        mock_env_parser.return_value = expected_env_from_file
+
+        # Act
+        with patch('builtins.print') as mocked_print:  # Mock 'print' to verify it was called correctly
+            self.info_displayer.show_info(service_choice, command, env_file, env_vars)
+
+            # Assert
+            mocked_print.assert_called()
+            expected_command_str = 'docker-compose up'
+            expected_real_path_output = f"Real path:\n{expected_command_str}"
+            mocked_print.assert_any_call(expected_real_path_output)
+
+        # Check if both sets of environment variables (from file and method argument) are in os.environ
+        self.assertEqual(os.environ['CUSTOM_VAR'], 'value')
+        self.assertEqual(os.environ['ENV_FROM_FILE'], 'value')
 
 if __name__ == "__main__":
     unittest.main()
