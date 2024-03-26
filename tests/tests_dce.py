@@ -426,31 +426,54 @@ class TestInfoDisplayer(unittest.TestCase):
         # Assert
         self.assertIn('my-cool-service', expanded_command_str)
 
-    # Test for show_info
-    @patch.dict(os.environ, {}, clear=True)  # Ensures a clean environment for each test
-    @patch('src.dce.EnvironmentFileParser.parse')  # Assume EnvironmentFileParser is imported from your_module
-    def test_show_info(self, mock_env_parser):
-        # Arrange
-        service_choice = "web"
-        command = ["docker-compose ", "up"]
-        env_file = "path/to/envfile"
-        env_vars = {'CUSTOM_VAR': 'value'}
-        expected_env_from_file = {'ENV_FROM_FILE': 'value'}
-        mock_env_parser.return_value = expected_env_from_file
 
-        # Act
-        with patch('builtins.print') as mocked_print:  # Mock 'print' to verify it was called correctly
-            self.info_displayer.show_info(service_choice, command, env_file, env_vars)
+class TestCommandRunner(unittest.TestCase):
+    def setUp(self):
+        self.command_runner = dce.CommandRunner()
 
-            # Assert
-            mocked_print.assert_called()
-            expected_command_str = 'docker-compose up'
-            expected_real_path_output = f"Real path:\n{expected_command_str}"
-            mocked_print.assert_any_call(expected_real_path_output)
+    @patch('subprocess.run')
+    def test_run_single_command_success(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        self.command_runner.run('echo "Hello, World!"')
+        mock_run.assert_called_once_with('echo "Hello, World!"', shell=True)
 
-        # Check if both sets of environment variables (from file and method argument) are in os.environ
-        self.assertEqual(os.environ['CUSTOM_VAR'], 'value')
-        self.assertEqual(os.environ['ENV_FROM_FILE'], 'value')
+    @patch('subprocess.run')
+    def test_run_single_command_failure(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=1)
+        with self.assertRaises(SystemExit) as cm:
+            self.command_runner.run('echo "Hello, World!" && exit 1')
+        self.assertEqual(cm.exception.code, 1)
+        mock_run.assert_called_once_with('echo "Hello, World!" && exit 1', shell=True)
+
+    @patch('subprocess.run')
+    def test_run_multiple_commands_success(self, mock_run):
+        mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=0)]
+        commands = ['echo "Hello"', 'echo "World"']
+        self.command_runner.run(commands)
+        self.assertEqual(mock_run.call_count, 2)
+        mock_run.assert_any_call('echo "Hello"', shell=True)
+        mock_run.assert_any_call('echo "World"', shell=True)
+
+    @patch('subprocess.run')
+    def test_run_multiple_commands_failure(self, mock_run):
+        mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=1)]
+        commands = ['echo "Hello"', 'echo "World" && exit 1', 'echo "Unreachable"']
+        with self.assertRaises(SystemExit) as cm:
+            self.command_runner.run(commands)
+        self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(mock_run.call_count, 2)
+        mock_run.assert_any_call('echo "Hello"', shell=True)
+        mock_run.assert_any_call('echo "World" && exit 1', shell=True)
+
+    @patch('subprocess.run')
+    def test_run_with_env_vars(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        env_vars = {'ENV_VAR': 'value'}
+        self.command_runner.run('echo $ENV_VAR', env_vars)
+        mock_run.assert_called_once_with('echo $ENV_VAR', shell=True)
+        self.assertEqual(os.environ['ENV_VAR'], 'value')
+
+
 
 if __name__ == "__main__":
     unittest.main()

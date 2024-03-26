@@ -67,16 +67,13 @@ class InfoDisplayer:
         all_vars = re.findall(r'\$\{?(\w+)\}?', command_str)
         undefined_vars = []
         for var in all_vars:
-            if var not in env_vars and os.getenv(var) is None:  # Check if var is undefined
+            if var not in env_vars and os.getenv(var) is None:
                 undefined_vars.append(var)
-
         if undefined_vars:
             print("Following environment variables are not defined:")
             for var in undefined_vars:
                 print(f" - {var}")
-            sys.exit(1)
-
-        # Expand the environmental variables in the command string
+            raise EnvironmentError("Undefined environment variables")
         return os.path.expandvars(command_str)
 
     @staticmethod
@@ -90,24 +87,30 @@ class InfoDisplayer:
     @staticmethod
     def show_info(service_choice, command, env_file, env_vars):
         if env_file:
-            # Assuming an existing function to parse the environment file
             env_from_file = EnvironmentFileParser.parse(env_file)
-            # Update the environment variables with those specified by the file
             os.environ.update(env_from_file)
+        print("-"*60)
+        print(f"\nExecuting:")
+        if isinstance(command, list):
+            for cmd in command:
+                print(f"  {cmd}")
+        else:
+            print(f"  {command}")
+        print()
 
-        # Convert the command list into a single string
-        command_str = ''.join(command)
+        if isinstance(command, list):
+            command_str = '\n'.join(command)
+        else:
+            command_str = command
 
-        print(f"\nExecuting:\n{command}\n")
+        substituted_command_str = InfoDisplayer.handle_command_substitutions(command_str, env_vars)
 
-        # Handle command substitutions like '$(cmd)'
-        command_str = InfoDisplayer.handle_command_substitutions(command_str, env_vars)
-
-        # Handle and expand environment variables
-        expanded_command_str = InfoDisplayer.handle_env_vars(command_str, env_vars)
-
-        # Print the expanded and ready-to-execute command
-        print(f"Real path:\n{expanded_command_str}")
+        # Check if any custom variables are used in the command
+        if re.search(r'\$\{?\w+\}?', command_str):
+            expanded_command_str = InfoDisplayer.handle_env_vars(substituted_command_str, env_vars)
+            print(f"Real path:")
+            print(expanded_command_str)
+        print("-"*60)
 
 
 class CommandRunner:
@@ -115,15 +118,22 @@ class CommandRunner:
         if env_vars:
             for key, value in env_vars.items():
                 os.environ[key] = value
+
         if isinstance(command_or_commands, list):
             for cmd in command_or_commands:
-                self._execute_command(cmd)
+                if not self._execute_command(cmd):
+                    sys.exit(1)  # Exit the script if a command fails
         else:
-            self._execute_command(command_or_commands)
+            if not self._execute_command(command_or_commands):
+                sys.exit(1)  # Exit the script if the command fails
 
     @staticmethod
     def _execute_command(command):
-        subprocess.run(command, shell=True)
+        result = subprocess.run(command, shell=True)
+        if result.returncode != 0:
+            print(f"Command '{command}' failed with exit code {result.returncode}")
+            return False
+        return True
 
 
 def determine_service_choice(config, args, user_interactions):
@@ -216,3 +226,4 @@ if __name__ == "__main__":
     user_interactions = UserInteractions()
     info_displayer = InfoDisplayer()
     main(command_runner, config_loader, user_interactions, info_displayer)
+
