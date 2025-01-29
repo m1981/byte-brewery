@@ -19,11 +19,14 @@ handle_file() {
 
 # Check if any arguments were passed
 if [ "$#" -eq 0 ]; then
-    echo "Concatenate Source Files For GPT"
+  echo "Concatenate Source Files For GPT"
 	echo "--------------------------------"
-    echo "No files specified." >&2
-	echo "Usage: $0 file1 [file2 ...] > output.md" >&2
-    exit 1
+  echo "No files specified." >&2
+	echo "Usage: mdcat file1 [file2 ...] > output.md"
+  echo "Examples:"
+  echo "  mdcat  file1.js file2.js > output.md"
+  echo "  find . -name '*.tsx' | xargs mdcat"
+  exit 1
 fi
 
 # Iterate over the positional parameters

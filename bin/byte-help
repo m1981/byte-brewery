@@ -1,29 +1,31 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-set -eu
+import json
+import os
+from pathlib import Path
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+def main():
+    # Get the directory where byte-help is installed
+    script_dir = Path(os.path.dirname(os.path.realpath(__file__)))
 
-# The tools directory is located relative to the script directory
-TOOLS_DIR="$SCRIPT_DIR"
+    # Load tools manifest
+    manifest_path = script_dir / "tools.json"
+    print(manifest_path)
+    try:
+        with open(manifest_path) as f:
+            tools = json.load(f)
 
-# Get the absolute path of this script 
-CURRENT_SCRIPT="$(realpath "$0")"
+        print("\nAvailable tools:\n")
+        for tool, description in tools["tools"].items():
+            print(f"  {tool:12} - {description}")
+        print()
 
-# Check if the tools directory exists
-if [ ! -d "$TOOLS_DIR" ]; then
-  echo "The directory $TOOLS_DIR does not exist."
-  exit 1
-fi
+    except FileNotFoundError:
+        print("Error: tools.json not found")
+        return 1
+    except json.JSONDecodeError:
+        print("Error: tools.json is invalid")
+        return 1
 
-# Loop through every executable file in the tools directory
-for SCRIPT in "$TOOLS_DIR"/*; do
-  # Get the absolute path of the tool script
-  TOOL_SCRIPT="$(realpath "$SCRIPT")"
-
-  if [ -x "$TOOL_SCRIPT" ] && [ -f "$TOOL_SCRIPT" ] && [ "$TOOL_SCRIPT" != "$CURRENT_SCRIPT" ]; then
-	echo
-    "$SCRIPT" || true # Execute the script without parameters
-    echo
-  fi
-done
+if __name__ == "__main__":
+    main()
