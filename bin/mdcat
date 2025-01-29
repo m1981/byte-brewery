@@ -25,6 +25,7 @@ if [ "$#" -eq 0 ]; then
 	echo "Usage: mdcat file1 [file2 ...] > output.md"
   echo "Examples:"
   echo "  mdcat  file1.js file2.js > output.md"
+  echo "  grep -l -r "currentChatIndex" . | xargs mdcat"
   echo "  find . -name '*.tsx' | xargs mdcat"
   exit 1
 fi
