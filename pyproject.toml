@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "byte-brewery"
+version = "1.0.0"
+description = "Byte Brewery Tools"
+requires-python = ">=3.6"
+dependencies = [
+    # Add your dependencies here
+]
+
+[project.scripts]
+aug = "augment_ai.aug_pipeline:main"

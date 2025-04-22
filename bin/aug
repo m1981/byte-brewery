@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import sys
 import logging
 
@@ -9,35 +8,15 @@ logging.basicConfig(
     format='%(levelname)s: %(message)s'
 )
 
-# Version check
 if sys.version_info < (3, 6):
     logging.error("Python 3.6 or higher is required")
     sys.exit(1)
-
-# Try multiple possible locations for the package
-possible_paths = [
-    # When installed via pip
-    os.path.join(sys.prefix, "lib", "python" + sys.version[:3], "site-packages"),
-    # When in development
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"),
-    # When installed in /usr/local/share
-    "/usr/local/share/byte-brewery/src",
-    # User site-packages
-    os.path.expanduser('~/.local/lib/python{}.{}/site-packages'.format(*sys.version_info[:2]))
-]
-
-# Add paths to Python path
-for path in possible_paths:
-    if os.path.exists(path) and path not in sys.path:
-        sys.path.insert(0, path)
 
 try:
     from augment_ai.aug_pipeline import main
 except ImportError as e:
     logging.error("Failed to import required modules: %s", e)
-    logging.error("Make sure the package is properly installed.")
-    logging.debug("Python path: %s", sys.path)
-    logging.debug("Current directory: %s", os.getcwd())
+    logging.error("Make sure byte-brewery is properly installed using pip")
     sys.exit(1)
 
 if __name__ == "__main__":
