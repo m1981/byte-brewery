@@ -1,4 +1,18 @@
 #!/bin/bash
+set -e  # Exit on error
+
+# Check Python version
+if ! command -v python3 &> /dev/null; then
+    echo "Error: Python 3 is required but not found"
+    exit 1
+fi
+
+# Check minimum Python version
+PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+if (( $(echo "$PYTHON_VERSION < 3.6" | bc -l) )); then
+    echo "Error: Python 3.6 or higher is required"
+    exit 1
+fi
 
 # Define installation directory
 INSTALL_DIR="/usr/local/bin"
@@ -32,9 +46,9 @@ sudo cp -R * "$SHARE_DIR/$REPO_NAME/"
 # Install Python package
 cd "$SHARE_DIR/$REPO_NAME"
 if command -v pip3 &> /dev/null; then
-    sudo pip3 install -e .
+    sudo pip3 install --no-cache-dir -e .
 elif command -v pip &> /dev/null; then
-    sudo pip install -e .
+    sudo pip install --no-cache-dir -e .
 else
     echo "Error: pip not found. Please install Python and pip."
     exit 1
@@ -45,6 +59,19 @@ cd "$INSTALL_DIR"
 for tool in "$SHARE_DIR/$REPO_NAME/bin"/*; do
     if [ -f "$tool" ]; then
         sudo ln -sf "$tool" .
+    fi
+done
+
+# Add completion if available
+if [ -f "$SHARE_DIR/$REPO_NAME/completion/aug-completion.bash" ]; then
+    sudo cp "$SHARE_DIR/$REPO_NAME/completion/aug-completion.bash" /etc/bash_completion.d/
+fi
+
+# Verify all required tools are available
+for cmd in aug byte-help; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo "Error: $cmd installation failed"
+        exit 1
     fi
 done
 
