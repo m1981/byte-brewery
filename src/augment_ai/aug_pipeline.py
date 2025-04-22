@@ -91,7 +91,8 @@ def process_chat_pipeline(input_xml: str, output_dir: str) -> bool:
         print(f"Error during processing: {e}", file=sys.stderr)
         return False
 
-def main():
+def create_parser():
+    """Create argument parser with all options."""
     parser = argparse.ArgumentParser(
         description="Process chat data through extraction, analysis, and schema generation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -107,10 +108,19 @@ Output files:
   - schema.json          : JSON schema for the processed data
         """
     )
-    parser.add_argument("input_xml", nargs="?", help="Input XML file path")
-    parser.add_argument("--output-dir", "-o", default="output",
+    parser.add_argument("input_xml", 
+                       nargs="?", 
+                       help="Input XML file path")
+    parser.add_argument("--output-dir", "-o", 
+                       default="output",
                        help="Output directory for all generated files (default: output)")
-    parser.add_argument("--version", "-v", action="version", version="aug v1.0.0")
+    parser.add_argument("--version", "-v", 
+                       action="version", 
+                       version="aug v1.0.0")
+    return parser
+
+def main():
+    parser = create_parser()
     args = parser.parse_args()
 
     # Show help if no arguments provided
