@@ -1,0 +1,48 @@
+{
+  "c8fced8c-edcd-4b0c-84d3-ed810c9c597c": [
+    {
+      "meaningful_content": "what is my repo about?",
+      "original_length": 22,
+      "processed_length": 22
+    },
+    {
+      "meaningful_content": "how to install tools on my local computer?",
+      "original_length": 42,
+      "processed_length": 42
+    },
+    {
+      "meaningful_content": "is it serious?1",
+      "original_length": 1918,
+      "processed_length": 14
+    },
+    {
+      "meaningful_content": "how to run tests on all tools?",
+      "original_length": 30,
+      "processed_length": 30
+    },
+    {
+      "meaningful_content": "@src/agument_ai I've added new src scripts please act as python expert and tell me they are about",
+      "original_length": 97,
+      "processed_length": 97
+    },
+    {
+      "meaningful_content": "Can you see how they can work togather in chain?",
+      "original_length": 48,
+      "processed_length": 48
+    },
+    {
+      "meaningful_content": "@src/augment_ai can you add my above tool to bin as aug",
+      "original_length": 56,
+      "processed_length": 55
+    },
+    {
+      "meaningful_content": "Please add more usefull vlidations",
+      "original_length": 445,
+      "processed_length": 34
+    },
+    {
+      "meaningful_content": "File",
+      "original_length": 236,
+      "processed_length": 4
+    }
+  ]

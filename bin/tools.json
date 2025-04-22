@@ -2,6 +2,7 @@
   "tools": {
     "dce": "Docker Compose Extended - Manages Docker Compose services with additional features",
     "mdcat": "Formats source files into markdown for GPT chat",
-    "pext": "Extracts User prompts from ChatGPT chats (in json)"
+    "pext": "Extracts User prompts from ChatGPT chats (in json)",
+    "aug": "Augment AI Pipeline - Process chat exports through extraction, analysis, and schema generation"
   }
 }

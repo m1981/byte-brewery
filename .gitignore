@@ -11,6 +11,8 @@ build/
 *.egg-info/
 .coverage
 all.txt
+output
+htmlcov
 
 # Obfuscated or compiled Python files
 *.so

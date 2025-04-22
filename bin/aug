@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+from pathlib import Path
+
+# Add the src directory to Python path
+src_dir = Path(os.path.dirname(os.path.realpath(__file__))).parent / "src"
+sys.path.append(str(src_dir))
+
+try:
+    from augment_ai.aug_pipeline import main
+except ImportError as e:
+    print(f"Error: Failed to import required modules: {e}", file=sys.stderr)
+    print("Make sure the package is properly installed.", file=sys.stderr)
+    sys.exit(1)
+
+if __name__ == "__main__":
+    main()

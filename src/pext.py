@@ -1,79 +1,129 @@
 #!/usr/bin/env python3
-
-import json
 import sys
-import unittest
-
+import json
+import argparse
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 class ChatMessageExtractor:
-
     @staticmethod
-    def extract_second_message(json_content, message_criteria=lambda x: True):
+    def extract_second_message(json_content: Optional[Dict[str, Any]], 
+                             message_criteria: callable = lambda x: True) -> List[Optional[str]]:
+        """
+        Extract second message from each chat in the JSON content.
+        
+        Args:
+            json_content (dict): JSON data containing chats
+            message_criteria (callable): Optional filter function for messages
+            
+        Returns:
+            list: List of second messages or None for chats with fewer than 2 messages
+        """
+        if json_content is None:
+            return []
+            
         second_messages = []
         for chat in json_content.get('chats', []):
-            # Get the list of messages in the chat
             messages = chat.get('messages', [])
-            # Check if there are at least two messages in the list
-            if len(messages) > 1:
-                # Get the content of the second message, apply criteria, and slice to 300 chars if it passes
-                second_message = messages[1]
-                if message_criteria(second_message):
-                    second_messages.append(second_message.get('content', 'No content')[:300])
-                else:
-                    # If message doesn't meet criteria, append None or a custom value
-                    second_messages.append(None)
-            else:
-                # If there isn't a second message, append None
-                second_messages.append(None)
+            filtered_messages = [
+                msg.get('content') 
+                for msg in messages 
+                if message_criteria(msg)
+            ]
+            second_messages.append(filtered_messages[1] if len(filtered_messages) > 1 else None)
         return second_messages
 
-def main(json_path, message_criteria):
-    try:
-        with open(json_path, 'r') as file:
-            chats_data = json.load(file)
+def parse_chat_json(file_path: Path) -> Dict[str, Any]:
+    """Parse JSON file containing chat data."""
+    with open(file_path) as f:
+        return json.load(f)
 
-        second_messages = ChatMessageExtractor.extract_second_message(chats_data, message_criteria)
+def extract_prompts(chat_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract prompts from chat data with metadata."""
+    prompts = []
+    for message in chat_data.get('messages', []):
+        if message.get('role') == 'human':
+            prompt = {
+                'content': message['content'],
+                'timestamp': chat_data.get('metadata', {}).get('timestamp'),
+                'conversation_id': chat_data.get('metadata', {}).get('conversation_id')
+            }
+            prompts.append(prompt)
+    return prompts
 
-        unique_messages = {}
-        for message in second_messages:
-            if message is not None:
-                # Standardizing to lowercase for case-insensitive comparison
-                unique_messages[message] = message
+def format_prompts(prompts: List[Dict[str, Any]], 
+                  format_type: str,
+                  include_timestamps: bool = False,
+                  include_conversation_id: bool = False) -> str:
+    """Format prompts according to specified format."""
+    if format_type == "json":
+        return json.dumps(prompts, indent=2)
+    elif format_type == "csv":
+        headers = ['content']
+        if include_timestamps:
+            headers.append('timestamp')
+        if include_conversation_id:
+            headers.append('conversation_id')
+            
+        lines = [','.join(headers)]
+        for prompt in prompts:
+            values = [prompt['content']]
+            if include_timestamps:
+                values.append(prompt.get('timestamp', ''))
+            if include_conversation_id:
+                values.append(prompt.get('conversation_id', ''))
+            lines.append(','.join(f'"{v}"' for v in values))
+        return '\n'.join(lines)
+    else:  # text format
+        lines = []
+        for prompt in prompts:
+            lines.append(prompt['content'])
+            if include_timestamps and prompt.get('timestamp'):
+                lines.append(f"Timestamp: {prompt['timestamp']}")
+            if include_conversation_id and prompt.get('conversation_id'):
+                lines.append(f"Conversation ID: {prompt['conversation_id']}")
+            lines.append('')  # blank line between prompts
+        return '\n'.join(lines)
 
-        # Filter out None entries and sort the valid second messages
-        valid_messages = sorted([m for m in unique_messages if m is not None])
-
-        for message in valid_messages:
-            print(message)
-            print('----------------------------------')
-
-    except Exception as e:
-        print(f'An error occurred: {e}')
-
-# Define your message criteria here
-def custom_criteria(message):
-    """Return True if the message meets the criteria, else False."""
-    # Example criteria: Message must be from the user and contain the word 'urgent'
-    content = message.get('content', '')
-    return (message.get('role') == 'user' and  'Act as' in message.get('content')
-    and '```' not in message.get('content')
-    )
-
-
-
-
-
-if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == 'test':
-        # If 'test' is the second argument, remove all arguments except the first
-        sys.argv = sys.argv[:1]
-        unittest.main()
-    elif len(sys.argv) == 2:
-        # Otherwise, the second argument is assumed to be the JSON file path
-        json_file_path = sys.argv[1]
-        main(json_file_path, custom_criteria)
+def save_output(content: str, output_file: Optional[Path]) -> None:
+    """Save content to file or print to stdout."""
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write(content)
     else:
-        print("Prompt Extracting Tool\n"
-		"----------------------------\n"
-		"Usage: python script.py <path_to_json_file> | test")
+        print(content)
+
+def main() -> None:
+    """Main function to process chat files."""
+    parser = argparse.ArgumentParser(description='Extract and format chat prompts')
+    parser.add_argument('input_file', type=Path, help='Input JSON file')
+    parser.add_argument('--output', type=Path, help='Output file (stdout if not specified)')
+    parser.add_argument('--format', choices=['text', 'json', 'csv'], default='text',
+                      help='Output format (default: text)')
+    parser.add_argument('--timestamps', action='store_true',
+                      help='Include timestamps in output')
+    parser.add_argument('--conversation-id', action='store_true',
+                      help='Include conversation IDs in output')
+    
+    args = parser.parse_args()
+    
+    if not args.input_file.exists():
+        print(f"Error: Input file {args.input_file} does not exist", file=sys.stderr)
         sys.exit(1)
+        
+    try:
+        chat_data = parse_chat_json(args.input_file)
+        prompts = extract_prompts(chat_data)
+        formatted = format_prompts(prompts, args.format, 
+                                args.timestamps, args.conversation_id)
+        save_output(formatted, args.output)
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in {args.input_file}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
