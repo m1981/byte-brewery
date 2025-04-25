@@ -1,0 +1,354 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema for GitHub Copilot Chat State",
+  "description": "Schema for GitHub Copilot chat state data",
+  "type": "object",
+  "properties": {
+    "currentConversationId": {
+      "type": "string",
+      "description": "ID of the currently active conversation"
+    },
+    "conversations": {
+      "type": "object",
+      "description": "Map of conversation objects indexed by their IDs",
+      "patternProperties": {
+        "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$": {
+          "type": "object",
+          "description": "A single conversation",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier for the conversation"
+            },
+            "createdAtIso": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO timestamp when the conversation was created"
+            },
+            "lastInteractedAtIso": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO timestamp when the conversation was last interacted with"
+            },
+            "chatHistory": {
+              "type": "array",
+              "description": "History of chat messages and responses",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "structured_output_nodes": {
+                    "type": "array",
+                    "description": "Structured output content nodes",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "description": "Node identifier"
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "Content text"
+                        },
+                        "type": {
+                          "type": "integer",
+                          "description": "Type of content node"
+                        }
+                      }
+                    }
+                  },
+                  "structured_request_nodes": {
+                    "type": "array",
+                    "description": "Structured request content nodes",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "description": "Node identifier"
+                        },
+                        "type": {
+                          "type": "integer",
+                          "description": "Type of request node"
+                        },
+                        "text_node": {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "type": "string",
+                              "description": "Text content of the request"
+                            }
+                          }
+                        },
+                        "ide_state_node": {
+                          "type": "object",
+                          "properties": {
+                            "workspaceFolders": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "repositoryRoot": {
+                                    "type": "string",
+                                    "description": "Root path of the repository"
+                                  },
+                                  "folderRoot": {
+                                    "type": "string",
+                                    "description": "Root path of the folder"
+                                  }
+                                }
+                              }
+                            },
+                            "workspaceFoldersUnchanged": {
+                              "type": "boolean",
+                              "description": "Whether workspace folders have changed"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "mentioned_items": {
+                    "type": "array",
+                    "description": "Items mentioned in the message",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "file": {
+                          "type": "object",
+                          "properties": {
+                            "repoRoot": {
+                              "type": "string"
+                            },
+                            "pathName": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "request_message": {
+                    "type": "string",
+                    "description": "User's request message"
+                  },
+                  "workspace_file_chunks": {
+                    "type": "array",
+                    "description": "Referenced file chunks from workspace",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "blob_name": {
+                          "type": "string"
+                        },
+                        "char_start": {
+                          "type": "string"
+                        },
+                        "file": {
+                          "type": "object",
+                          "properties": {
+                            "repoRoot": {
+                              "type": "string",
+                              "description": "Repository root path"
+                            },
+                            "pathName": {
+                              "type": "string",
+                              "description": "File path relative to repo root"
+                            }
+                          }
+                        },
+                        "char_end": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Status of the request/response",
+                    "enum": ["success", "error", "pending", "draft"]
+                  },
+                  "request_id": {
+                    "type": "string",
+                    "description": "Unique identifier for the request"
+                  },
+                  "rich_text_json_repr": {
+                    "type": "object",
+                    "description": "Rich text representation of the message",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "content": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  },
+                                  "attrs": {
+                                    "type": "object"
+                                  }
+                                }
+                              }
+                            },
+                            "type": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "seen_state": {
+                    "type": "string",
+                    "description": "Indicates if the message has been seen",
+                    "enum": ["seen", "unseen"]
+                  },
+                  "response_text": {
+                    "type": "string",
+                    "description": "Text of the response"
+                  }
+                }
+              }
+            },
+            "feedbackStates": {
+              "type": "object",
+              "description": "User feedback on responses",
+              "patternProperties": {
+                "^temp-fe-[0-9a-f-]+$": {
+                  "type": "object",
+                  "properties": {
+                    "selectedRating": {
+                      "type": "integer",
+                      "description": "User rating value"
+                    },
+                    "feedbackNote": {
+                      "type": "string",
+                      "description": "Additional feedback comments"
+                    }
+                  }
+                }
+              }
+            },
+            "toolUseStates": {
+              "type": "object",
+              "description": "States of tool usage"
+            },
+            "draftExchange": {
+              "type": "object",
+              "description": "Draft message being composed",
+              "properties": {
+                "request_message": {
+                  "type": "string"
+                },
+                "rich_text_json_repr": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["draft"]
+                }
+              }
+            },
+            "requestIds": {
+              "type": "array",
+              "description": "List of request IDs in this conversation",
+              "items": {
+                "type": "string"
+              }
+            },
+            "isPinned": {
+              "type": "boolean",
+              "description": "Whether the conversation is pinned"
+            },
+            "isShareable": {
+              "type": "boolean",
+              "description": "Whether the conversation can be shared"
+            },
+            "extraData": {
+              "type": "object",
+              "description": "Additional metadata",
+              "properties": {
+                "hasDirtyEdits": {
+                  "type": "boolean",
+                  "description": "Whether there are unsaved edits"
+                }
+              }
+            },
+            "personaType": {
+              "type": "integer",
+              "description": "Type of persona used for this conversation"
+            }
+          },
+          "required": [
+            "id",
+            "createdAtIso",
+            "lastInteractedAtIso",
+            "chatHistory",
+            "feedbackStates",
+            "toolUseStates",
+            "draftExchange",
+            "requestIds",
+            "isPinned",
+            "isShareable",
+            "extraData",
+            "personaType"
+          ]
+        }
+      }
+    },
+    "agentExecutionMode": {
+      "type": "string",
+      "description": "Mode of agent execution",
+      "enum": ["manual", "auto"]
+    },
+    "isAgentEditsCollapsed": {
+      "type": "boolean",
+      "description": "Whether agent edits UI is collapsed"
+    }
+  },
+  "required": [
+    "currentConversationId",
+    "conversations",
+    "agentExecutionMode",
+    "isAgentEditsCollapsed"
+  ]
+}
