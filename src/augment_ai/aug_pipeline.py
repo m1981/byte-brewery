@@ -7,6 +7,7 @@ from pathlib import Path
 # Fix imports to use relative paths within the package
 from .aug_extract_json import extract_json_from_xml
 from .aug_extract_chats import extract_human_prompts
+from .aug_common import extract_conversation_responses  # Move this import here
 from .aug_process_prompts import group_prompts_by_conversation, extract_meaningful_content
 from .aug_gen_schema import generate_schema
 from .aug_common import save_json_output
@@ -100,12 +101,7 @@ def create_parser():
 Examples:
   aug input.xml                     # Process with default output directory
   aug input.xml -o /path/to/output  # Process with custom output directory
-  
-Output files:
-  - chat_state.json      : Raw chat data extracted from XML
-  - prompts.json         : Extracted human prompts
-  - analyzed_prompts.json: Processed and analyzed prompts
-  - schema.json          : JSON schema for the processed data
+  aug input.xml --extract-responses <conversation_id>  # Extract responses from specific conversation
         """
     )
     parser.add_argument("input_xml", 
@@ -114,6 +110,8 @@ Output files:
     parser.add_argument("--output-dir", "-o", 
                        default="output",
                        help="Output directory for all generated files (default: output)")
+    parser.add_argument("--extract-responses",
+                       help="Extract responses from specific conversation ID")
     parser.add_argument("--version", "-v", 
                        action="version", 
                        version="aug v1.0.0")
@@ -135,7 +133,19 @@ def main():
     if not validate_output_dir(args.output_dir):
         sys.exit(1)
 
-    # Run pipeline
+    # Extract JSON from XML
+    chat_data = extract_json_from_xml(args.input_xml)
+    
+    # If conversation ID provided, extract responses
+    if args.extract_responses:
+        responses = extract_conversation_responses(chat_data, args.extract_responses)
+        response_file = f"{args.output_dir}/responses_{args.extract_responses}.md"
+        with open(response_file, 'w', encoding='utf-8') as f:
+            f.write(responses)
+        print(f"Responses extracted to {response_file}")
+        sys.exit(0)
+
+    # Run regular pipeline
     success = process_chat_pipeline(args.input_xml, args.output_dir)
     sys.exit(0 if success else 1)
 

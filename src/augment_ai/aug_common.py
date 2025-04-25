@@ -4,6 +4,7 @@ import sys
 from collections import defaultdict
 import base64
 import xml.etree.ElementTree as ET
+import re
 
 def load_json_input(input_file):
     """Load JSON data from file or stdin."""
@@ -32,6 +33,34 @@ def save_json_output(data, output_file=None):
         print(f"Data saved to {output_file}")
     else:
         print(output_json)
+
+def clean_markdown_response(response_text: str) -> str:
+    """Clean up markdown formatting in response text."""
+    # Replace ````mermaid path=xxx mode=xxx with ```mermaid
+    response_text = re.sub(r'````mermaid.*?(\n)', '```mermaid\n', response_text)
+    # Replace any remaining ```` with ```
+    response_text = response_text.replace('````', '```')
+    return response_text
+
+def extract_conversation_responses(json_data: dict, conversation_id: str) -> str:
+    """Extract and format response_text from specific conversation."""
+    conversation = None
+    for conv in json_data.get('conversations', {}).values():
+        if conv.get('id') == conversation_id:
+            conversation = conv
+            break
+
+    if not conversation:
+        print(f"Error: Conversation {conversation_id} not found", file=sys.stderr)
+        return ""
+
+    responses = []
+    for message in conversation.get('chatHistory', []):
+        response_text = message.get('response_text', '')
+        if response_text:
+            responses.append(clean_markdown_response(response_text))
+
+    return "\n\n".join(responses)
 
 def extract_human_prompts(json_data):
     """Extract all human prompts from the chat JSON data."""

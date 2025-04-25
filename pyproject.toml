@@ -13,3 +13,7 @@ dependencies = [
 
 [project.scripts]
 aug = "augment_ai.aug_pipeline:main"
+aug-extract-responses = "augment_ai.aug_extract_responses:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/augment_ai"]
