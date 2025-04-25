@@ -7,7 +7,7 @@ from pathlib import Path
 # Fix imports to use relative paths within the package
 from .aug_extract_json import extract_json_from_xml
 from .aug_extract_chats import extract_human_prompts
-from .aug_common import extract_conversation_responses  # Move this import here
+from .aug_common import extract_conversation_exchanges  # Update import
 from .aug_process_prompts import group_prompts_by_conversation, extract_meaningful_content
 from .aug_gen_schema import generate_schema
 from .aug_common import save_json_output
@@ -112,9 +112,6 @@ Examples:
                        help="Output directory for all generated files (default: output)")
     parser.add_argument("--extract-responses",
                        help="Extract responses from specific conversation ID")
-    parser.add_argument("--version", "-v", 
-                       action="version", 
-                       version="aug v1.0.0")
     return parser
 
 def main():
@@ -136,13 +133,13 @@ def main():
     # Extract JSON from XML
     chat_data = extract_json_from_xml(args.input_xml)
     
-    # If conversation ID provided, extract responses
+    # If conversation ID provided, extract exchanges
     if args.extract_responses:
-        responses = extract_conversation_responses(chat_data, args.extract_responses)
-        response_file = f"{args.output_dir}/responses_{args.extract_responses}.md"
-        with open(response_file, 'w', encoding='utf-8') as f:
-            f.write(responses)
-        print(f"Responses extracted to {response_file}")
+        exchanges = extract_conversation_exchanges(chat_data, args.extract_responses)
+        exchange_file = f"{args.output_dir}/conversation_{args.extract_responses}.md"
+        with open(exchange_file, 'w', encoding='utf-8') as f:
+            f.write(exchanges)
+        print(f"Conversation exchanges extracted to {exchange_file}")
         sys.exit(0)
 
     # Run regular pipeline

@@ -36,10 +36,16 @@ def save_json_output(data, output_file=None):
 
 def clean_markdown_response(response_text: str) -> str:
     """Clean up markdown formatting in response text."""
+    if not response_text:
+        return ""
+        
     # Replace ````mermaid path=xxx mode=xxx with ```mermaid
     response_text = re.sub(r'````mermaid.*?(\n)', '```mermaid\n', response_text)
     # Replace any remaining ```` with ```
     response_text = response_text.replace('````', '```')
+    # Remove any <augment_code_snippet> tags
+    response_text = re.sub(r'<augment_code_snippet.*?>', '', response_text)
+    response_text = response_text.replace('</augment_code_snippet>', '')
     return response_text
 
 def extract_conversation_responses(json_data: dict, conversation_id: str) -> str:
@@ -61,6 +67,33 @@ def extract_conversation_responses(json_data: dict, conversation_id: str) -> str
             responses.append(clean_markdown_response(response_text))
 
     return "\n\n".join(responses)
+
+def extract_conversation_exchanges(json_data: dict, conversation_id: str) -> str:
+    """Extract and format request/response pairs from specific conversation."""
+    conversation = None
+    for conv in json_data.get('conversations', {}).values():
+        if conv.get('id') == conversation_id:
+            conversation = conv
+            break
+
+    if not conversation:
+        print(f"Error: Conversation {conversation_id} not found", file=sys.stderr)
+        return ""
+
+    exchanges = []
+    for message in conversation.get('chatHistory', []):
+        request = message.get('request_message', '')
+        response = message.get('response_text', '')
+        
+        if request or response:
+            exchange = []
+            if request:
+                exchange.append(f"### User Request\n\n{request}\n")
+            if response:
+                exchange.append(f"### Assistant Response\n\n{clean_markdown_response(response)}\n")
+            exchanges.append("\n".join(exchange))
+
+    return "\n\n---\n\n".join(exchanges)
 
 def extract_human_prompts(json_data):
     """Extract all human prompts from the chat JSON data."""

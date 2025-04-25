@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 import argparse
-from .aug_common import load_json_input, extract_conversation_responses
+import sys
+from .aug_common import load_json_input, extract_conversation_exchanges
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract and format response_text from chat conversations",
+        description="Extract and format conversation exchanges from chat",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   aug-extract-responses chat_state.json <conversation_id>
-  aug-extract-responses chat_state.json <conversation_id> -o readme_section.md
+  aug-extract-responses chat_state.json <conversation_id> -o conversation.md
         """
     )
     parser.add_argument("input_file", help="Input JSON file path")
@@ -19,14 +20,14 @@ Examples:
 
     try:
         json_data = load_json_input(args.input_file)
-        formatted_response = extract_conversation_responses(json_data, args.conversation_id)
+        formatted_exchanges = extract_conversation_exchanges(json_data, args.conversation_id)
         
         if args.output:
             with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(formatted_response)
-            print(f"Responses saved to {args.output}")
+                f.write(formatted_exchanges)
+            print(f"Conversation exchanges saved to {args.output}")
         else:
-            print(formatted_response)
+            print(formatted_exchanges)
             
     except Exception as e:
         print(f"Error: {str(e)}", file=sys.stderr)
