@@ -194,7 +194,7 @@ run_regression_test() {
 if [ "$1" == "--test" ]; then
     if [ -z "$2" ]; then
         echo "Error: Please provide test directory path"
-        echo "Usage for test: $0 --test <test_directory_path>"
+        echo "Usage for test: rsum --test <test_directory_path>"
         exit 1
     fi
     run_regression_test "$2"  # Pass the second argument to run_regression_test
@@ -214,10 +214,10 @@ else
         # Original directory processing logic
         if [ -z "$1" ]; then
             echo "Error: Please provide a directory path or pipe input"
-            echo "Usage: $0 <directory_path>"
-            echo "       $0 --test <test_directory_path>"
-            echo "       find . -name \"*.ts\" | $0"
-            echo '       git status --porcelain | grep  -E "\.(js|ts)$" | ./git_files.sh | ./react_code_summary.sh'
+            echo "Usage: rsum <directory_path>"
+            echo "       rsum --test <test_directory_path>"
+            echo "       find . -name \"*.ts\" | rsum"
+            echo '       grep  -E "\.(js|ts)$" | rsum'
             exit 1
         fi
 
