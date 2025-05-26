@@ -62,13 +62,40 @@ fi
 echo "Installing byte-brewery using pipx..."
 pipx install --force "git+https://github.com/m1981/byte-brewery.git@main"
 
-# Get the installation directory
-PACKAGE_DIR=$(pipx list --json | grep -o '"venv": "[^"]*"' | grep -m1 "byte-brewery" | cut -d'"' -f4)
+# Get the installation directory - more robust approach
+echo "Locating installation directory..."
+PACKAGE_DIR=""
+
+# Try using pipx list with jq if available
+if command_exists jq; then
+    PACKAGE_DIR=$(pipx list --json | jq -r '.venvs."byte-brewery".metadata.venv_dir' 2>/dev/null)
+fi
+
+# If jq not available or failed, try with grep
+if [ -z "$PACKAGE_DIR" ]; then
+    PACKAGE_DIR=$(pipx list --json | grep -o '"venv_dir": "[^"]*"' | grep -m1 "byte-brewery" | cut -d'"' -f4 2>/dev/null || true)
+fi
+
+# If still empty, try a different approach with python
+if [ -z "$PACKAGE_DIR" ]; then
+    PACKAGE_DIR=$(python3 -c "import json,sys;data=json.load(sys.stdin);print(data['venvs']['byte-brewery']['metadata']['venv_dir'] if 'byte-brewery' in data['venvs'] else '')" < <(pipx list --json 2>/dev/null) 2>/dev/null || true)
+fi
+
+# If still empty, try to find it in the standard location
+if [ -z "$PACKAGE_DIR" ]; then
+    POSSIBLE_DIR="$HOME/.local/pipx/venvs/byte-brewery"
+    if [ -d "$POSSIBLE_DIR" ]; then
+        PACKAGE_DIR="$POSSIBLE_DIR"
+    fi
+fi
 
 if [ -z "$PACKAGE_DIR" ]; then
     echo "Error: Could not determine installation directory."
+    echo "Please run 'pipx list' to see if byte-brewery was installed correctly."
     exit 1
 fi
+
+echo "Found installation directory: $PACKAGE_DIR"
 
 # Create symlinks for all scripts in bin directory
 echo "Setting up command-line tools..."
