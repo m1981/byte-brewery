@@ -62,7 +62,49 @@ fi
 echo "Installing byte-brewery using pipx..."
 pipx install --force "git+https://github.com/m1981/byte-brewery.git@main"
 
-echo "Installation complete! 'aug' command is now available."
+# Get the installation directory
+PACKAGE_DIR=$(pipx list --json | grep -o '"venv": "[^"]*"' | grep -m1 "byte-brewery" | cut -d'"' -f4)
+
+if [ -z "$PACKAGE_DIR" ]; then
+    echo "Error: Could not determine installation directory."
+    exit 1
+fi
+
+# Create symlinks for all scripts in bin directory
+echo "Setting up command-line tools..."
+BIN_DIR="$PACKAGE_DIR/bin"
+DEST_DIR="$HOME/.local/bin"
+mkdir -p "$DEST_DIR"
+
+# Ensure destination directory is in PATH
+if [[ ":$PATH:" != *":$DEST_DIR:"* ]]; then
+    echo "Adding $DEST_DIR to PATH in your profile..."
+    if [ -f "$HOME/.bashrc" ]; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+        echo "Added to .bashrc"
+    elif [ -f "$HOME/.zshrc" ]; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+        echo "Added to .zshrc"
+    else
+        echo "Warning: Could not find .bashrc or .zshrc to update PATH"
+        echo "Please add $DEST_DIR to your PATH manually"
+    fi
+fi
+
+# Create symlinks for all executable files in bin
+if [ -d "$BIN_DIR" ]; then
+    for script in "$BIN_DIR"/*; do
+        if [ -f "$script" ] && [ -x "$script" ]; then
+            script_name=$(basename "$script")
+            ln -sf "$script" "$DEST_DIR/$script_name"
+            echo "Linked $script_name"
+        fi
+    done
+else
+    echo "Warning: bin directory not found at $BIN_DIR"
+fi
+
+echo "Installation complete! All commands are now available."
 echo "You may need to restart your terminal for the changes to take effect."
-echo "You can run 'aug --help' to see available commands."
+echo "You can run 'byte-help' to see available commands."
 
