@@ -6,132 +6,48 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to install Python venv and pipx on Ubuntu/Debian
-install_prerequisites_debian() {
-    echo "Installing Python prerequisites..."
-    # Get Python version
-    PY_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
-    
-    # Install python3-venv for the specific version
-    sudo apt-get update -y || true
-    sudo apt-get install -y python${PY_VERSION}-venv python3-pip || {
-        echo "Failed to install using apt. Trying alternative method..."
-        python3 -m pip install --user virtualenv
-    }
-    
-    # Install pipx
-    python3 -m pip install --user pipx
-    python3 -m pipx ensurepath
-    
-    # Add to PATH for current session
-    export PATH="$HOME/.local/bin:$PATH"
-}
-
-# Check and install prerequisites if needed
-if ! command_exists pipx; then
-    echo "pipx not found. Installing prerequisites..."
-    if command_exists brew; then
-        brew install pipx
-        pipx ensurepath
-    elif command_exists apt-get; then
-        install_prerequisites_debian
+# Function to install Python dependencies
+install_python_deps() {
+    echo "Installing Python dependencies..."
+    if command_exists pip3; then
+        pip3 install --user -r requirements.txt
     else
-        python3 -m pip install --user virtualenv
-        python3 -m pip install --user pipx
-        python3 -m pipx ensurepath
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
-    
-    # Verify pipx installation
-    if ! command_exists pipx; then
-        echo "Adding ~/.local/bin to PATH for current session..."
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
-    
-    # Final verification
-    if ! command_exists pipx; then
-        echo "Error: Failed to install pipx. Please try manually:"
-        echo "sudo apt-get install python3-venv python3-pip"
-        echo "python3 -m pip install --user pipx"
-        echo "python3 -m pipx ensurepath"
+        echo "Error: pip3 not found. Please install Python3 and pip."
         exit 1
     fi
+}
+
+# Create installation directory
+INSTALL_DIR="$HOME/.local/bin"
+mkdir -p "$INSTALL_DIR"
+
+# Clone the repository to a temporary location
+TMP_DIR=$(mktemp -d)
+echo "Cloning repository to $TMP_DIR..."
+git clone https://github.com/m1981/byte-brewery.git "$TMP_DIR"
+
+# Install Python dependencies if any exist
+if [ -f "$TMP_DIR/requirements.txt" ]; then
+    install_python_deps
 fi
 
-# Install the package using pipx
-echo "Installing byte-brewery using pipx..."
-pipx install --force "git+https://github.com/m1981/byte-brewery.git@main"
+# Copy all scripts to installation directory
+echo "Installing scripts to $INSTALL_DIR..."
+cp "$TMP_DIR/bin/"* "$INSTALL_DIR/"
+chmod +x "$INSTALL_DIR"/*
 
-# Get the installation directory - more robust approach
-echo "Locating installation directory..."
-PACKAGE_DIR=""
-
-# Try using pipx list with jq if available
-if command_exists jq; then
-    PACKAGE_DIR=$(pipx list --json | jq -r '.venvs."byte-brewery".metadata.venv_dir' 2>/dev/null)
+# Add installation directory to PATH if not already there
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc" 2>/dev/null || true
+    echo "Added $INSTALL_DIR to PATH in .bashrc and .zshrc"
 fi
 
-# If jq not available or failed, try with grep
-if [ -z "$PACKAGE_DIR" ]; then
-    PACKAGE_DIR=$(pipx list --json | grep -o '"venv_dir": "[^"]*"' | grep -m1 "byte-brewery" | cut -d'"' -f4 2>/dev/null || true)
-fi
+# Clean up
+rm -rf "$TMP_DIR"
 
-# If still empty, try a different approach with python
-if [ -z "$PACKAGE_DIR" ]; then
-    PACKAGE_DIR=$(python3 -c "import json,sys;data=json.load(sys.stdin);print(data['venvs']['byte-brewery']['metadata']['venv_dir'] if 'byte-brewery' in data['venvs'] else '')" < <(pipx list --json 2>/dev/null) 2>/dev/null || true)
-fi
+echo "Installation complete! All tools are now available."
+echo "You may need to restart your terminal or run 'source ~/.bashrc' for the changes to take effect."
+echo "Available tools: $(ls -1 $INSTALL_DIR | tr '\n' ' ')"
 
-# If still empty, try to find it in the standard location
-if [ -z "$PACKAGE_DIR" ]; then
-    POSSIBLE_DIR="$HOME/.local/pipx/venvs/byte-brewery"
-    if [ -d "$POSSIBLE_DIR" ]; then
-        PACKAGE_DIR="$POSSIBLE_DIR"
-    fi
-fi
-
-if [ -z "$PACKAGE_DIR" ]; then
-    echo "Error: Could not determine installation directory."
-    echo "Please run 'pipx list' to see if byte-brewery was installed correctly."
-    exit 1
-fi
-
-echo "Found installation directory: $PACKAGE_DIR"
-
-# Create symlinks for all scripts in bin directory
-echo "Setting up command-line tools..."
-BIN_DIR="$PACKAGE_DIR/bin"
-DEST_DIR="$HOME/.local/bin"
-mkdir -p "$DEST_DIR"
-
-# Ensure destination directory is in PATH
-if [[ ":$PATH:" != *":$DEST_DIR:"* ]]; then
-    echo "Adding $DEST_DIR to PATH in your profile..."
-    if [ -f "$HOME/.bashrc" ]; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-        echo "Added to .bashrc"
-    elif [ -f "$HOME/.zshrc" ]; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
-        echo "Added to .zshrc"
-    else
-        echo "Warning: Could not find .bashrc or .zshrc to update PATH"
-        echo "Please add $DEST_DIR to your PATH manually"
-    fi
-fi
-
-# Create symlinks for all executable files in bin
-if [ -d "$BIN_DIR" ]; then
-    for script in "$BIN_DIR"/*; do
-        if [ -f "$script" ] && [ -x "$script" ]; then
-            script_name=$(basename "$script")
-            ln -sf "$script" "$DEST_DIR/$script_name"
-            echo "Linked $script_name"
-        fi
-    done
-else
-    echo "Warning: bin directory not found at $BIN_DIR"
-fi
-
-echo "Installation complete! All commands are now available."
-echo "You may need to restart your terminal for the changes to take effect."
-echo "You can run 'byte-help' to see available commands."
 
