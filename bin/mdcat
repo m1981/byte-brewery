@@ -27,6 +27,7 @@ if [ "$#" -eq 0 ]; then
   echo "  mdcat  file1.js file2.js > output.md"
   echo "  grep -l -r "currentChatIndex" . | xargs mdcat"
   echo "  find . -name '*.tsx' | xargs mdcat"
+  echo "  find . -path '*/src/*.js' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test'"
   exit 1
 fi
 
