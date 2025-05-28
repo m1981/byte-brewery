@@ -206,7 +206,7 @@ else
     if [ -p /dev/stdin ]; then
         # Read from stdin (pipe)
         while read -r file; do
-            if [[ $file =~ \.(ts|tsx)$ ]] && [[ ! $file =~ node_modules ]]; then
+            if [[ $file =~ \.(ts|tsx|js|jsx)$ ]] && [[ ! $file =~ node_modules ]]; then
                 process_file "$file"
             fi
         done
@@ -226,7 +226,7 @@ else
             exit 1
         fi
 
-        find "$1" -type f \( -name "*.ts" -o -name "*.tsx" \) -not -path "*/node_modules/*" | while read -r file; do
+        find "$1" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" | while read -r file; do
             process_file "$file"
         done
     fi
