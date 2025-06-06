@@ -3,6 +3,7 @@ const { version } = require('../package.json');
 console.log(`Taskr v${version}`);
 
 const inquirer = require('inquirer');
+const chalk = require('chalk');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -16,41 +17,26 @@ let packageJson = {};
 let scripts = {};
 
 try {
+    // Get the current working directory
+    const currentDir = process.cwd();
+    const packageJsonPath = path.join(currentDir, 'package.json');
+
     if (fs.existsSync(packageJsonPath)) {
         packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         scripts = packageJson.scripts || {};
+        console.log(`Found package.json in ${currentDir}`);
     } else {
-        // Try to find package.json in parent directories
-        let currentDir = scriptDir;
-        let foundPackageJson = false;
-
-        while (currentDir !== path.parse(currentDir).root && !foundPackageJson) {
-            const parentDir = path.dirname(currentDir);
-            const parentPackageJsonPath = path.join(parentDir, 'package.json');
-
-            if (fs.existsSync(parentPackageJsonPath)) {
-                packageJson = JSON.parse(fs.readFileSync(parentPackageJsonPath, 'utf8'));
-                scripts = packageJson.scripts || {};
-                console.log(`Found package.json in ${parentDir}`);
-                foundPackageJson = true;
-            }
-
-            currentDir = parentDir;
-        }
-
-        if (!foundPackageJson) {
-            console.error('Error: Could not find package.json in this directory or any parent directory.');
-            console.log('Please run this script from a directory containing a package.json file or its subdirectory.');
+        console.error('Error: Could not find package.json in the current directory.');
+        console.log('Please run this script from a directory containing a package.json file.');
             process.exit(1);
         }
-    }
 } catch (error) {
     console.error(`Error reading package.json: ${error.message}`);
     process.exit(1);
 }
 
 // Path to favorites file
-const favoritesPath = path.join(scriptDir, '.favorites');
+const favoritesPath = path.join(process.cwd(), '.favorites');
 
 // Read favorites file if it exists
 let favorites = [];
@@ -72,25 +58,28 @@ if (scriptNames.length === 0) {
     process.exit(0);
 }
 
-// Create choices for inquirer with favorites at the top
 function buildChoices() {
-    return [
-        ...(favorites.length > 0 ? [new inquirer.Separator('--- FAVORITES ---')] : []),
+  return [
+    ...favorites.length > 0 ? [new inquirer.Separator(chalk.yellow('★ FAVORITES ★'))] : [],
         ...favorites.map(name => ({
-            name: `★ ${name}: ${scripts[name]}`,
+      name: `${chalk.yellow('★')} ${chalk.green(name)}: ${chalk.dim(scripts[name])}`,
             value: name
         })),
-        ...favorites.length > 0 ? [new inquirer.Separator('--- ALL SCRIPTS ---')] : [],
+    ...favorites.length > 0 ? [new inquirer.Separator(chalk.blue('ALL SCRIPTS'))] : [],
         ...scriptNames
             .filter(name => !favorites.includes(name))
             .map(name => ({
-                name: `${name}: ${scripts[name]}`,
+        name: `${chalk.green(name)}: ${chalk.dim(scripts[name])}`,
                 value: name
             })),
         new inquirer.Separator(),
         {
-            name: '✎ Manage favorites...',
+      name: chalk.magenta('✎ Manage favorites...'),
             value: 'MANAGE_FAVORITES'
+    },
+    {
+      name: chalk.red('✖ Exit'),
+      value: 'EXIT'
         }
     ];
 }
@@ -99,7 +88,7 @@ let choices = buildChoices();
 
 // Function to run the main menu
 function showMainMenu() {
-    prompt([
+    inquirer.prompt([
         {
             type: 'list',
             name: 'scriptName',
