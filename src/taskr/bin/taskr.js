@@ -7,6 +7,7 @@ const chalk = require('chalk');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
 
 // Get the directory where the script is located
 const scriptDir = __dirname;
@@ -58,13 +59,28 @@ if (scriptNames.length === 0) {
     process.exit(0);
 }
 
+// Set up keyboard input once at the start
+    readline.emitKeypressEvents(process.stdin);
+    if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+    }
+
+// Increase max listeners to avoid warnings
+process.stdin.setMaxListeners(20);
+
+// Global variable to track the current prompt UI
+let currentPromptUI = null;
+let keypressHandlerActive = false;
+
 function buildChoices() {
+    const favoriteChoices = favorites.map((name, index) => ({
+        name: `${chalk.yellow(index < 9 ? `[${index + 1}]` : '★')} ${chalk.green(name)}: ${chalk.dim(scripts[name])}`,
+        value: name
+    }));
+
   return [
     ...favorites.length > 0 ? [new inquirer.Separator(chalk.yellow('★ FAVORITES ★'))] : [],
-        ...favorites.map(name => ({
-      name: `${chalk.yellow('★')} ${chalk.green(name)}: ${chalk.dim(scripts[name])}`,
-            value: name
-        })),
+        ...favoriteChoices,
     ...favorites.length > 0 ? [new inquirer.Separator(chalk.blue('ALL SCRIPTS'))] : [],
         ...scriptNames
             .filter(name => !favorites.includes(name))
@@ -78,7 +94,7 @@ function buildChoices() {
             value: 'MANAGE_FAVORITES'
     },
     {
-      name: chalk.red('✖ Exit'),
+            name: chalk.red('✖ Exit [q]'),
       value: 'EXIT'
         }
     ];
@@ -86,9 +102,80 @@ function buildChoices() {
 
 let choices = buildChoices();
 
+// Global keypress handler
+function setupKeypressHandler() {
+    if (keypressHandlerActive) return;
+
+    keypressHandlerActive = true;
+
+    // Set up the global keypress handler
+    process.stdin.on('keypress', handleKeypress);
+}
+
+function removeKeypressHandler() {
+    if (!keypressHandlerActive) return;
+
+    process.stdin.removeListener('keypress', handleKeypress);
+    keypressHandlerActive = false;
+}
+
+function handleKeypress(str, key) {
+    // Only process keypresses when we have an active prompt
+    if (!currentPromptUI) return;
+
+    // 'q' to exit
+    if (key.name === 'q') {
+        currentPromptUI.close();
+        process.exit(0);
+    }
+
+    // Number keys for favorites
+    const num = parseInt(str);
+    if (!isNaN(num) && num >= 1 && num <= 9 && num <= favorites.length) {
+        currentPromptUI.close();
+        currentPromptUI = null;
+        runScript(favorites[num - 1]);
+    }
+}
+
+// Function to run a script
+function runScript(scriptName) {
+    if (scriptName === 'EXIT') {
+        process.exit(0);
+        }
+
+    if (scriptName === 'MANAGE_FAVORITES') {
+                showFavoritesMenu();
+                return;
+            }
+
+    const command = `pnpm run ${scriptName}`;
+            console.log(`\nExecuting: ${command}\n`);
+
+            try {
+        // Temporarily disable raw mode while running the script
+        if (process.stdin.isTTY) {
+            process.stdin.setRawMode(false);
+        }
+
+                execSync(command, { stdio: 'inherit', cwd: path.dirname(packageJsonPath) });
+            } catch (error) {
+                console.error('Script execution failed\n');
+    } finally {
+        // Re-enable raw mode after script completes
+        if (process.stdin.isTTY) {
+            process.stdin.setRawMode(true);
+        }
+            }
+            showMainMenu();
+}
+
 // Function to run the main menu
 function showMainMenu() {
-    inquirer.prompt([
+    // Make sure keypress handler is set up
+    setupKeypressHandler();
+
+    const prompt = inquirer.prompt([
         {
             type: 'list',
             name: 'scriptName',
@@ -96,27 +183,15 @@ function showMainMenu() {
             choices,
             pageSize: 15
         }
-    ])
-        .then(answers => {
-            if (answers.scriptName === 'MANAGE_FAVORITES') {
-                showFavoritesMenu();
-                return;
-            }
+    ]);
 
-            const command = `pnpm run ${answers.scriptName}`;
-            console.log(`\nExecuting: ${command}\n`);
+    // Store reference to the current prompt UI
+    currentPromptUI = prompt.ui;
 
-            try {
-                execSync(command, { stdio: 'inherit', cwd: path.dirname(packageJsonPath) });
-            } catch (error) {
-                console.error('Script execution failed');
-            }
-
-            // Return to the menu after script execution
-            console.log('\nReturning to script menu...\n');
-            showMainMenu();
-        })
-        .catch(error => {
+    prompt.then(answers => {
+        currentPromptUI = null;
+        runScript(answers.scriptName);
+    }).catch(error => {
             console.error('An error occurred:', error.message);
             process.exit(1);
         });
@@ -124,6 +199,9 @@ function showMainMenu() {
 
 // Function to manage favorites
 function showFavoritesMenu() {
+    // We don't need keypress shortcuts in the favorites menu
+    removeKeypressHandler();
+
     const allScripts = Object.keys(scripts);
 
     inquirer
@@ -164,6 +242,19 @@ function showFavoritesMenu() {
             showMainMenu(); // Return to main menu even if there's an error
         });
 }
+
+// Clean up on exit
+process.on('exit', () => {
+    if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+    }
+    removeKeypressHandler();
+});
+
+// Handle Ctrl+C
+process.on('SIGINT', () => {
+    process.exit(0);
+});
 
 // Start the application
 showMainMenu();
