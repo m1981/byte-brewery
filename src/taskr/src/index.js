@@ -136,8 +136,6 @@ function showMainMenu() {
     const favorites = loadFavorites();
     const choices = createChoices(scripts, favorites);
 
-    console.log(chalk.blue(`\nTaskr - Using ${chalk.bold(packageManager)}\n`));
-
     inquirer
         .prompt([
             {
@@ -150,7 +148,8 @@ function showMainMenu() {
         ])
         .then(answers => {
             if (answers.scriptName === 'MANAGE_FAVORITES') {
-                manageFavorites(scripts, () => showMainMenu());
+                // Pass showMainMenu as the callback
+                manageFavorites(scripts, showMainMenu);
                 return;
             }
 
@@ -160,9 +159,7 @@ function showMainMenu() {
             }
 
             executeScript(answers.scriptName, packageManager);
-
-            // Return to the menu after script execution
-            showMainMenu();
+            showMainMenu(); // Continue the loop
         })
         .catch(error => {
             console.error(chalk.red('Error:'), error);

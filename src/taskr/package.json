@@ -6,6 +6,15 @@
   "bin": {
     "taskr": "./bin/taskr.js"
   },
+  "scripts": {
+    "proxy": "node scripts/server.js",
+    "dev:host": "vite --host --force",
+    "build": "NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
+    "build:vite": "NODE_OPTIONS='--max_old_space_size=2192' vite build",
+    "dead": "pnpm build && node scripts/analyze-maps.js",
+    "sentry:upload": "node scripts/upload-to-sentry.js",
+    "test": "NODE_ENV=test vitest run"
+  },
   "type": "commonjs",
   "keywords": ["npm", "scripts", "pnpm", "cli", "interactive"],
   "author": "Michal",

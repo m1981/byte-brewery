@@ -77,14 +77,15 @@ function manageFavorites(scripts, callback) {
             console.log(chalk.green('\n✓ Favorites updated successfully!\n'));
 
             if (typeof callback === 'function') {
-                callback();
+                // Ensure there's a slight delay to prevent UI issues
+                setTimeout(callback, 100);
             }
         })
         .catch(error => {
             console.error(chalk.red('Error:'), error);
 
             if (typeof callback === 'function') {
-                callback();
+                setTimeout(callback, 100);
             }
         });
 }
