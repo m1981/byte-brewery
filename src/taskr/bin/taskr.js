@@ -149,7 +149,11 @@ function runScript(scriptName) {
                 return;
             }
 
-    const command = `pnpm run ${scriptName}`;
+    // Get the current working directory where package.json is located
+    const currentDir = process.cwd();
+
+    // Use npm-run-path to ensure the correct environment
+    const command = `npm run ${scriptName}`;
             console.log(`\nExecuting: ${command}\n`);
 
             try {
@@ -158,7 +162,12 @@ function runScript(scriptName) {
             process.stdin.setRawMode(false);
         }
 
-                execSync(command, { stdio: 'inherit', cwd: path.dirname(packageJsonPath) });
+        // Execute the command in the current directory
+        execSync(command, {
+            stdio: 'inherit',
+            cwd: currentDir,
+            env: { ...process.env, FORCE_COLOR: true }
+        });
             } catch (error) {
                 console.error('Script execution failed\n');
     } finally {
