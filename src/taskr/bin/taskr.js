@@ -46,6 +46,8 @@ try {
         favorites = fs.readFileSync(favoritesPath, 'utf8')
             .split('\n')
             .filter(line => line.trim() && scripts[line.trim()]);
+
+        cleanFavoritesFile();
     }
 } catch (error) {
     console.warn('Could not read favorites file:', error.message);
@@ -204,6 +206,24 @@ function showMainMenu() {
             console.error('An error occurred:', error.message);
             process.exit(1);
         });
+}
+
+function cleanFavoritesFile() {
+    // Check if favorites in memory differ from file content
+    if (fs.existsSync(favoritesPath)) {
+        const fileContent = fs.readFileSync(favoritesPath, 'utf8')
+            .split('\n')
+            .filter(line => line.trim());
+
+        // If we filtered out some favorites that don't exist anymore
+        if (fileContent.length > favorites.length) {
+            console.log(chalk.yellow('Notice: Some favorite scripts no longer exist in package.json'));
+            console.log(chalk.yellow('Cleaning up favorites file...'));
+
+            // Update the file with only valid favorites
+            fs.writeFileSync(favoritesPath, favorites.join('\n'));
+        }
+    }
 }
 
 // Function to manage favorites
