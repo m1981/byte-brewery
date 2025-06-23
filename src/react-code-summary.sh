@@ -219,7 +219,5 @@ else
             echo '       find . -path '*/src/*.ts' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test' | rsum'
             exit 1
         fi
-
-        done
     fi
 fi
