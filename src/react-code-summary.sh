@@ -1,10 +1,10 @@
-#!/bin/bash
+  #!/bin/bash
 
 process_file() {
     local file="$1"
     local relative_file=$(basename "$file")
 
-    echo "$relative_file"
+    echo "$file"
 
     #  Imporrt s (typically at the top)
     local imports=$(grep -E "^import .*" "$file" | sed 's/ as .*//g' | sort)
@@ -214,20 +214,12 @@ else
         # Original directory processing logic
         if [ -z "$1" ]; then
             echo "Error: Please provide a directory path or pipe input"
-            echo "Usage: rsum <directory_path>"
-            echo "       rsum --test <test_directory_path>"
+            echo "Usage: rsum "
             echo "       find . -name \"*.ts\" | rsum"
-            echo '       grep  -E "\.(js|ts)$" | rsum'
+            echo '       find . -path '*/src/*.ts' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test' | rsum'
             exit 1
         fi
 
-        if [ ! -d "$1" ]; then
-            echo "Error: '$1' is not a valid directory"
-            exit 1
-        fi
-
-        find "$1" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" | while read -r file; do
-            process_file "$file"
         done
     fi
 fi
