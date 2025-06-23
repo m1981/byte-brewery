@@ -150,7 +150,7 @@ process_file() {
         echo "$exports"
     fi
 
-    echo -e "\n"
+    prinft "\n"
 }
 
 # Function to run regression test
