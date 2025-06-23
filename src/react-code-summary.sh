@@ -9,6 +9,7 @@ process_file() {
     #  Imporrt s (typically at the top)
     local imports=$(grep -E "^import .*" "$file" | sed 's/ as .*//g' | sort)
     if [ ! -z "$imports" ]; then
+        echo
         echo "Imports:"
         echo "$imports"
     fi
@@ -144,13 +145,15 @@ process_file() {
     fi
 
     # Exported Items (usually at the end)
-    local exports=$(grep -E "^export (const|default|function)" "$file")
+    local exports=$(grep -E "^export (const|default|function|{)" "$file")
     if [ ! -z "$exports" ]; then
+        echo
         echo "Exports:"
         echo "$exports"
     fi
 
-    prinft "\n\n"
+    echo
+    echo
 }
 
 # Function to run regression test
