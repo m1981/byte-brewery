@@ -4,6 +4,7 @@
     "mdcat": "Formats source files into markdown for GPT chat",
     "pext": "Extracts User prompts from ChatGPT chats (in json)",
     "aug": "Augment AI Pipeline - Process chat exports through extraction, analysis, and schema generation",
-    "rsum": "React Summary - Analyzes React component and test files to generate structured summaries"
+    "rsum": "React Summary - Analyzes React component and test files to generate structured summaries",
+    "taskr": "Interactive script runner with favorites for npm/pnpm projects"
   }
 }

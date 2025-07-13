@@ -17,6 +17,45 @@ install_python_deps() {
     fi
 }
 
+# Function to install Python package
+install_python_package() {
+    echo "Installing Python package..."
+    cd "$TMP_DIR"
+    
+    # Try with --user flag first
+    if pip3 install --user . >/dev/null 2>&1; then
+        echo "Package installed successfully."
+    # If that fails, try with break-system-packages
+    elif pip3 install --user --break-system-packages . >/dev/null 2>&1; then
+        echo "Package installed with --break-system-packages flag."
+    # If both fail, create a virtual environment
+    else
+        echo "Creating virtual environment for byte-brewery..."
+        VENV_DIR="$HOME/.local/venvs/byte-brewery"
+        python3 -m venv "$VENV_DIR"
+        source "$VENV_DIR/bin/activate"
+        pip3 install .
+        deactivate
+        
+        # Create wrapper scripts that activate the venv before running
+        for script in "$INSTALL_DIR"/aug*; do
+            if [ -f "$script" ]; then
+                mv "$script" "${script}.original"
+                cat > "$script" << EOF
+#!/bin/bash
+source "$VENV_DIR/bin/activate"
+"${script}.original" "\$@"
+deactivate
+EOF
+                chmod +x "$script"
+            fi
+        done
+        echo "Package installed in virtual environment at $VENV_DIR"
+    fi
+    
+    cd - > /dev/null
+}
+
 # Create installation directory
 INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$INSTALL_DIR"
@@ -30,6 +69,9 @@ git clone https://github.com/m1981/byte-brewery.git "$TMP_DIR"
 if [ -f "$TMP_DIR/requirements.txt" ]; then
     install_python_deps
 fi
+
+# Install the Python package
+install_python_package
 
 # Copy all scripts to installation directory
 echo "Installing scripts to $INSTALL_DIR..."
