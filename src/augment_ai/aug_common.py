@@ -139,3 +139,24 @@ def extract_json_from_xml(xml_file):
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         raise
+
+
+def extract_user_prompts_markdown(json_data: dict) -> str:
+    """Extract only user prompts in markdown format."""
+    all_prompts = []
+    
+    for conv_id, conversation in json_data.get('conversations', {}).items():
+        title = f"# Conversation: {conv_id}\n"
+        created = conversation.get('createdAtIso', 'Unknown')
+        title += f"**Created:** {created}\n\n"
+        
+        prompts = []
+        for i, message in enumerate(conversation.get('chatHistory', []), 1):
+            request = message.get('request_message', '')
+            if request:
+                prompts.append(f"## Prompt {i}\n\n{request}\n")
+        
+        if prompts:
+            all_prompts.append(title + "\n".join(prompts))
+    
+    return "\n\n" + "="*80 + "\n\n".join(all_prompts)

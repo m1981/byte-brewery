@@ -102,6 +102,7 @@ Examples:
   aug input.xml                     # Process with default output directory
   aug input.xml -o /path/to/output  # Process with custom output directory
   aug input.xml --extract-responses <conversation_id>  # Extract responses from specific conversation
+  aug input.xml --extract-user-prompts  # Extract only user prompts in markdown format
         """
     )
     parser.add_argument("input_xml", 
@@ -112,6 +113,8 @@ Examples:
                        help="Output directory for all generated files (default: output)")
     parser.add_argument("--extract-responses",
                        help="Extract responses from specific conversation ID")
+    parser.add_argument("--extract-user-prompts", action="store_true",
+                       help="Extract only user prompts in markdown format")
     return parser
 
 def main():
@@ -140,6 +143,16 @@ def main():
         with open(exchange_file, 'w', encoding='utf-8') as f:
             f.write(exchanges)
         print(f"Conversation exchanges extracted to {exchange_file}")
+        sys.exit(0)
+
+    # If user prompts extraction requested
+    if args.extract_user_prompts:
+        from .aug_common import extract_user_prompts_markdown
+        user_prompts = extract_user_prompts_markdown(chat_data)
+        prompts_file = f"{args.output_dir}/user_prompts.md"
+        with open(prompts_file, 'w', encoding='utf-8') as f:
+            f.write(user_prompts)
+        print(f"User prompts extracted to {prompts_file}")
         sys.exit(0)
 
     # Run regular pipeline
