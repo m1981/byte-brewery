@@ -21,6 +21,34 @@ process_file() {
         echo "$types"
     fi
 
+    # Class Definitions (after types/interfaces)
+    local class_defs=$(grep -E "^(export )?class [A-Z][a-zA-Z]*" "$file")
+    if [ ! -z "$class_defs" ]; then
+        echo "Class Definitions:"
+        echo "$class_defs"
+    fi
+
+    # Constructor Methods
+    local constructors=$(grep -E "^[[:space:]]*constructor\(" "$file")
+    if [ ! -z "$constructors" ]; then
+        echo "Constructors:"
+        echo "$constructors"
+    fi
+
+    # Class Methods (public/private/async)
+    local class_methods=$(grep -E "^[[:space:]]*(public |private |protected )?(async )?[a-zA-Z_][a-zA-Z0-9_]*\(" "$file" | grep -v "constructor")
+    if [ ! -z "$class_methods" ]; then
+        echo "Class Methods:"
+        echo "$class_methods"
+    fi
+
+    # Static Methods
+    local static_methods=$(grep -E "^[[:space:]]*static (async )?[a-zA-Z_][a-zA-Z0-9_]*\(" "$file")
+    if [ ! -z "$static_methods" ]; then
+        echo "Static Methods:"
+        echo "$static_methods"
+    fi
+
     # For test files, check test setup first
     if [[ "$file" == *".test."* || "$file" == *".spec."* ]]; then
         # Vitest Mocks (usually set up early)
