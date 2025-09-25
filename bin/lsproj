@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# lsproj - Simple SvelteKit Project File Lister
+# Usage:
+#   tool $(lsproj)        # Direct use with tools
+#   lsproj | xargs tool   # Use with xargs
+
+CONFIG_FILE=.projlist
+EXCLUDE_DIRS="node_modules .svelte-kit build .git"
+
+# Check if config file exists
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo >&2 "Error: Config file '$CONFIG_FILE' not found."
+    echo >&2 "Please create a .projlist file with patterns like:"
+    echo >&2 "*.ts"
+    echo >&2 "*.svelte"
+    exit 1
+fi
+
+# Build exclude pattern
+EXCLUDE_PATTERN=""
+for dir in $EXCLUDE_DIRS; do
+    EXCLUDE_PATTERN="$EXCLUDE_PATTERN -not -path './$dir/*'"
+done
+
+# Build find expression from patterns in config file
+FIND_EXPR=""
+FIRST=true
+
+while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+    # Skip empty lines and comments
+    [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+
+    if [ "$FIRST" = true ]; then
+        FIND_EXPR="-name \"$pattern\""
+        FIRST=false
+    else
+        FIND_EXPR="$FIND_EXPR -o -name \"$pattern\""
+    fi
+done < "$CONFIG_FILE"
+
+# Execute find command
+eval "find . -type f \( $FIND_EXPR \) $EXCLUDE_PATTERN"
