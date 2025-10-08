@@ -7,7 +7,7 @@ from pathlib import Path
 # Fix imports to use relative paths within the package
 from .aug_extract_json import extract_json_from_xml
 from .aug_extract_chats import extract_human_prompts
-from .aug_common import extract_conversation_exchanges  # Update import
+from .aug_common import extract_conversation_exchanges, clean_chat_data  # Update import
 from .aug_process_prompts import group_prompts_by_conversation, extract_meaningful_content
 from .aug_gen_schema import generate_schema
 from .aug_common import save_json_output
@@ -51,11 +51,15 @@ def process_chat_pipeline(input_xml: str, output_dir: str) -> bool:
         print(f"Processing '{input_xml}'...")
         print("Step 1: Extracting JSON from XML...")
         chat_data = extract_json_from_xml(input_xml)
-        save_json_output(chat_data, f"{output_dir}/chat_state.json")
+        
+        # Debug: Clean the data before saving
+        print("🧹 DEBUG: Cleaning workspace_file_chunks from chat_data before saving...")
+        cleaned_chat_data = clean_chat_data(chat_data)
+        save_json_output(cleaned_chat_data, f"{output_dir}/chat_state.json")
 
         # Step 2: Extract prompts
         print("Step 2: Extracting prompts...")
-        prompts = extract_human_prompts(chat_data)
+        prompts = extract_human_prompts(cleaned_chat_data)  # Use cleaned data
         if not prompts:
             print("Warning: No prompts found in chat data", file=sys.stderr)
         save_json_output(prompts, f"{output_dir}/prompts.json")

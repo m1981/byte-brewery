@@ -82,8 +82,9 @@ def extract_conversation_exchanges(json_data: dict, conversation_id: str) -> str
 
     exchanges = []
     for message in conversation.get('chatHistory', []):
+        # Use only the essential fields - avoid duplication
         request = message.get('request_message', '')
-        response = message.get('response_text', '')
+        response = message.get('response_text', '')  # Primary source
         
         if request or response:
             exchange = []
@@ -95,6 +96,18 @@ def extract_conversation_exchanges(json_data: dict, conversation_id: str) -> str
 
     return "\n\n---\n\n".join(exchanges)
 
+def clean_message_data(message_data: dict) -> dict:
+    """Clean message data by removing workspace_file_chunks and other noise."""
+    cleaned = message_data.copy()
+    
+    # Remove workspace file chunks and other verbose fields
+    cleaned.pop('workspace_file_chunks', None)
+    cleaned.pop('structured_output_nodes', None)  # Duplicate of response_text
+    cleaned.pop('structured_request_nodes', None)  # Duplicate of request_message
+    cleaned.pop('rich_text_json_repr', None)       # Another duplicate format
+    
+    return cleaned
+
 def extract_human_prompts(json_data):
     """Extract all human prompts from the chat JSON data."""
     prompts = []
@@ -102,17 +115,15 @@ def extract_human_prompts(json_data):
     for conv_id, conversation in json_data.get("conversations", {}).items():
         for message in conversation.get("chatHistory", []):
             if "request_message" in message and message["request_message"].strip():
+                # Clean the message data
+                cleaned_message = clean_message_data(message)
+                
                 prompt_data = {
-                    "prompt": message["request_message"],
-                    "request_id": message.get("request_id", ""),
+                    "prompt": cleaned_message["request_message"],
+                    "request_id": cleaned_message.get("request_id", ""),
                     "conversation_id": conv_id,
-                    "timestamp": message.get("timestamp", "")
+                    "timestamp": cleaned_message.get("timestamp", "")
                 }
-
-                # Try to extract timestamp from conversation if not in message
-                if not prompt_data["timestamp"] and "lastInteractedAtIso" in conversation:
-                    prompt_data["timestamp"] = conversation["lastInteractedAtIso"]
-
                 prompts.append(prompt_data)
 
     return prompts
@@ -132,7 +143,8 @@ def extract_json_from_xml(xml_file):
                 except:
                     json_str = value
 
-                return json.loads(json_str)
+                json_data = json.loads(json_str)
+                return json_data
 
         raise ValueError("No CHAT_STATE entry found")
 
@@ -160,3 +172,36 @@ def extract_user_prompts_markdown(json_data: dict) -> str:
             all_prompts.append(title + "\n".join(prompts))
     
     return "\n\n" + "="*80 + "\n\n".join(all_prompts)
+
+def clean_chat_data(json_data: dict) -> dict:
+    """Clean entire chat data structure by removing workspace_file_chunks."""
+    cleaned_data = json_data.copy()
+    
+    total_chunks_removed = 0
+    total_rich_text_removed = 0
+    total_feedback_removed = 0
+    
+    for conv_id, conversation in cleaned_data.get('conversations', {}).items():
+        # Remove feedbackStates at conversation level
+        if 'feedbackStates' in conversation:
+            total_feedback_removed += len(conversation['feedbackStates'])
+            del conversation['feedbackStates']
+        
+        for message in conversation.get('chatHistory', []):
+            if 'workspace_file_chunks' in message:
+                chunk_count = len(message['workspace_file_chunks'])
+                total_chunks_removed += chunk_count
+                del message['workspace_file_chunks']
+            
+            if 'rich_text_json_repr' in message:
+                total_rich_text_removed += 1
+                del message['rich_text_json_repr']
+            
+            # Also clean other redundant fields
+            message.pop('structured_output_nodes', None)
+            message.pop('structured_request_nodes', None)
+    
+    if total_chunks_removed > 0 or total_rich_text_removed > 0 or total_feedback_removed > 0:
+        print(f"✅ Cleaned {total_chunks_removed} workspace_file_chunks, {total_rich_text_removed} rich_text_json_repr, and {total_feedback_removed} feedbackStates from dataset")
+    
+    return cleaned_data
