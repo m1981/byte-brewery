@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """
 A tool to generate a readable Markdown recap from an Agent AI state file.
-
-This script parses a JSON state file, extracts conversation histories,
-and generates a structured, navigable Markdown document. It filters out
-agent file-edit code blocks for cleaner output.
 """
 import sys
 import re
@@ -17,74 +13,77 @@ from typing import Dict, Any, List, Optional, Tuple
 
 # --- Text Processing Utilities ---
 
-def filter_file_edits(text: str) -> str:
+def filter_file_edits(text: str, debug: bool = False) -> str:
     """
     Finds agent-generated file edit blocks and replaces them with a summary message.
     """
     if not text:
         return ""
 
-    # Regex to find code blocks with path and mode attributes.
-    # It's non-greedy and handles multiline content.
+    # Corrected Regex:
+    # Matches the actual backticks ``` instead of the escaped representation.
     pattern = re.compile(
-        r"`` `(\w*)\s*path=([^\s]+)\s+mode=\w+\n.*?\n`` `",
+        r"```[^\n]*?path=([^\s]+)\s+mode=\w+.*?```",
         re.DOTALL
     )
 
+    if debug:
+        print("\n--- REGEX DEBUG START ---", file=sys.stderr)
+        print(f"Original Text (first 300 chars):\n---\n{text[:300]}...\n---", file=sys.stderr)
+        matches = list(pattern.finditer(text))
+        if not matches:
+            print("Regex found NO matches for file edit blocks.", file=sys.stderr)
+        else:
+            print(f"Regex found {len(matches)} match(es):", file=sys.stderr)
+            for i, match in enumerate(matches):
+                path = match.group(1)
+                print(f"  - Match {i + 1}: Found path='{path}'. Replacing block.", file=sys.stderr)
+        print("--- REGEX DEBUG END ---\n", file=sys.stderr)
+
     def replacer(match: re.Match) -> str:
-        """Replacement function to create a summary line."""
-        path = match.group(2)
+        """Replacement function to create a summary placeholder."""
+        path = match.group(1)
         return f"\n> *[File edit performed on `{path}`]*\n"
 
     return pattern.sub(replacer, text)
 
 
 def clean_text_content(text: Optional[str]) -> str:
-    """
-    Non-destructively clean text content for Markdown display.
-    Handles JSON escape sequences and filters file edits.
-    """
+    """Non-destructively clean text content for Markdown display."""
     if not text:
         return ""
 
     text = str(text)
 
-    # Decode unicode escapes like \u2705 first
-    # This regex-based approach is safer than encode/decode for malformed strings
     def decode_unicode_escapes(match):
         try:
             return chr(int(match.group(1), 16))
         except (ValueError, TypeError):
-            return match.group(0)  # Return original if conversion fails
+            return match.group(0)
 
     text = re.sub(r'\\u([0-9a-fA-F]{4})', decode_unicode_escapes, text)
 
-    # Normalize escaped newlines to actual newlines
     text = text.replace('\\n', '\n')
-
-    # Remove only ASCII control characters, preserving tabs and newlines
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
 
     return text
 
 
 def smart_truncate(text: str, max_length: int) -> str:
-    """
-    Truncate text for a summary, prioritizing the first line and then
-    falling back to sentence or word boundaries.
-    """
+    """Truncate text for a summary, prioritizing the first meaningful line."""
     if not text:
         return ""
 
-    first_line = next((line for line in text.splitlines() if line.strip()), "").strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith('>*[File edit')]
+    first_meaningful_line = lines[0] if lines else ""
 
-    if len(first_line) > max_length:
-        return first_line[:max_length].strip() + "..."
-    if len(first_line) > 60:
-        return first_line
+    if len(first_meaningful_line) > max_length:
+        return first_meaningful_line[:max_length].strip() + "..."
+    if len(first_meaningful_line) > 60:
+        return first_meaningful_line
 
     if len(text) <= max_length:
-        return text.replace('\n', ' ')
+        return text.replace('\n', ' ').strip()
 
     truncated = text[:max_length]
 
@@ -96,13 +95,13 @@ def smart_truncate(text: str, max_length: int) -> str:
             best_cut = max(best_cut, pos + len(ending))
 
     if best_cut > 0:
-        return text[:best_cut].replace('\n', ' ') + "..."
+        return text[:best_cut].replace('\n', ' ').strip() + "..."
 
     last_space = truncated.rfind(' ')
     if last_space > max_length * 0.7:
-        return text[:last_space].replace('\n', ' ') + "..."
+        return text[:last_space].replace('\n', ' ').strip() + "..."
 
-    return text[:max_length].replace('\n', ' ') + "..."
+    return text[:max_length].replace('\n', ' ').strip() + "..."
 
 
 # --- Markdown Generation ---
@@ -147,7 +146,8 @@ def _parse_iso_date(date_str: str) -> Optional[datetime]:
         return None
 
 
-def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str]) -> str:
+def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool,
+                                   debug_regex: bool) -> str:
     """Generate a full Markdown recap from the conversation data."""
     conversations = json_data.get("conversations", {})
     since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
@@ -205,18 +205,15 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
 
         for i, msg in enumerate(chat_history, 1):
             request_clean = clean_text_content(msg.get("request_message"))
-
-            # Clean and then filter the response
             response_clean = clean_text_content(msg.get("response_text"))
-            response_filtered = filter_file_edits(response_clean)
+
+            response_to_display = response_clean if show_edits else filter_file_edits(response_clean, debug=debug_regex)
 
             status = msg.get("status", "unknown")
             timestamp = msg.get("timestamp", "")
 
-            status_icon = {
-                "success": "✅", "error": "❌", "pending": "⏳",
-                "draft": "📝", "cancelled": "🚫"
-            }.get(status, "❓")
+            status_icon = {"success": "✅", "error": "❌", "pending": "⏳", "draft": "📝", "cancelled": "🚫"}.get(status,
+                                                                                                             "❓")
 
             md.append(f"\n### Turn {i} ({status.capitalize()}) {status_icon}")
             if timestamp:
@@ -224,15 +221,13 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
 
             if request_clean:
                 summary = smart_truncate(request_clean, 200)
-                md.append(f'<details>')
-                md.append(f'  <summary><strong>Request:</strong> {summary}</summary>')
-                md.append(f'\n```\n{request_clean}\n```\n</details>\n')
+                md.append(
+                    f'<details>\n  <summary><strong>Request:</strong> {summary}</summary>\n\n```\n{request_clean}\n```\n</details>\n')
 
-            if response_filtered:
-                summary = smart_truncate(response_filtered, 300)
-                md.append(f'<details>')
-                md.append(f'  <summary><strong>Response:</strong> {summary}</summary>')
-                md.append(f'\n{response_filtered}\n</details>\n')
+            if response_to_display.strip():
+                summary = smart_truncate(response_to_display, 300)
+                md.append(
+                    f'<details>\n  <summary><strong>Response:</strong> {summary}</summary>\n\n{response_to_display}\n</details>\n')
 
     return "\n".join(md)
 
@@ -245,24 +240,20 @@ def main():
         description="Generate a readable Markdown recap from an Agent AI state file.",
         formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument(
-        "input_file", nargs='?', default='-',
-        help="Input JSON file path. Reads from stdin if not provided."
-    )
-    parser.add_argument(
-        "-o", "--output",
-        help="Output file path. Writes to stdout if not provided."
-    )
-    parser.add_argument(
-        "--since",
-        help="Filter conversations created on or after this date (YYYY-MM-DD)."
-    )
+    parser.add_argument("input_file", nargs='?', default='-',
+                        help="Input JSON file path. Reads from stdin if not provided.")
+    parser.add_argument("-o", "--output", help="Output file path. Writes to stdout if not provided.")
+    parser.add_argument("--since", help="Filter conversations created on or after this date (YYYY-MM-DD).")
+    parser.add_argument("--show-edits", action="store_true",
+                        help="Include full content of agent file edits in the output.")
+    parser.add_argument("--debug-regex", action="store_true",
+                        help="Print debug information for the file edit regex filter.")
 
     args = parser.parse_args()
 
     try:
-        # Explicitly handle encoding for robust unicode support
         if args.input_file == '-':
+            sys.stdin.reconfigure(encoding='utf-8')
             json_data = json.load(sys.stdin)
         else:
             with open(args.input_file, 'r', encoding='utf-8') as f:
@@ -271,7 +262,7 @@ def main():
         print(f"Error reading input file: {e}", file=sys.stderr)
         sys.exit(1)
 
-    markdown_output = extract_conversations_markdown(json_data, args.since)
+    markdown_output = extract_conversations_markdown(json_data, args.since, args.show_edits, args.debug_regex)
 
     if args.output:
         try:
@@ -282,7 +273,6 @@ def main():
             print(f"Error writing to output file: {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        # Ensure stdout is configured for UTF-8
         sys.stdout.reconfigure(encoding='utf-8')
         print(markdown_output)
 
