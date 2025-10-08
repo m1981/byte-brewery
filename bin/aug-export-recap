@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 A tool to generate a readable Markdown recap from an Agent AI state file.
+This version uses a streaming approach to handle very large files without high memory usage.
 """
 import sys
 import re
@@ -8,18 +9,19 @@ import argparse
 import json
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple, NamedTuple
+from typing import Dict, Any, List, Optional, Tuple, NamedTuple, TextIO
 
-# --- Constants ---
+# --- Constants and Data Structures ---
 TRUNCATION_REQUEST_LENGTH_THRESHOLD = 250
+TRUNCATION_RESPONSE_LENGTH_THRESHOLD = 500
 TRUNCATION_SUMMARY_MAX_LENGTH = 120
 STATUS_ICONS = {
     "success": "✅", "error": "❌", "pending": "⏳",
     "draft": "📝", "cancelled": "🚫", "unknown": "❓",
 }
+FALLBACK_DATE_STRING = "1970-01-01T00:00:00.000Z"
 
 
-# --- Data Structures ---
 class ConversationTurn(NamedTuple):
     turn_number: int
     request_raw: str
@@ -29,51 +31,34 @@ class ConversationTurn(NamedTuple):
 
 
 # --- Text Processing Utilities ---
-
-def filter_file_edits(text: str, verbose: bool = False) -> str:
+def filter_file_edits(text: str) -> str:
     if not text: return ""
     pattern = re.compile(r"```[^\n]*?path=([^\s]+).*?```", re.DOTALL)
-    if verbose:
-        # ... (verbose logging remains the same)
-        pass
     return pattern.sub(lambda m: f"\n> *[File edit performed on `{m.group(1)}`]*\n", text)
 
 
 def clean_text_content(text: Optional[Any]) -> str:
-    """
-    Robustly clean text content for Markdown display.
-    Handles None, non-string types, and control characters.
-    The JSON loader already handles unicode escapes like \\uXXXX.
-    """
-    if text is None:
-        return ""
-    # Ensure we are working with a string, handling potential non-str data
-    if not isinstance(text, str):
-        text = str(text)
-
-    # The json library handles \uXXXX escapes. We only need to handle literal \n.
+    if text is None: return ""
+    if not isinstance(text, str): text = str(text)
     text = text.replace('\\n', '\n')
-    # Remove ASCII control characters except for tab, newline, and carriage return.
     return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
 
 
 def smart_truncate(text: str, max_length: int) -> str:
     if not text: return ""
-    stripped_text = text.strip()
-    first_line = stripped_text.split('\n', 1)[0].strip()
+    first_line = text.strip().split('\n', 1)[0].strip()
     if not first_line: return "..."
-    if len(first_line) > max_length:
-        return first_line[:max_length].strip() + "..."
-    return first_line
+    return (first_line[:max_length].strip() + "...") if len(first_line) > max_length else first_line
 
 
-# --- Markdown Generation ---
-
+# --- Markdown Generation Helpers (All defined at global scope) ---
 def get_conversation_title(conv: Dict[str, Any]) -> str:
     if name := conv.get("name", "").strip(): return name
     chat_history = conv.get("chatHistory", [])
     if not chat_history: return "Empty Conversation"
-    first_message = chat_history[0].get("request_message", "")
+    first_turn = chat_history[0]
+    if not isinstance(first_turn, dict): return "Malformed Conversation"
+    first_message = first_turn.get("request_message", "")
     if not first_message: return "Untitled Conversation"
     first_line = first_message.split('\n', 1)[0].strip()
     title = re.sub(r'^(act as|please|can you|explain|help me with|i need|tell me)\s+',
@@ -82,13 +67,15 @@ def get_conversation_title(conv: Dict[str, Any]) -> str:
 
 
 def create_markdown_anchor(text: str) -> str:
-    anchor = text.lower()
-    anchor = re.sub(r'[^\w\s-]', '', anchor)
-    anchor = re.sub(r'[-\s]+', '-', anchor).strip('-')
-    return anchor
+    """Create a GitHub-compatible markdown anchor."""
+    # Remove special characters, convert to lowercase, replace spaces with hyphens
+    anchor = re.sub(r'[^\w\s-]', '', text.lower())
+    anchor = re.sub(r'[-\s]+', '-', anchor)
+    return anchor.strip('-')
 
 
-def _parse_iso_date(date_str: str) -> Optional[datetime]:
+
+def _parse_iso_date(date_str: Optional[str]) -> Optional[datetime]:
     if not date_str: return None
     try:
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
@@ -96,122 +83,183 @@ def _parse_iso_date(date_str: str) -> Optional[datetime]:
         return None
 
 
-def _generate_toc(conversations: List[Tuple[str, Dict[str, Any]]]) -> List[str]:
-    if not conversations: return ["*No conversations found for the selected period.*"]
-    md_toc = ["## Table of Contents", ""]
-    for _, conv in conversations:
-        title = get_conversation_title(conv)
-        anchor = create_markdown_anchor(title)
-        created_at = (conv.get("createdAtIso") or "Unknown")[:10]
-        pin_icon = "📌 " if conv.get("isPinned") else ""
-        md_toc.append(f"- [{pin_icon}{title}](#{anchor}) *({created_at})*")
-    return md_toc
-
-
 def _format_turn_content(
         content: str, content_type: str, summary_max_len: int, truncation_threshold: int,
         debug: bool, context_for_debug: str
 ) -> Tuple[str, str]:
     content_len = len(content)
-    contains_code_block = '```' in content
-    should_truncate = content_len > truncation_threshold or (contains_code_block and content_len > 200)
+    should_truncate = content_len > truncation_threshold
 
     if debug:
-        print("\n--- TRUNCATION DEBUG ---", file=sys.stderr)
-        print(f"Context: {context_for_debug}, Type: {content_type}", file=sys.stderr)
-        print(f"  - Content Length: {content_len} chars", file=sys.stderr)
-        print(f"  - Contains '```': {contains_code_block}", file=sys.stderr)
-        print(f"  - Decision: {'TRUNCATE' if should_truncate else 'SHOW FULL'}", file=sys.stderr)
-
-    if should_truncate:
-        summary = smart_truncate(content, summary_max_len)
-        if contains_code_block and "user provided" not in summary.lower():
-            summary = "User provided a large code/log excerpt..."
-        display_text = content[:truncation_threshold] + "\n... [content truncated] ..."
-        if debug: print(f"  - Generated Summary: '{summary}'", file=sys.stderr)
-        return summary, display_text
+        print(f"\n--- TRUNCATION DEBUG ({context_for_debug}, {content_type}) ---", file=sys.stderr)
+        print(
+            f"  - Length: {content_len}, Threshold: {truncation_threshold}, Decision: {'TRUNCATE' if should_truncate else 'SHOW FULL'}",
+            file=sys.stderr)
 
     summary = smart_truncate(content, summary_max_len)
-    if debug: print(f"  - Generated Summary: '{summary}'", file=sys.stderr)
-    return summary, content
+
+    if should_truncate:
+        display_text = content[:truncation_threshold] + "\n... [content truncated] ..."
+        if '```' in content:
+            summary = "User provided a large code/log excerpt..."
+    else:
+        display_text = content
+
+    if debug: print(f"  - Summary: '{summary}'", file=sys.stderr)
+    return summary, display_text
 
 
-def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, verbose: bool, debug_truncation: bool) -> List[
-    str]:
+def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, debug_truncation: bool, conv_title: str) -> List[str]:
     status_icon = STATUS_ICONS.get(turn.status, STATUS_ICONS["unknown"])
     md = [
         f"\n### Turn {turn.turn_number} ({turn.status.capitalize()}) {status_icon}",
-        f"*{turn.timestamp}*\n" if turn.timestamp else "",
     ]
-    debug_context = f"Turn {turn.turn_number}"
 
-    if turn.request_raw.strip():
-        req_summary, req_display = _format_turn_content(
-            turn.request_raw, "Request", TRUNCATION_SUMMARY_MAX_LENGTH,
-            TRUNCATION_REQUEST_LENGTH_THRESHOLD, debug_truncation, debug_context
-        )
-        md.append(
-            f'<details>\n  <summary><strong>Request:</strong> {req_summary}</summary>\n\n```\n{req_display}\n```\n</details>\n')
+    if turn.timestamp:
+        md.append(f"*{turn.timestamp}*\n")
+    else:
+        md.append("")
 
-    response_processed = turn.response_raw if show_edits else filter_file_edits(turn.response_raw, verbose=verbose)
-    if response_processed.strip():
-        resp_summary, resp_display = _format_turn_content(
-            response_processed, "Response", TRUNCATION_SUMMARY_MAX_LENGTH + 100,
-                                            TRUNCATION_REQUEST_LENGTH_THRESHOLD * 2, debug_truncation, debug_context
-        )
-        md.append(
-            f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
+    debug_context = f"'{conv_title}' Turn {turn.turn_number}"
 
-    return [line for line in md if line]
+    # Always include the request section, even if empty
+    req_summary, req_display = _format_turn_content(
+        turn.request_raw, "Request", TRUNCATION_SUMMARY_MAX_LENGTH,
+        TRUNCATION_REQUEST_LENGTH_THRESHOLD, debug_truncation, debug_context
+    )
+    md.append(
+        f'<details>\n  <summary><strong>Request:</strong> {req_summary}</summary>\n\n```\n{req_display}\n```\n</details>\n')
+
+    # Always include the response section, even if empty
+    response_processed = turn.response_raw if show_edits else filter_file_edits(turn.response_raw)
+    resp_summary, resp_display = _format_turn_content(
+        response_processed, "Response", TRUNCATION_SUMMARY_MAX_LENGTH + 100,
+        TRUNCATION_RESPONSE_LENGTH_THRESHOLD, debug_truncation, debug_context
+    )
+    md.append(
+        f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
+
+    # Return all lines, not just non-empty ones
+    return md
 
 
-def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool, verbose: bool,
-                                   debug_truncation: bool) -> str:
+
+# --- Main Streaming Function ---
+def stream_conversation_recap(
+        json_data: Dict[str, Any],
+        output_stream: TextIO,
+        since: Optional[str],
+        show_edits: bool,
+        verbose: bool,
+        debug_truncation: bool
+):
+    def write(text: str):
+        output_stream.write(text + '\n')
+
     conversations = json_data.get("conversations", {})
     if not conversations:
-        return "# Project Recap\n\n*No conversations found in the state file.*"
+        write("# Project Recap\n*No conversations found in the state file.*")
+        return
 
-    since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
+    since_date = _parse_iso_date(since + "T00:00:00+00:00") if since else None
 
-    sorted_convs: List[Tuple[str, Dict[str, Any]]] = sorted(
-        conversations.items(), key=lambda item: item[1].get("createdAtIso", ""), reverse=True
-    )
+    def get_sort_key(item):
+        conv_data = item[1]
+        if not isinstance(conv_data, dict): return FALLBACK_DATE_STRING
+        return conv_data.get("createdAtIso") or conv_data.get("lastInteractedAtIso") or FALLBACK_DATE_STRING
 
-    filtered_convs = [
-        (conv_id, conv) for conv_id, conv in sorted_convs
-        if not since_date or (_parse_iso_date(conv.get("createdAtIso")) or datetime.min.replace(
-            tzinfo=timezone.utc)) >= since_date
-    ]
+    sorted_convs = sorted(conversations.items(), key=get_sort_key, reverse=True)
 
-    md_output = ["# Project Recap"]
-    md_output.extend(_generate_toc(filtered_convs))
+    def is_after_since_date(conv):
+        if not since_date: return True
+        date_str = conv.get("createdAtIso") or conv.get("lastInteractedAtIso")
+        conv_date = _parse_iso_date(date_str)
+        return conv_date >= since_date if conv_date else False
+
+    filtered_convs = [(cid, c) for cid, c in sorted_convs if is_after_since_date(c)]
+
+    if verbose:
+        print(f"INFO: Found {len(conversations)} total conversations.", file=sys.stderr)
+        print(f"INFO: Sorted and filtered down to {len(filtered_convs)} conversations.", file=sys.stderr)
+
+    write("# Project Recap")
+    write("## Table of Contents")
+    if not filtered_convs:
+        write("*No conversations found for the selected period.*")
+    else:
+        # Track titles to ensure uniqueness
+        seen_titles = {}
+        for i, (conv_id, conv) in enumerate(filtered_convs, 1):
+            title = get_conversation_title(conv)
+            # Add a suffix to duplicate titles to make them unique
+            if title in seen_titles:
+                title = f"{title} ({i})"
+            seen_titles[title] = True
+
+            anchor = create_markdown_anchor(title)
+            created_at = (conv.get("createdAtIso") or conv.get("lastInteractedAtIso") or "Unknown")[:10]
+            pin_icon = "📌 " if conv.get("isPinned") else ""
+
+            if verbose:
+                print(f"DEBUG: TOC entry '{title}' with anchor '#{anchor}'", file=sys.stderr)
+
+            write(f"- [{pin_icon}{title}](#{anchor}) *({created_at})*")
+
+    # Track processed conversation IDs to prevent duplicates
+    processed_conv_ids = set()
 
     for i, (conv_id, conv) in enumerate(filtered_convs, 1):
+        # Skip duplicates
+        if conv_id in processed_conv_ids:
+            if verbose:
+                print(f"WARNING: Skipping duplicate conversation ID: {conv_id[:8]}", file=sys.stderr)
+            continue
+
+        processed_conv_ids.add(conv_id)
+
+        title = "Unknown Title"
         try:
-            md_output.append("\n---\n")
+            if not isinstance(conv, dict):
+                write(f"\n---\n\n> **[WARNING]** Skipping malformed entry with ID `{conv_id[:8]}`.")
+                continue
+
             title = get_conversation_title(conv)
+            # Ensure title is unique if it was modified earlier
+            for seen_title in seen_titles:
+                if seen_title.startswith(title) and seen_title != title:
+                    title = seen_title
+                    break
+
+            if verbose:
+                print(f"\nINFO: Processing conversation {i}/{len(filtered_convs)}: '{title}' ({conv_id[:8]})",
+                      file=sys.stderr)
+
+            write("\n---\n")
             pin_icon = "📌 " if conv.get("isPinned") else ""
-            md_output.append(f"## {pin_icon}{title}")
+            write(f"## {pin_icon}{title}")
 
             created_at = conv.get("createdAtIso", "N/A")
             last_interaction = conv.get("lastInteractedAtIso", "N/A")
-            md_output.extend([
-                f"| ID | Created | Last Interaction |", f"|:---|:---|:---|",
-                f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |"
-            ])
+            write(f"| ID | Created | Last Interaction |")
+            write(f"|:---|:---|:---|")
+            write(f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |")
 
             chat_history = conv.get("chatHistory", [])
             if not chat_history:
-                md_output.append("\n*This conversation has no messages.*")
+                write("\n*This conversation has no messages.*")
                 continue
 
-            mentioned_files = {f"`{item['name']}`" for msg in chat_history for item in msg.get("mentioned_items", []) if
-                               item and item.get("name")}
+            mentioned_files = {f"`{item['name']}`" for msg in chat_history if isinstance(msg, dict) for item in
+                               msg.get("mentioned_items", []) if isinstance(item, dict) and item.get("name")}
             if mentioned_files:
-                md_output.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
+                write(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
 
             for j, msg in enumerate(chat_history, 1):
-                # Safely get and clean content right at the source
+                if verbose: print(f"  -> Processing Turn {j}...", file=sys.stderr)
+                if not isinstance(msg, dict):
+                    write(f"\n> **[WARNING]** Skipping malformed turn `{j}`.")
+                    continue
+
                 turn = ConversationTurn(
                     turn_number=j,
                     request_raw=clean_text_content(msg.get("request_message")),
@@ -219,73 +267,61 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
                     status=msg.get("status", "unknown"),
                     timestamp=msg.get("timestamp", ""),
                 )
-                md_output.extend(_format_conversation_turn(turn, show_edits, verbose, debug_truncation))
+
+                turn_md_lines = _format_conversation_turn(turn, show_edits, debug_truncation, title)
+                for line in turn_md_lines:
+                    write(line)
+                if verbose: print(f"  -> Turn {j} completed.", file=sys.stderr)
 
         except Exception as e:
-            # This is the crucial addition. It catches errors and reports them without stopping the whole script.
-            error_title = get_conversation_title(conv)
-            md_output.append(
-                f"\n\n> **[ERROR]** An unexpected error occurred while processing conversation `{conv_id[:8]}` ('{error_title}'). Skipping the rest of this conversation.")
-            md_output.append(f"> ```\n> {type(e).__name__}: {e}\n> ```")
-            print(f"\n--- ⚠️ ERROR ---", file=sys.stderr)
-            print(f"Skipping conversation {i}/{len(filtered_convs)} ('{error_title}') due to an unhandled exception:",
-                  file=sys.stderr)
-            print(f"  - ID: {conv_id}", file=sys.stderr)
-            print(f"  - Exception: {type(e).__name__}: {e}", file=sys.stderr)
-            print(f"--- END ERROR ---\n", file=sys.stderr)
-            continue  # Move to the next conversation
+            write(f"\n\n> **[ERROR]** An unexpected error occurred while processing '{title}'. Skipping.")
+            write(f"> ```\n> {type(e).__name__}: {e}\n> ```")
+            print(f"--- ⚠️ ERROR ---", file=sys.stderr)
+            print(f"Skipping conversation {i}/{len(filtered_convs)} ('{title}') due to an exception:", file=sys.stderr)
+            print(f"  - ID: {conv_id}\n  - Exception: {type(e).__name__}: {e}", file=sys.stderr)
+            continue
 
-    return "\n".join(md_output)
+    if verbose: print("\nINFO: All conversations processed. Stream complete.", file=sys.stderr)
 
 
-# --- Main Execution ---
 def main():
-    # ... (main function remains the same as your corrected version) ...
     parser = argparse.ArgumentParser(
         description="Generate a Markdown recap from an Agent AI state file.",
         formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("input_file", nargs='?', default='-',
-                        help="Input JSON file path. Reads from stdin if not provided ('-').")
-    parser.add_argument("-o", "--output", help="Output file path. Writes to stdout if not provided.")
+    parser.add_argument("input_file", nargs='?', default='-', help="Input JSON file path.")
+    parser.add_argument("-o", "--output", help="Output file path. Bypasses stdout for reliability.")
     parser.add_argument("--since", help="Filter conversations created on or after this date (YYYY-MM-DD).")
-    parser.add_argument("--show-edits", action="store_true",
-                        help="Include full content of agent file edits in the output.")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="Print verbose debug information for file edit filtering to stderr.")
-    parser.add_argument("--debug-truncation", action="store_true",
-                        help="Print strategic debug logs for content truncation logic to stderr.")
+    parser.add_argument("--show-edits", action="store_true", help="Include full content of agent file edits.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print progress and canary logs to stderr.")
+    parser.add_argument("--debug-truncation", action="store_true", help="Print detailed truncation logic to stderr.")
     args = parser.parse_args()
 
     try:
         if args.input_file == '-':
             json_data = json.load(sys.stdin)
         else:
-            input_path = Path(args.input_file)
-            json_data = json.loads(input_path.read_text(encoding='utf-8'))
-    except FileNotFoundError:
-        print(f"Error: Input file not found at '{args.input_file}'", file=sys.stderr)
-        sys.exit(1)
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            json_data = json.loads(Path(args.input_file).read_text(encoding='utf-8'))
+    except Exception as e:
         print(f"Error reading or parsing input file: {e}", file=sys.stderr)
         sys.exit(1)
 
-    markdown_output = extract_conversations_markdown(
-        json_data, args.since, args.show_edits, args.verbose, args.debug_truncation
-    )
-
     if args.output:
         try:
-            output_path = Path(args.output)
-            output_path.write_text(markdown_output, encoding='utf-8')
+            with open(args.output, 'w', encoding='utf-8') as f:
+                stream_conversation_recap(
+                    json_data, f, args.since, args.show_edits, args.verbose, args.debug_truncation
+                )
             print(f"Recap successfully written to {args.output}", file=sys.stderr)
         except IOError as e:
             print(f"Error writing to output file '{args.output}': {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        if sys.stdout.encoding.lower() != 'utf-8':
+        if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
             sys.stdout.reconfigure(encoding='utf-8')
-        print(markdown_output)
+        stream_conversation_recap(
+            json_data, sys.stdout, args.since, args.show_edits, args.verbose, args.debug_truncation
+        )
 
 
 if __name__ == "__main__":
