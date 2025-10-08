@@ -2,6 +2,7 @@
 import sys
 import os
 from pathlib import Path
+import re
 
 # Add src directory to Python path
 script_dir = Path(__file__).parent
@@ -11,6 +12,60 @@ sys.path.insert(0, str(src_dir))
 import argparse
 from augment_ai.aug_common import load_json_input, save_json_output
 from datetime import datetime, timezone
+
+def sanitize_markdown(text):
+    """Sanitize text to prevent markdown formatting issues."""
+    if not text:
+        return ""
+    
+    text = str(text)
+    
+    # DEBUG: Show what we're starting with
+    if '\\n' in text or '\n' in text:
+        print(f"🐛 DEBUG: Input contains newlines: {repr(text[:100])}", file=sys.stderr)
+    
+    # Handle unicode escape sequences with regex instead of unicode_escape
+    def decode_unicode_escapes(match):
+        try:
+            return chr(int(match.group(1), 16))
+        except ValueError:
+            return match.group(0)
+    
+    # Replace \uXXXX sequences with actual unicode characters
+    text = re.sub(r'\\u([0-9a-fA-F]{4})', decode_unicode_escapes, text)
+    
+    # Replace literal \n with actual newlines, then normalize to spaces
+    original_text = text
+    text = text.replace('\\n', '\n')
+    
+    # Also handle escaped newlines that might be double-escaped
+    text = text.replace('\\\\n', '\n')
+    
+    # DEBUG: Show after newline replacement
+    if original_text != text:
+        print(f"🐛 DEBUG: After newline replacement: {repr(text[:100])}", file=sys.stderr)
+    
+    # Normalize all whitespace to single spaces
+    before_normalize = text
+    text = re.sub(r'\s+', ' ', text)
+    
+    # DEBUG: Show after normalization
+    if before_normalize != text:
+        print(f"🐛 DEBUG: After normalization: {repr(text[:100])}", file=sys.stderr)
+    
+    # Only escape problematic markdown chars that would break structure
+    dangerous_chars = ['`', '#', '[', ']']
+    for char in dangerous_chars:
+        text = text.replace(char, f'\\{char}')
+    
+    # Remove control characters
+    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+    
+    # DEBUG: Final check for remaining \n
+    if '\\n' in text:
+        print(f"🐛 DEBUG: Still has \\n after processing: {repr(text[:100])}", file=sys.stderr)
+    
+    return text.strip()
 
 def extract_project_recap(json_data, options):
     """Extract project recap data for historical context."""
@@ -27,122 +82,171 @@ def extract_project_recap(json_data, options):
     # Filter by date if specified
     since_date = None
     if hasattr(options, 'since') and options.since:
-        # Parse since date and make it timezone-aware if needed
-        since_date = datetime.fromisoformat(options.since.replace('Z', '+00:00'))
-        if since_date.tzinfo is None:
-            from datetime import timezone
-            since_date = since_date.replace(tzinfo=timezone.utc)
+        # Handle different date formats
+        since_str = options.since
+        if 'T' not in since_str:
+            # Add time and timezone if only date provided
+            since_str = f"{since_str}T00:00:00+00:00"
+        elif 'Z' in since_str:
+            since_str = since_str.replace('Z', '+00:00')
+        elif '+' not in since_str and 'Z' not in since_str:
+            # Add timezone if missing
+            since_str = f"{since_str}+00:00"
+        
+        since_date = datetime.fromisoformat(since_str)
     
     for conv_id, conv in conversations.items():
         # Skip if filtering by date
         if since_date:
-            created_str = conv.get("createdAtIso", "")
-            if created_str:
-                created = datetime.fromisoformat(created_str.replace('Z', '+00:00'))
-                if created.tzinfo is None:
-                    from datetime import timezone
-                    created = created.replace(tzinfo=timezone.utc)
+            created_iso = conv.get("createdAtIso", "")
+            if created_iso:
+                created = datetime.fromisoformat(created_iso.replace('Z', '+00:00'))
                 if created < since_date:
                     continue
-                
-        # Skip if filtering by pinned only
-        if hasattr(options, 'pinned_only') and options.pinned_only and not conv.get("isPinned", False):
+
+def get_conversation_title(conv):
+    """Extract a meaningful title from the conversation name or first message."""
+    # First try to get the name field from the conversation
+    name = conv.get("name", "")
+    if name and name.strip():
+        return sanitize_markdown(name.strip())
+    
+    # Fallback to first message if no name
+    chat_history = conv.get("chatHistory", [])
+    if not chat_history:
+        return "Empty Conversation"
+    
+    first_message = chat_history[0]
+    request = first_message.get("request_message", "")
+    
+    if not request:
+        return "Untitled Conversation"
+    
+    # Clean and truncate the request to make a title
+    title = sanitize_markdown(request)
+    # Remove common prefixes
+    title = re.sub(r'^(Act as|Please|Can you|How to|I need|Help me)\s+', '', title, flags=re.IGNORECASE)
+    # Take first meaningful part (up to 60 chars)
+    title = title[:60].strip()
+    if len(request) > 60:
+        title += "..."
+    
+    return title or "Untitled Conversation"
+
+def extract_conversations_markdown(json_data, options):
+    """Extract all conversations in markdown format with truncated content."""
+    conversations = json_data.get("conversations", {})
+    
+    # Filter by date if specified
+    since_date = None
+    if hasattr(options, 'since') and options.since:
+        since_str = options.since
+        if 'T' not in since_str:
+            since_str = f"{since_str}T00:00:00+00:00"
+        elif 'Z' in since_str:
+            since_str = since_str.replace('Z', '+00:00')
+        elif '+' not in since_str and 'Z' not in since_str:
+            since_str = f"{since_str}+00:00"
+        since_date = datetime.fromisoformat(since_str)
+    
+    markdown_output = []
+    markdown_output.append("# All Conversations Overview\n")
+    
+    # Sort conversations by creation date
+    sorted_convs = sorted(
+        conversations.items(),
+        key=lambda x: x[1].get("createdAtIso", ""),
+        reverse=True
+    )
+    
+    for conv_id, conv in sorted_convs:
+        # Skip if filtering by date
+        if since_date:
+            created_iso = conv.get("createdAtIso", "")
+            if created_iso:
+                created = datetime.fromisoformat(created_iso.replace('Z', '+00:00'))
+                if created < since_date:
+                    continue
+        
+        created_at = conv.get("createdAtIso", "Unknown")
+        last_interaction = conv.get("lastInteractedAtIso", "Unknown")
+        is_pinned = "📌" if conv.get("isPinned", False) else ""
+        
+        # Get conversation title from first message
+        title = get_conversation_title(conv)
+        safe_conv_id = sanitize_markdown(conv_id[:8])
+        
+        markdown_output.append(f"## {is_pinned} {title}")
+        markdown_output.append(f"**ID:** {safe_conv_id}...")
+        markdown_output.append(f"**Created:** {created_at}")
+        markdown_output.append(f"**Last Interaction:** {last_interaction}")
+        markdown_output.append("")
+        
+        chat_history = conv.get("chatHistory", [])
+        if not chat_history:
+            markdown_output.append("*No messages*\n")
             continue
             
-        # Extract timeline events
-        timeline_entry = {
-            "conversation_id": conv_id,
-            "name": conv.get("name", "Untitled"),
-            "created": conv.get("createdAtIso"),
-            "last_interaction": conv.get("lastInteractedAtIso"),
-            "is_pinned": conv.get("isPinned", False),
-            "message_count": len(conv.get("chatHistory", []))
-        }
-        recap["project_timeline"].append(timeline_entry)
-        
-        # Extract file mentions and decisions
-        for message in conv.get("chatHistory", []):
-            # Key decisions from successful responses
-            if message.get("status") == "success" and message.get("response_text"):
-                decision = {
-                    "conversation": conv.get("name"),
-                    "request": message.get("request_message", "")[:200],
-                    "response_summary": message.get("response_text", "")[:500],
-                    "files_mentioned": [item.get("file", {}).get("pathName") 
-                                      for item in message.get("mentioned_items", []) 
-                                      if item.get("file", {}).get("pathName")]
-                }
-                recap["key_decisions"].append(decision)
+        for i, message in enumerate(chat_history, 1):
+            request = message.get("request_message", "")
+            response = message.get("response_text", "")
+            status = message.get("status", "unknown")
+            timestamp = message.get("timestamp", "")
             
-            # File evolution tracking
-            for item in message.get("mentioned_items", []):
-                file_path = item.get("file", {}).get("pathName")
-                if file_path:
-                    if file_path not in recap["file_evolution"]:
-                        recap["file_evolution"][file_path] = []
-                    recap["file_evolution"][file_path].append({
-                        "conversation": conv.get("name"),
-                        "context": message.get("request_message", "")[:100]
-                    })
+            # Sanitize and truncate content
+            request_clean = sanitize_markdown(request)
+            response_clean = sanitize_markdown(response)
+            
+            request_short = (request_clean[:47] + "...") if len(request_clean) > 50 else request_clean
+            response_short = (response_clean[:47] + "...") if len(response_clean) > 50 else response_clean
+            
+            status_icon = {
+                "success": "✅",
+                "error": "❌", 
+                "pending": "⏳",
+                "draft": "📝",
+                "cancelled": "🚫"
+            }.get(status, "❓")
+            
+            markdown_output.append(f"### Message {i} {status_icon}")
+            if timestamp:
+                safe_timestamp = sanitize_markdown(timestamp)
+                markdown_output.append(f"*{safe_timestamp}*")
+            
+            if request_short:
+                markdown_output.append(f"**Request:** {request_short}")
+            if response_short:
+                markdown_output.append(f"**Response:** {response_short}")
+            markdown_output.append("")
+        
+        markdown_output.append("---\n")
     
-    return recap
-
-def format_recap_markdown(recap_data):
-    """Format recap data as markdown."""
-    md = "# Project Recap\n\n"
-    
-    # Timeline section
-    md += "## Timeline\n\n"
-    timeline = sorted(recap_data["project_timeline"], key=lambda x: x["created"])
-    for entry in timeline:
-        created_date = entry["created"][:10] if entry["created"] else "Unknown"
-        pin_marker = " 📌" if entry["is_pinned"] else ""
-        md += f"- **{created_date}**: {entry['name']} ({entry['message_count']} messages){pin_marker}\n"
-    
-    # Key decisions section
-    md += "\n## Key Decisions\n\n"
-    for decision in recap_data["key_decisions"]:
-        md += f"### {decision['conversation']}\n"
-        md += f"**Request**: {decision['request']}\n\n"
-        md += f"**Response**: {decision['response_summary']}\n\n"
-        if decision['files_mentioned']:
-            md += f"**Files**: {', '.join(decision['files_mentioned'])}\n\n"
-        md += "---\n\n"
-    
-    # File evolution section
-    md += "## File Evolution\n\n"
-    for file_path, contexts in recap_data["file_evolution"].items():
-        md += f"### {file_path}\n"
-        for ctx in contexts:
-            md += f"- **{ctx['conversation']}**: {ctx['context']}\n"
-        md += "\n"
-    
-    return md
+    return "\n".join(markdown_output)
 
 def main():
-    parser = argparse.ArgumentParser(description="Export project recap for historical context")
-    parser.add_argument("input_file", help="Chat state JSON file")
-    parser.add_argument("--output", "-o", help="Output file (default: stdout)")
-    parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
-    parser.add_argument("--pinned-only", action="store_true", help="Only pinned conversations")
-    parser.add_argument("--since", help="Only conversations since date (ISO format)")
-    parser.add_argument("--files", help="Only conversations mentioning specific files")
+    parser = argparse.ArgumentParser(description="Export chat recap data")
+    parser.add_argument("input_file", nargs='?', default='-',
+                       help="Input JSON file path (default: stdin)")
+    parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
+    parser.add_argument("--since", help="Filter conversations since date (YYYY-MM-DD)")
+    parser.add_argument("--format", choices=["recap", "conversations"], 
+                       default="recap", help="Output format")
     
     args = parser.parse_args()
     
     json_data = load_json_input(args.input_file)
-    recap_data = extract_project_recap(json_data, args)
     
-    if args.format == "markdown":
-        formatted = format_recap_markdown(recap_data)
+    if args.format == "conversations":
+        output = extract_conversations_markdown(json_data, args)
+        # For markdown output, write directly as text, not JSON
         if args.output:
             with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(formatted)
-            print(f"Recap saved to {args.output}")
+                f.write(output)
         else:
-            print(formatted)
+            print(output)
     else:
-        save_json_output(formatted, args.output)
+        output = extract_project_recap(json_data, args)
+        save_json_output(output, args.output)
 
 if __name__ == "__main__":
     main()
