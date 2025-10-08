@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+import sys
+import os
+from pathlib import Path
+
+# Add src directory to Python path
+script_dir = Path(__file__).parent
+src_dir = script_dir.parent / "src"
+sys.path.insert(0, str(src_dir))
+
+import argparse
+from augment_ai.aug_common import load_json_input, save_json_output
+from datetime import datetime, timezone
+
+def extract_project_recap(json_data, options):
+    """Extract project recap data for historical context."""
+    recap = {
+        "project_timeline": [],
+        "key_decisions": [],
+        "file_evolution": {},
+        "error_patterns": [],
+        "tool_usage": []
+    }
+    
+    conversations = json_data.get("conversations", {})
+    
+    # Filter by date if specified
+    since_date = None
+    if hasattr(options, 'since') and options.since:
+        # Parse since date and make it timezone-aware if needed
+        since_date = datetime.fromisoformat(options.since.replace('Z', '+00:00'))
+        if since_date.tzinfo is None:
+            from datetime import timezone
+            since_date = since_date.replace(tzinfo=timezone.utc)
+    
+    for conv_id, conv in conversations.items():
+        # Skip if filtering by date
+        if since_date:
+            created_str = conv.get("createdAtIso", "")
+            if created_str:
+                created = datetime.fromisoformat(created_str.replace('Z', '+00:00'))
+                if created.tzinfo is None:
+                    from datetime import timezone
+                    created = created.replace(tzinfo=timezone.utc)
+                if created < since_date:
+                    continue
+                
+        # Skip if filtering by pinned only
+        if hasattr(options, 'pinned_only') and options.pinned_only and not conv.get("isPinned", False):
+            continue
+            
+        # Extract timeline events
+        timeline_entry = {
+            "conversation_id": conv_id,
+            "name": conv.get("name", "Untitled"),
+            "created": conv.get("createdAtIso"),
+            "last_interaction": conv.get("lastInteractedAtIso"),
+            "is_pinned": conv.get("isPinned", False),
+            "message_count": len(conv.get("chatHistory", []))
+        }
+        recap["project_timeline"].append(timeline_entry)
+        
+        # Extract file mentions and decisions
+        for message in conv.get("chatHistory", []):
+            # Key decisions from successful responses
+            if message.get("status") == "success" and message.get("response_text"):
+                decision = {
+                    "conversation": conv.get("name"),
+                    "request": message.get("request_message", "")[:200],
+                    "response_summary": message.get("response_text", "")[:500],
+                    "files_mentioned": [item.get("file", {}).get("pathName") 
+                                      for item in message.get("mentioned_items", []) 
+                                      if item.get("file", {}).get("pathName")]
+                }
+                recap["key_decisions"].append(decision)
+            
+            # File evolution tracking
+            for item in message.get("mentioned_items", []):
+                file_path = item.get("file", {}).get("pathName")
+                if file_path:
+                    if file_path not in recap["file_evolution"]:
+                        recap["file_evolution"][file_path] = []
+                    recap["file_evolution"][file_path].append({
+                        "conversation": conv.get("name"),
+                        "context": message.get("request_message", "")[:100]
+                    })
+    
+    return recap
+
+def format_recap_markdown(recap_data):
+    """Format recap data as markdown."""
+    md = "# Project Recap\n\n"
+    
+    # Timeline section
+    md += "## Timeline\n\n"
+    timeline = sorted(recap_data["project_timeline"], key=lambda x: x["created"])
+    for entry in timeline:
+        created_date = entry["created"][:10] if entry["created"] else "Unknown"
+        pin_marker = " 📌" if entry["is_pinned"] else ""
+        md += f"- **{created_date}**: {entry['name']} ({entry['message_count']} messages){pin_marker}\n"
+    
+    # Key decisions section
+    md += "\n## Key Decisions\n\n"
+    for decision in recap_data["key_decisions"]:
+        md += f"### {decision['conversation']}\n"
+        md += f"**Request**: {decision['request']}\n\n"
+        md += f"**Response**: {decision['response_summary']}\n\n"
+        if decision['files_mentioned']:
+            md += f"**Files**: {', '.join(decision['files_mentioned'])}\n\n"
+        md += "---\n\n"
+    
+    # File evolution section
+    md += "## File Evolution\n\n"
+    for file_path, contexts in recap_data["file_evolution"].items():
+        md += f"### {file_path}\n"
+        for ctx in contexts:
+            md += f"- **{ctx['conversation']}**: {ctx['context']}\n"
+        md += "\n"
+    
+    return md
+
+def main():
+    parser = argparse.ArgumentParser(description="Export project recap for historical context")
+    parser.add_argument("input_file", help="Chat state JSON file")
+    parser.add_argument("--output", "-o", help="Output file (default: stdout)")
+    parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
+    parser.add_argument("--pinned-only", action="store_true", help="Only pinned conversations")
+    parser.add_argument("--since", help="Only conversations since date (ISO format)")
+    parser.add_argument("--files", help="Only conversations mentioning specific files")
+    
+    args = parser.parse_args()
+    
+    json_data = load_json_input(args.input_file)
+    recap_data = extract_project_recap(json_data, args)
+    
+    if args.format == "markdown":
+        formatted = format_recap_markdown(recap_data)
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(formatted)
+            print(f"Recap saved to {args.output}")
+        else:
+            print(formatted)
+    else:
+        save_json_output(formatted, args.output)
+
+if __name__ == "__main__":
+    main()

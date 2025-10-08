@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Schema for GitHub Copilot Chat State",
+  "title": "Schema for Agumented AI code plugin",
   "description": "Schema for GitHub Copilot chat state data",
   "type": "object",
   "properties": {
