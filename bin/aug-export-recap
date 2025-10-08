@@ -14,31 +14,16 @@ from typing import Dict, Any, List, Optional, Tuple
 # --- Text Processing Utilities ---
 
 def filter_file_edits(text: str, verbose: bool = False) -> str:
-    """
-    Finds agent-generated file edit blocks and replaces them with a summary message.
-    """
+    """Finds agent-generated file edit blocks and replaces them with a summary message."""
     if not text:
         return ""
-
-    # Corrected Regex:
-    # - ```: Matches the literal start of a code block fence.
-    # - [^\n]*?: Non-greedy match for the rest of the info string on the same line.
-    # - path=([^\s]+): Captures the file path.
-    # - .*?: Non-greedy match for the code content across multiple lines.
-    # - ```: Matches the end of the code block.
-    # - re.DOTALL: Allows `.` to match newlines.
-    pattern = re.compile(
-        r"```[^\n]*?path=([^\s]+)\s+mode=\w+.*?```",
-        re.DOTALL
-    )
-
+    pattern = re.compile(r"```[^\n]*?path=([^\s]+)\s+mode=\w+.*?```", re.DOTALL)
     if verbose:
         print("\n--- REGEX DEBUG START ---", file=sys.stderr)
         print(f"Analyzing response text snippet:\n---\n{text[:350]}...\n---", file=sys.stderr)
         matches = list(pattern.finditer(text))
         if not matches:
-            print("✅ Regex found NO file edit blocks to replace (this is expected for some agent turns).",
-                  file=sys.stderr)
+            print("✅ Regex found NO file edit blocks to replace.", file=sys.stderr)
         else:
             print(f"✅ Regex found {len(matches)} file edit block(s):", file=sys.stderr)
             for i, match in enumerate(matches):
@@ -47,7 +32,6 @@ def filter_file_edits(text: str, verbose: bool = False) -> str:
         print("--- REGEX DEBUG END ---\n", file=sys.stderr)
 
     def replacer(match: re.Match) -> str:
-        """Replacement function to create a summary placeholder."""
         path = match.group(1)
         return f"\n> *[File edit performed on `{path}`]*\n"
 
@@ -112,6 +96,7 @@ def _parse_iso_date(date_str: str) -> Optional[datetime]:
 
 def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool,
                                    verbose: bool) -> str:
+    """Generate a full Markdown recap from the conversation data."""
     conversations = json_data.get("conversations", {})
     since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
 
@@ -157,10 +142,20 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
         if mentioned_files: md.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
 
         for i, msg in enumerate(chat_history, 1):
-            request_clean = clean_text_content(msg.get("request_message"))
+            request_raw = clean_text_content(msg.get("request_message"))
             response_clean = clean_text_content(msg.get("response_text"))
 
+            # *** NEW LOGIC FOR REQUEST TRUNCATION ***
+            is_code_request = request_raw.lstrip().startswith('```')
+            if is_code_request and len(request_raw) > 200:
+                request_to_display = request_raw[:200] + "\n... [truncated] ..."
+                request_summary = "User provided a large code/log excerpt..."
+            else:
+                request_to_display = request_raw
+                request_summary = smart_truncate(request_raw, 200)
+
             response_to_display = response_clean if show_edits else filter_file_edits(response_clean, verbose=verbose)
+            response_summary = smart_truncate(response_to_display, 300)
 
             status, timestamp = msg.get("status", "unknown"), msg.get("timestamp", "")
             status_icon = {"success": "✅", "error": "❌", "pending": "⏳", "draft": "📝", "cancelled": "🚫"}.get(status,
@@ -169,15 +164,13 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
             md.append(f"\n### Turn {i} ({status.capitalize()}) {status_icon}")
             if timestamp: md.append(f"*{timestamp}*\n")
 
-            if request_clean:
-                summary = smart_truncate(request_clean, 200)
+            if request_to_display:
                 md.append(
-                    f'<details>\n  <summary><strong>Request:</strong> {summary}</summary>\n\n```\n{request_clean}\n```\n</details>\n')
+                    f'<details>\n  <summary><strong>Request:</strong> {request_summary}</summary>\n\n```\n{request_to_display}\n```\n</details>\n')
 
             if response_to_display.strip():
-                summary = smart_truncate(response_to_display, 300)
                 md.append(
-                    f'<details>\n  <summary><strong>Response:</strong> {summary}</summary>\n\n{response_to_display}\n</details>\n')
+                    f'<details>\n  <summary><strong>Response:</strong> {response_summary}</summary>\n\n{response_to_display}\n</details>\n')
 
     return "\n".join(md)
 
