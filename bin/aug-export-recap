@@ -15,8 +15,7 @@ from typing import Dict, Any, List, Optional, Tuple
 
 def filter_file_edits(text: str, verbose: bool = False) -> str:
     """Finds agent-generated file edit blocks and replaces them with a summary message."""
-    if not text:
-        return ""
+    if not text: return ""
     pattern = re.compile(r"```[^\n]*?path=([^\s]+)\s+mode=\w+.*?```", re.DOTALL)
     if verbose:
         print("\n--- REGEX DEBUG START ---", file=sys.stderr)
@@ -65,6 +64,20 @@ def smart_truncate(text: str, max_length: int) -> str:
     return first_meaningful_line
 
 
+def is_primarily_code(text: str, threshold: float = 0.5) -> bool:
+    """
+    Determines if a string is composed mainly of code blocks.
+    """
+    code_block_pattern = re.compile(r"```.*?```", re.DOTALL)
+    total_len = len(text)
+    if total_len == 0:
+        return False
+
+    code_len = sum(len(match.group(0)) for match in code_block_pattern.finditer(text))
+
+    return (code_len / total_len) > threshold
+
+
 # --- Markdown Generation ---
 
 def get_conversation_title(conv: Dict[str, Any]) -> str:
@@ -94,8 +107,8 @@ def _parse_iso_date(date_str: str) -> Optional[datetime]:
         return None
 
 
-def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool,
-                                   verbose: bool) -> str:
+def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool, verbose: bool,
+                                   debug_truncation: bool) -> str:
     """Generate a full Markdown recap from the conversation data."""
     conversations = json_data.get("conversations", {})
     since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
@@ -145,14 +158,26 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
             request_raw = clean_text_content(msg.get("request_message"))
             response_clean = clean_text_content(msg.get("response_text"))
 
-            # *** NEW LOGIC FOR REQUEST TRUNCATION ***
-            is_code_request = request_raw.lstrip().startswith('```')
-            if is_code_request and len(request_raw) > 200:
-                request_to_display = request_raw[:200] + "\n... [truncated] ..."
+            # --- TRUNCATION LOGIC WITH DEBUGGING ---
+            request_len = len(request_raw)
+            is_code_heavy = is_primarily_code(request_raw)
+
+            if debug_truncation:
+                print("\n--- TRUNCATION DEBUG START ---", file=sys.stderr)
+                print(f"Conversation '{title}', Turn {i}", file=sys.stderr)
+                print(f"  - Request Length: {request_len} chars", file=sys.stderr)
+                print(f"  - Is primarily code (>50%): {is_code_heavy}", file=sys.stderr)
+
+            if is_code_heavy and request_len > 200:
+                if debug_truncation: print("  - Decision: TRUNCATE code block request.", file=sys.stderr)
+                request_to_display = request_raw[:200] + "\n... [request truncated] ..."
                 request_summary = "User provided a large code/log excerpt..."
             else:
+                if debug_truncation: print("  - Decision: DO NOT truncate request.", file=sys.stderr)
                 request_to_display = request_raw
                 request_summary = smart_truncate(request_raw, 200)
+
+            if debug_truncation: print("--- TRUNCATION DEBUG END ---\n", file=sys.stderr)
 
             response_to_display = response_clean if show_edits else filter_file_edits(response_clean, verbose=verbose)
             response_summary = smart_truncate(response_to_display, 300)
@@ -189,6 +214,8 @@ def main():
                         help="Include full content of agent file edits in the output.")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Print verbose debug information for regex filtering to stderr.")
+    parser.add_argument("--debug-truncation", action="store_true",
+                        help="Print debug information for user request truncation logic.")
 
     args = parser.parse_args()
 
@@ -203,7 +230,8 @@ def main():
         print(f"Error reading input file: {e}", file=sys.stderr)
         sys.exit(1)
 
-    markdown_output = extract_conversations_markdown(json_data, args.since, args.show_edits, args.verbose)
+    markdown_output = extract_conversations_markdown(json_data, args.since, args.show_edits, args.verbose,
+                                                     args.debug_truncation)
 
     if args.output:
         try:
