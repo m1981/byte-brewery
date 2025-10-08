@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Tuple
 
 # --- Text Processing Utilities ---
 
-def filter_file_edits(text: str, debug: bool = False) -> str:
+def filter_file_edits(text: str, verbose: bool = False) -> str:
     """
     Finds agent-generated file edit blocks and replaces them with a summary message.
     """
@@ -21,23 +21,29 @@ def filter_file_edits(text: str, debug: bool = False) -> str:
         return ""
 
     # Corrected Regex:
-    # Matches the actual backticks ``` instead of the escaped representation.
+    # - ```: Matches the literal start of a code block fence.
+    # - [^\n]*?: Non-greedy match for the rest of the info string on the same line.
+    # - path=([^\s]+): Captures the file path.
+    # - .*?: Non-greedy match for the code content across multiple lines.
+    # - ```: Matches the end of the code block.
+    # - re.DOTALL: Allows `.` to match newlines.
     pattern = re.compile(
         r"```[^\n]*?path=([^\s]+)\s+mode=\w+.*?```",
         re.DOTALL
     )
 
-    if debug:
+    if verbose:
         print("\n--- REGEX DEBUG START ---", file=sys.stderr)
-        print(f"Original Text (first 300 chars):\n---\n{text[:300]}...\n---", file=sys.stderr)
+        print(f"Analyzing response text snippet:\n---\n{text[:350]}...\n---", file=sys.stderr)
         matches = list(pattern.finditer(text))
         if not matches:
-            print("Regex found NO matches for file edit blocks.", file=sys.stderr)
+            print("✅ Regex found NO file edit blocks to replace (this is expected for some agent turns).",
+                  file=sys.stderr)
         else:
-            print(f"Regex found {len(matches)} match(es):", file=sys.stderr)
+            print(f"✅ Regex found {len(matches)} file edit block(s):", file=sys.stderr)
             for i, match in enumerate(matches):
                 path = match.group(1)
-                print(f"  - Match {i + 1}: Found path='{path}'. Replacing block.", file=sys.stderr)
+                print(f"  - Match {i + 1}: Found and replaced block for path='{path}'.", file=sys.stderr)
         print("--- REGEX DEBUG END ---\n", file=sys.stderr)
 
     def replacer(match: re.Match) -> str:
@@ -50,9 +56,7 @@ def filter_file_edits(text: str, debug: bool = False) -> str:
 
 def clean_text_content(text: Optional[str]) -> str:
     """Non-destructively clean text content for Markdown display."""
-    if not text:
-        return ""
-
+    if not text: return ""
     text = str(text)
 
     def decode_unicode_escapes(match):
@@ -62,84 +66,44 @@ def clean_text_content(text: Optional[str]) -> str:
             return match.group(0)
 
     text = re.sub(r'\\u([0-9a-fA-F]{4})', decode_unicode_escapes, text)
-
     text = text.replace('\\n', '\n')
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-
     return text
 
 
 def smart_truncate(text: str, max_length: int) -> str:
     """Truncate text for a summary, prioritizing the first meaningful line."""
-    if not text:
-        return ""
-
+    if not text: return ""
     lines = [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith('>*[File edit')]
     first_meaningful_line = lines[0] if lines else ""
-
-    if len(first_meaningful_line) > max_length:
-        return first_meaningful_line[:max_length].strip() + "..."
-    if len(first_meaningful_line) > 60:
-        return first_meaningful_line
-
-    if len(text) <= max_length:
-        return text.replace('\n', ' ').strip()
-
-    truncated = text[:max_length]
-
-    sentence_ends = ['. ', '.\n', '? ', '?\n', '! ', '!\n', '```']
-    best_cut = -1
-    for ending in sentence_ends:
-        pos = truncated.rfind(ending)
-        if pos > max_length * 0.6:
-            best_cut = max(best_cut, pos + len(ending))
-
-    if best_cut > 0:
-        return text[:best_cut].replace('\n', ' ').strip() + "..."
-
-    last_space = truncated.rfind(' ')
-    if last_space > max_length * 0.7:
-        return text[:last_space].replace('\n', ' ').strip() + "..."
-
-    return text[:max_length].replace('\n', ' ').strip() + "..."
+    if not first_meaningful_line: return text[:max_length].strip() + "..."
+    if len(first_meaningful_line) > max_length: return first_meaningful_line[:max_length].strip() + "..."
+    return first_meaningful_line
 
 
 # --- Markdown Generation ---
 
 def get_conversation_title(conv: Dict[str, Any]) -> str:
-    """Extract a clean and concise title from a conversation object."""
     name = conv.get("name", "").strip()
-    if name:
-        return name
-
+    if name: return name
     chat_history = conv.get("chatHistory", [])
-    if not chat_history:
-        return "Empty Conversation"
-
+    if not chat_history: return "Empty Conversation"
     first_message_request = chat_history[0].get("request_message", "")
-    if not first_message_request:
-        return "Untitled Conversation"
-
+    if not first_message_request: return "Untitled Conversation"
     first_line = first_message_request.split('\n')[0].strip()
-    title = re.sub(
-        r'^(act as|please|can you|explain|help me with|i need)\s+',
-        '', first_line, flags=re.IGNORECASE
-    ).strip()
-
+    title = re.sub(r'^(act as|please|can you|explain|help me with|i need)\s+', '', first_line,
+                   flags=re.IGNORECASE).strip()
     return smart_truncate(title, 80) or "Untitled Conversation"
 
 
 def create_markdown_anchor(text: str) -> str:
-    """Create a GitHub-style markdown anchor from a title."""
     anchor = re.sub(r'[^\w\s-]', '', text.lower())
     anchor = re.sub(r'[-\s]+', '-', anchor).strip('-')
     return anchor
 
 
 def _parse_iso_date(date_str: str) -> Optional[datetime]:
-    """Parse an ISO date string, handling 'Z' timezone."""
-    if not date_str:
-        return None
+    if not date_str: return None
     try:
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
     except (ValueError, TypeError):
@@ -147,15 +111,12 @@ def _parse_iso_date(date_str: str) -> Optional[datetime]:
 
 
 def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool,
-                                   debug_regex: bool) -> str:
-    """Generate a full Markdown recap from the conversation data."""
+                                   verbose: bool) -> str:
     conversations = json_data.get("conversations", {})
     since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
 
     sorted_convs: List[Tuple[str, Dict[str, Any]]] = sorted(
-        conversations.items(),
-        key=lambda item: item[1].get("createdAtIso", ""),
-        reverse=True
+        conversations.items(), key=lambda item: item[1].get("createdAtIso", ""), reverse=True
     )
 
     filtered_convs = [
@@ -165,7 +126,6 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
     ]
 
     md = ["# Project Recap"]
-
     md.append("\n## Table of Contents\n")
     if not filtered_convs:
         md.append("*No conversations found for the selected period.*")
@@ -183,41 +143,31 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
         pin_icon = "📌 " if conv.get("isPinned") else ""
         md.append(f"## {pin_icon}{title}")
 
-        created_at = conv.get("createdAtIso", "N/A")
-        last_interaction = conv.get("lastInteractedAtIso", "N/A")
-
-        md.append(f"| ID | Created | Last Interaction |")
-        md.append(f"|:---|:---|:---|")
-        md.append(f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |")
+        created_at, last_interaction = conv.get("createdAtIso", "N/A"), conv.get("lastInteractedAtIso", "N/A")
+        md.extend([f"| ID | Created | Last Interaction |", f"|:---|:---|:---|",
+                   f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |"])
 
         chat_history = conv.get("chatHistory", [])
         if not chat_history:
             md.append("\n*This conversation has no messages.*")
             continue
 
-        mentioned_files = set()
-        for msg in chat_history:
-            for item in msg.get("mentioned_items", []):
-                if name := item.get("name"):
-                    mentioned_files.add(f"`{name}`")
-        if mentioned_files:
-            md.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
+        mentioned_files = {f"`{item['name']}`" for msg in chat_history for item in msg.get("mentioned_items", []) if
+                           item.get("name")}
+        if mentioned_files: md.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
 
         for i, msg in enumerate(chat_history, 1):
             request_clean = clean_text_content(msg.get("request_message"))
             response_clean = clean_text_content(msg.get("response_text"))
 
-            response_to_display = response_clean if show_edits else filter_file_edits(response_clean, debug=debug_regex)
+            response_to_display = response_clean if show_edits else filter_file_edits(response_clean, verbose=verbose)
 
-            status = msg.get("status", "unknown")
-            timestamp = msg.get("timestamp", "")
-
+            status, timestamp = msg.get("status", "unknown"), msg.get("timestamp", "")
             status_icon = {"success": "✅", "error": "❌", "pending": "⏳", "draft": "📝", "cancelled": "🚫"}.get(status,
                                                                                                              "❓")
 
             md.append(f"\n### Turn {i} ({status.capitalize()}) {status_icon}")
-            if timestamp:
-                md.append(f"*{timestamp}*\n")
+            if timestamp: md.append(f"*{timestamp}*\n")
 
             if request_clean:
                 summary = smart_truncate(request_clean, 200)
@@ -236,18 +186,16 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
 
 def main():
     """Main function to parse arguments and generate the recap."""
-    parser = argparse.ArgumentParser(
-        description="Generate a readable Markdown recap from an Agent AI state file.",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description="Generate a Markdown recap from an Agent AI state file.",
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("input_file", nargs='?', default='-',
                         help="Input JSON file path. Reads from stdin if not provided.")
     parser.add_argument("-o", "--output", help="Output file path. Writes to stdout if not provided.")
     parser.add_argument("--since", help="Filter conversations created on or after this date (YYYY-MM-DD).")
     parser.add_argument("--show-edits", action="store_true",
                         help="Include full content of agent file edits in the output.")
-    parser.add_argument("--debug-regex", action="store_true",
-                        help="Print debug information for the file edit regex filter.")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="Print verbose debug information for regex filtering to stderr.")
 
     args = parser.parse_args()
 
@@ -262,7 +210,7 @@ def main():
         print(f"Error reading input file: {e}", file=sys.stderr)
         sys.exit(1)
 
-    markdown_output = extract_conversations_markdown(json_data, args.since, args.show_edits, args.debug_regex)
+    markdown_output = extract_conversations_markdown(json_data, args.since, args.show_edits, args.verbose)
 
     if args.output:
         try:
