@@ -1,252 +1,268 @@
 #!/usr/bin/env python3
+"""
+A tool to generate a readable Markdown recap from an Agent AI state file.
+
+This script parses a JSON state file, extracts conversation histories,
+and generates a structured, navigable Markdown document.
+"""
 import sys
 import os
-from pathlib import Path
 import re
-
-# Add src directory to Python path
-script_dir = Path(__file__).parent
-src_dir = script_dir.parent / "src"
-sys.path.insert(0, str(src_dir))
-
 import argparse
-from augment_ai.aug_common import load_json_input, save_json_output
-from datetime import datetime, timezone
+import json
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Any, List, Optional, Tuple
 
-def sanitize_markdown(text):
-    """Sanitize text to prevent markdown formatting issues."""
+
+# --- Text Processing Utilities ---
+
+def clean_text_content(text: Optional[str]) -> str:
+    """
+    Non-destructively clean text content for Markdown display.
+    Handles JSON escape sequences without removing essential formatting.
+    """
     if not text:
         return ""
-    
+
     text = str(text)
-    
-    # Handle unicode escape sequences with regex instead of unicode_escape
-    def decode_unicode_escapes(match):
-        try:
-            return chr(int(match.group(1), 16))
-        except ValueError:
-            return match.group(0)
-    
-    # Replace \uXXXX sequences with actual unicode characters
-    text = re.sub(r'\\u([0-9a-fA-F]{4})', decode_unicode_escapes, text)
-    
-    # Replace literal \n with actual newlines, then normalize to spaces
+
+    # Decode unicode escapes like \u2705
+    try:
+        text = text.encode('utf-8').decode('unicode-escape')
+    except UnicodeDecodeError:
+        # Fallback for malformed escapes
+        pass
+
+    # Normalize escaped newlines to actual newlines
     text = text.replace('\\n', '\n')
-    text = text.replace('\\\\n', '\n')
-    
-    # Normalize all whitespace to single spaces
-    text = re.sub(r'\s+', ' ', text)
-    
-    # DON'T escape markdown characters - they're needed for formatting
-    # Only escape truly dangerous characters that break structure
-    dangerous_chars = ['<', '>']  # Only HTML-like chars
-    for char in dangerous_chars:
-        text = text.replace(char, f'\\{char}')
-    
-    # Remove control characters
-    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
-    
-    return text.strip()
 
-def extract_project_recap(json_data, options):
-    """Extract project recap data for historical context."""
-    recap = {
-        "project_timeline": [],
-        "key_decisions": [],
-        "file_evolution": {},
-        "error_patterns": [],
-        "tool_usage": []
-    }
-    
-    conversations = json_data.get("conversations", {})
-    
-    # Filter by date if specified
-    since_date = None
-    if hasattr(options, 'since') and options.since:
-        # Handle different date formats
-        since_str = options.since
-        if 'T' not in since_str:
-            # Add time and timezone if only date provided
-            since_str = f"{since_str}T00:00:00+00:00"
-        elif 'Z' in since_str:
-            since_str = since_str.replace('Z', '+00:00')
-        elif '+' not in since_str and 'Z' not in since_str:
-            # Add timezone if missing
-            since_str = f"{since_str}+00:00"
-        
-        since_date = datetime.fromisoformat(since_str)
-    
-    for conv_id, conv in conversations.items():
-        # Skip if filtering by date
-        if since_date:
-            created_iso = conv.get("createdAtIso", "")
-            if created_iso:
-                created = datetime.fromisoformat(created_iso.replace('Z', '+00:00'))
-                if created < since_date:
-                    continue
+    # Remove only ASCII control characters, preserving tabs and newlines
+    # This prevents binary garbage from breaking the markdown display
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
 
-def get_conversation_title(conv):
-    """Extract a meaningful title from the conversation name or first message."""
-    # First try to get the name field from the conversation
-    name = conv.get("name", "")
-    if name and name.strip():
-        return sanitize_markdown(name.strip())
-    
-    # Fallback to first message if no name
+
+def smart_truncate(text: str, max_length: int) -> str:
+    """
+    Truncate text for a summary, prioritizing the first line and then
+    falling back to sentence or word boundaries.
+    """
+    if not text:
+        return ""
+
+    # Use the first non-empty line as a base for the summary
+    first_line = next((line for line in text.splitlines() if line.strip()), "").strip()
+
+    if len(first_line) > max_length:
+        return first_line[:max_length].strip() + "..."
+    if len(first_line) > 60:  # If the first line is reasonably long, just use it
+        return first_line
+
+    # If the first line is short, try to get more context
+    if len(text) <= max_length:
+        return text.replace('\n', ' ')
+
+    truncated = text[:max_length]
+
+    # Try to find a good break point like a sentence end
+    sentence_ends = ['. ', '.\n', '? ', '?\n', '! ', '!\n', '```']
+    best_cut = -1
+    for ending in sentence_ends:
+        pos = truncated.rfind(ending)
+        if pos > max_length * 0.6:  # Don't cut too early
+            best_cut = max(best_cut, pos + len(ending))
+
+    if best_cut > 0:
+        return text[:best_cut].replace('\n', ' ') + "..."
+
+    # Fallback to word boundary
+    last_space = truncated.rfind(' ')
+    if last_space > max_length * 0.7:
+        return text[:last_space].replace('\n', ' ') + "..."
+
+    return text[:max_length].replace('\n', ' ') + "..."
+
+
+# --- Markdown Generation ---
+
+def get_conversation_title(conv: Dict[str, Any]) -> str:
+    """Extract a clean and concise title from a conversation object."""
+    name = conv.get("name", "").strip()
+    if name:
+        return name
+
     chat_history = conv.get("chatHistory", [])
     if not chat_history:
         return "Empty Conversation"
-    
-    first_message = chat_history[0]
-    request = first_message.get("request_message", "")
-    
-    if not request:
+
+    first_message_request = chat_history[0].get("request_message", "")
+    if not first_message_request:
         return "Untitled Conversation"
-    
-    # Clean and truncate the request to make a title
-    title = sanitize_markdown(request)
-    # Remove common prefixes
-    title = re.sub(r'^(Act as|Please|Can you|How to|I need|Help me)\s+', '', title, flags=re.IGNORECASE)
-    # Take first meaningful part (up to 60 chars)
-    title = title[:60].strip()
-    if len(request) > 60:
-        title += "..."
-    
-    return title or "Untitled Conversation"
 
-def create_markdown_anchor(text):
-    """Create a markdown anchor from text (GitHub-style)."""
-    # Convert to lowercase, replace spaces with hyphens, remove special chars
+    first_line = first_message_request.split('\n')[0].strip()
+    # Remove common conversational prefixes for a cleaner title
+    title = re.sub(
+        r'^(act as|please|can you|explain|help me with|i need)\s+',
+        '', first_line, flags=re.IGNORECASE
+    ).strip()
+
+    return smart_truncate(title, 80) or "Untitled Conversation"
+
+
+def create_markdown_anchor(text: str) -> str:
+    """Create a GitHub-style markdown anchor from a title."""
     anchor = re.sub(r'[^\w\s-]', '', text.lower())
-    anchor = re.sub(r'[-\s]+', '-', anchor)
-    return anchor.strip('-')
+    anchor = re.sub(r'[-\s]+', '-', anchor).strip('-')
+    return anchor
 
-def extract_conversations_markdown(json_data, options):
-    """Extract all conversations in markdown format with TOC and full content."""
+
+def _parse_iso_date(date_str: str) -> Optional[datetime]:
+    """Parse an ISO date string, handling 'Z' timezone."""
+    if not date_str:
+        return None
+    try:
+        # Ensure timezone-aware datetime object for comparison
+        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+    except (ValueError, TypeError):
+        return None
+
+
+def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str]) -> str:
+    """Generate a full Markdown recap from the conversation data."""
     conversations = json_data.get("conversations", {})
-    
-    # Filter by date if specified
-    since_date = None
-    if hasattr(options, 'since') and options.since:
-        since_str = options.since
-        if 'T' not in since_str:
-            since_str = f"{since_str}T00:00:00+00:00"
-        elif 'Z' in since_str:
-            since_str = since_str.replace('Z', '+00:00')
-        elif '+' not in since_str and 'Z' not in since_str:
-            since_str = f"{since_str}+00:00"
-        since_date = datetime.fromisoformat(since_str)
-    
-    # Sort conversations by creation date
-    sorted_convs = sorted(
+    since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
+
+    # Sort and filter conversations
+    sorted_convs: List[Tuple[str, Dict[str, Any]]] = sorted(
         conversations.items(),
-        key=lambda x: x[1].get("createdAtIso", ""),
+        key=lambda item: item[1].get("createdAtIso", ""),
         reverse=True
     )
-    
-    # Filter conversations
-    filtered_convs = []
-    for conv_id, conv in sorted_convs:
-        if since_date:
-            created_iso = conv.get("createdAtIso", "")
-            if created_iso:
-                created = datetime.fromisoformat(created_iso.replace('Z', '+00:00'))
-                if created < since_date:
-                    continue
-        filtered_convs.append((conv_id, conv))
-    
-    markdown_output = []
-    markdown_output.append("# All Conversations Overview\n")
-    
-    # Create Table of Contents
-    markdown_output.append("## Table of Contents\n")
+
+    filtered_convs = [
+        (conv_id, conv) for conv_id, conv in sorted_convs
+        if not since_date or (_parse_iso_date(conv.get("createdAtIso")) or datetime.min.replace(
+            tzinfo=None)) >= since_date.replace(tzinfo=None)
+    ]
+
+    md = ["# Project Recap"]
+
+    # 1. Generate Table of Contents
+    md.append("\n## Table of Contents\n")
+    if not filtered_convs:
+        md.append("*No conversations found for the selected period.*")
+    else:
+        for _, conv in filtered_convs:
+            title = get_conversation_title(conv)
+            anchor = create_markdown_anchor(title)
+            created_at = (conv.get("createdAtIso") or "Unknown")[:10]
+            pin_icon = "📌 " if conv.get("isPinned") else ""
+            md.append(f"- [{pin_icon}{title}](#{anchor}) *({created_at})*")
+
+    # 2. Generate Detailed Conversation Logs
     for conv_id, conv in filtered_convs:
+        md.append("\n---\n")
         title = get_conversation_title(conv)
-        anchor = create_markdown_anchor(title)
-        created_at = conv.get("createdAtIso", "Unknown")[:10]  # Just date
-        is_pinned = "📌 " if conv.get("isPinned", False) else ""
-        
-        markdown_output.append(f"- [{is_pinned}{title}](#{anchor}) *({created_at})*")
-    
-    markdown_output.append("\n---\n")
-    
-    # Full Content
-    for conv_id, conv in filtered_convs:
-        created_at = conv.get("createdAtIso", "Unknown")
-        last_interaction = conv.get("lastInteractedAtIso", "Unknown")
-        is_pinned = "📌 " if conv.get("isPinned", False) else ""
-        
-        title = get_conversation_title(conv)
-        safe_conv_id = sanitize_markdown(conv_id[:8])
-        
-        markdown_output.append(f"## {is_pinned}{title}")
-        markdown_output.append(f"**ID:** {safe_conv_id}...")
-        markdown_output.append(f"**Created:** {created_at}")
-        markdown_output.append(f"**Last Interaction:** {last_interaction}")
-        markdown_output.append("")
-        
+        pin_icon = "📌 " if conv.get("isPinned") else ""
+        md.append(f"## {pin_icon}{title}")
+
+        created_at = conv.get("createdAtIso", "N/A")
+        last_interaction = conv.get("lastInteractedAtIso", "N/A")
+
+        md.append(f"| ID | Created | Last Interaction |")
+        md.append(f"|:---|:---|:---|")
+        md.append(f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |")
+
         chat_history = conv.get("chatHistory", [])
         if not chat_history:
-            markdown_output.append("*No messages*\n")
+            md.append("\n*This conversation has no messages.*")
             continue
-            
-        for i, message in enumerate(chat_history, 1):
-            request = message.get("request_message", "")
-            response = message.get("response_text", "")
-            status = message.get("status", "unknown")
-            timestamp = message.get("timestamp", "")
-            
-            # Sanitize content but keep it full (not truncated)
-            request_clean = sanitize_markdown(request) if request else ""
-            response_clean = sanitize_markdown(response) if response else ""
-            
+
+        # Summary of mentioned files
+        mentioned_files = set()
+        for msg in chat_history:
+            for item in msg.get("mentioned_items", []):
+                if name := item.get("name"):
+                    mentioned_files.add(f"`{name}`")
+        if mentioned_files:
+            md.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
+
+        for i, msg in enumerate(chat_history, 1):
+            request = clean_text_content(msg.get("request_message"))
+            response = clean_text_content(msg.get("response_text"))
+            status = msg.get("status", "unknown")
+            timestamp = msg.get("timestamp", "")
+
             status_icon = {
-                "success": "✅",
-                "error": "❌", 
-                "pending": "⏳",
-                "draft": "📝",
-                "cancelled": "🚫"
+                "success": "✅", "error": "❌", "pending": "⏳",
+                "draft": "📝", "cancelled": "🚫"
             }.get(status, "❓")
-            
-            markdown_output.append(f"### Message {i} {status_icon}")
+
+            md.append(f"\n### Turn {i} ({status.capitalize()}) {status_icon}")
             if timestamp:
-                safe_timestamp = sanitize_markdown(timestamp)
-                markdown_output.append(f"*{safe_timestamp}*")
-            
-            if request_clean:
-                markdown_output.append(f"**Request:** {request_clean}")
-            if response_clean:
-                markdown_output.append(f"**Response:** {response_clean}")
-            markdown_output.append("")
-        
-        markdown_output.append("---\n")
-    
-    return "\n".join(markdown_output)
+                md.append(f"*{timestamp}*\n")
+
+            if request:
+                summary = smart_truncate(request, 200)
+                md.append(f'<details>')
+                md.append(f'  <summary><strong>Request:</strong> {summary}</summary>')
+                md.append(f'\n```\n{request}\n```\n</details>\n')
+
+            if response:
+                summary = smart_truncate(response, 300)
+                md.append(f'<details>')
+                md.append(f'  <summary><strong>Response:</strong> {summary}</summary>')
+                md.append(f'\n```markdown\n{response}\n```\n</details>\n')
+
+    return "\n".join(md)
+
+
+# --- Main Execution ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Export chat recap data")
-    parser.add_argument("input_file", nargs='?', default='-',
-                       help="Input JSON file path (default: stdin)")
-    parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
-    parser.add_argument("--since", help="Filter conversations since date (YYYY-MM-DD)")
-    parser.add_argument("--format", choices=["recap", "conversations"], 
-                       default="recap", help="Output format")
-    
+    """Main function to parse arguments and generate the recap."""
+    parser = argparse.ArgumentParser(
+        description="Generate a readable Markdown recap from an Agent AI state file.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "input_file", nargs='?', default='-',
+        help="Input JSON file path. Reads from stdin if not provided."
+    )
+    parser.add_argument(
+        "-o", "--output",
+        help="Output file path. Writes to stdout if not provided."
+    )
+    parser.add_argument(
+        "--since",
+        help="Filter conversations created on or after this date (YYYY-MM-DD)."
+    )
+
     args = parser.parse_args()
-    
-    json_data = load_json_input(args.input_file)
-    
-    if args.format == "conversations":
-        output = extract_conversations_markdown(json_data, args)
-        # For markdown output, write directly as text, not JSON
-        if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(output)
+
+    try:
+        if args.input_file == '-':
+            json_data = json.load(sys.stdin)
         else:
-            print(output)
+            with open(args.input_file, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        print(f"Error reading input file: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    markdown_output = extract_conversations_markdown(json_data, args.since)
+
+    if args.output:
+        try:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(markdown_output)
+            print(f"Recap successfully written to {args.output}", file=sys.stderr)
+        except IOError as e:
+            print(f"Error writing to output file: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
-        output = extract_project_recap(json_data, args)
-        save_json_output(output, args.output)
+        print(markdown_output)
+
 
 if __name__ == "__main__":
     main()
