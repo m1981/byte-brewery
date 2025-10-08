@@ -161,25 +161,21 @@ def _format_turn_content(
     summary = smart_truncate(content, summary_max_len)
 
     if should_truncate:
-        # Count code block markers to ensure we don't break inside a code block
-        open_ticks = content[:truncation_threshold].count("```")
-
-        # Create truncated content
         display_text = content[:truncation_threshold] + "\n... [content truncated] ..."
-
-        # If we have an odd number of code block markers, add a closing marker
-        if open_ticks % 2 != 0:
-            display_text += "\n```"
-
-        # Special summary for code-heavy content
         if '```' in content:
             summary = "User provided a large code/log excerpt..."
     else:
-        # Use full content if under threshold
         display_text = content
 
-    # Wrap long lines for better rendering
-    display_text = _wrap_long_lines(display_text)
+    # Check for nested backticks and escape them
+    # This handles cases where code blocks contain triple backticks
+    if '```' in display_text and display_text.count('```') % 2 == 0:
+        # Even number of backticks - might have nested code blocks
+        # Replace internal backticks with an escape sequence
+        # Only do this for request content since it will be wrapped in another code block
+        if content_type == "Request":
+            # Find all triple backtick sequences and replace them
+            display_text = display_text.replace("```", "\\`\\`\\`")
 
     if debug: print(f"  - Summary: '{summary}'", file=sys.stderr)
     return summary, display_text
@@ -198,37 +194,33 @@ def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, debug_tr
 
     debug_context = f"'{conv_title}' Turn {turn.turn_number}"
 
+    # Clean nested code blocks in request
+    clean_request = clean_nested_code_blocks(turn.request_raw)
     # Always include the request section, even if empty
     req_summary, req_display = _format_turn_content(
-        turn.request_raw, "Request", TRUNCATION_SUMMARY_MAX_LENGTH,
+        clean_request, "Request", TRUNCATION_SUMMARY_MAX_LENGTH,
         TRUNCATION_REQUEST_LENGTH_THRESHOLD, debug_truncation, debug_context
     )
 
-    # Ensure code blocks are properly closed
-    req_display = ensure_closed_code_blocks(req_display)
-
+    # For requests, ensure we have proper code block formatting
     md.append(
         f'<details>\n  <summary><strong>Request:</strong> {req_summary}</summary>\n\n```\n{req_display}\n```\n</details>\n')
 
-    # Always include the response section, even if empty
+    # Process response content
     response_processed = turn.response_raw if show_edits else filter_file_edits(turn.response_raw)
     resp_summary, resp_display = _format_turn_content(
         response_processed, "Response", TRUNCATION_SUMMARY_MAX_LENGTH + 100,
         TRUNCATION_RESPONSE_LENGTH_THRESHOLD, debug_truncation, debug_context
     )
 
-    # Ensure code blocks are properly closed
-    resp_display = ensure_closed_code_blocks(resp_display)
-
-    # Different formatting based on response content type
+    # For responses, don't wrap in additional code blocks if it already contains file edits
+    # This prevents the triple backtick issues in the PB topic section
     if "> *[File edit performed on" in resp_display:
-        # Don't wrap file edits in additional code blocks
         md.append(
             f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
     else:
-        # Use code blocks for regular responses
         md.append(
-            f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
+            f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n```\n{resp_display}\n```\n</details>\n')
 
     # Return all lines, not just non-empty ones
     return md
@@ -404,13 +396,51 @@ def stream_conversation_recap(
     if verbose:
         print("\nINFO: All conversations processed.", file=sys.stderr)
 
-    # If validation was requested, validate and write the final output
-    if validate_output and output_buffer:
-        final_markdown = output_buffer.getvalue()
-        validated_markdown = validate_markdown(final_markdown)
-        output_stream.write(validated_markdown)
-        if verbose:
-            print("INFO: Markdown validation completed.", file=sys.stderr)
+    # At the end of processing, add:
+    if validate_output:
+        # Get the full output
+        if isinstance(output_stream, StringIO):
+            final_markdown = output_stream.getvalue()
+            # Check for unclosed code blocks
+            code_block_open = False
+            for line in final_markdown.split('\n'):
+                if "```" in line:
+                    # Count backticks in the line
+                    count = line.count("```")
+                    for _ in range(count):
+                        code_block_open = not code_block_open
+
+            # If we end with an open code block, close it
+            if code_block_open:
+                output_stream.write("\n```\n")
+
+
+def clean_nested_code_blocks(text: str) -> str:
+    """Handle nested code blocks by escaping internal backticks."""
+    lines = text.split('\n')
+    in_code_block = False
+    result = []
+
+    for line in lines:
+        if line.strip().startswith('```'):
+            # This is a code block delimiter line
+            if not in_code_block:
+                # Opening a code block
+                in_code_block = True
+                result.append(line)
+            else:
+                # Closing a code block
+                in_code_block = False
+                result.append(line)
+        elif in_code_block and '```' in line:
+            # This is a line inside a code block that contains backticks
+            # Escape the backticks
+            result.append(line.replace('```', '\\`\\`\\`'))
+        else:
+            # Regular line
+            result.append(line)
+
+    return '\n'.join(result)
 
 
 def main():
@@ -453,8 +483,8 @@ def main():
         if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
             sys.stdout.reconfigure(encoding='utf-8')
         stream_conversation_recap(
-            json_data, sys.stdout, args.since, args.show_edits, args.verbose,
-            args.debug_truncation, args.validate  # Add the validate parameter
+        json_data, f, args.since, args.show_edits, args.verbose,
+        args.debug_truncation, args.validate
         )
 
 
