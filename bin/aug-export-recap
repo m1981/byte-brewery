@@ -7,9 +7,11 @@ import sys
 import re
 import argparse
 import json
+import textwrap
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple, NamedTuple, TextIO
+from typing import Dict, Any, List, Optional, Tuple, NamedTuple, TextIO, Union, IO
+from io import StringIO
 
 # --- Constants and Data Structures ---
 TRUNCATION_REQUEST_LENGTH_THRESHOLD = 250
@@ -31,27 +33,87 @@ class ConversationTurn(NamedTuple):
 
 
 # --- Text Processing Utilities ---
+def ensure_closed_code_blocks(text: str) -> str:
+    """Ensure all code blocks in the text are properly closed."""
+    if not text:
+        return ""
+
+    # Count code block markers
+    code_markers = text.count("```")
+
+    # If we have an odd number of markers, add a closing one
+    if code_markers % 2 != 0:
+        return text + "\n```"
+
+    return text
+
+
 def filter_file_edits(text: str) -> str:
-    if not text: return ""
+    """Replace file edit code blocks with a more compact representation."""
+    if not text:
+        return ""
+
+    # This pattern matches code blocks with path= attribute
     pattern = re.compile(r"```[^\n]*?path=([^\s]+).*?```", re.DOTALL)
-    return pattern.sub(lambda m: f"\n> *[File edit performed on `{m.group(1)}`]*\n", text)
+
+    # Replace with a more compact format
+    filtered_text = pattern.sub(lambda m: f"\n> *[File edit performed on `{m.group(1)}`]*\n", text)
+
+    # Ensure no unclosed code blocks remain
+    filtered_text = ensure_closed_code_blocks(filtered_text)
+
+    return filtered_text
 
 
 def clean_text_content(text: Optional[Any]) -> str:
-    if text is None: return ""
-    if not isinstance(text, str): text = str(text)
+    """Clean and normalize text content."""
+    if text is None:
+        return ""
+    if not isinstance(text, str):
+        text = str(text)
+
+    # Replace escaped newlines with actual newlines
     text = text.replace('\\n', '\n')
+
+    # Remove control characters
     return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
 
 
 def smart_truncate(text: str, max_length: int) -> str:
-    if not text: return ""
+    """Intelligently truncate text to a maximum length."""
+    if not text:
+        return ""
+
+    # Get just the first line
     first_line = text.strip().split('\n', 1)[0].strip()
-    if not first_line: return "..."
-    return (first_line[:max_length].strip() + "...") if len(first_line) > max_length else first_line
+    if not first_line:
+        return "..."
+
+    # Truncate if needed
+    if len(first_line) > max_length:
+        return first_line[:max_length].strip() + "..."
+    else:
+        return first_line
 
 
-# --- Markdown Generation Helpers (All defined at global scope) ---
+def _wrap_long_lines(text: str, max_length: int = 120) -> str:
+    """Wrap very long lines to prevent rendering issues."""
+    lines = text.split('\n')
+    wrapped_lines = []
+
+    for line in lines:
+        # Only wrap non-code lines that are very long
+        if len(line) > max_length and '```' not in line and '|' not in line and not line.startswith('#'):
+            # Don't wrap tables, code blocks or headings
+            wrapped_line = textwrap.fill(line, width=max_length)
+            wrapped_lines.append(wrapped_line)
+        else:
+            wrapped_lines.append(line)
+
+    return '\n'.join(wrapped_lines)
+
+
+# --- Markdown Generation Helpers ---
 def get_conversation_title(conv: Dict[str, Any]) -> str:
     if name := conv.get("name", "").strip(): return name
     chat_history = conv.get("chatHistory", [])
@@ -99,11 +161,25 @@ def _format_turn_content(
     summary = smart_truncate(content, summary_max_len)
 
     if should_truncate:
+        # Count code block markers to ensure we don't break inside a code block
+        open_ticks = content[:truncation_threshold].count("```")
+
+        # Create truncated content
         display_text = content[:truncation_threshold] + "\n... [content truncated] ..."
+
+        # If we have an odd number of code block markers, add a closing marker
+        if open_ticks % 2 != 0:
+            display_text += "\n```"
+
+        # Special summary for code-heavy content
         if '```' in content:
             summary = "User provided a large code/log excerpt..."
     else:
+        # Use full content if under threshold
         display_text = content
+
+    # Wrap long lines for better rendering
+    display_text = _wrap_long_lines(display_text)
 
     if debug: print(f"  - Summary: '{summary}'", file=sys.stderr)
     return summary, display_text
@@ -127,6 +203,10 @@ def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, debug_tr
         turn.request_raw, "Request", TRUNCATION_SUMMARY_MAX_LENGTH,
         TRUNCATION_REQUEST_LENGTH_THRESHOLD, debug_truncation, debug_context
     )
+
+    # Ensure code blocks are properly closed
+    req_display = ensure_closed_code_blocks(req_display)
+
     md.append(
         f'<details>\n  <summary><strong>Request:</strong> {req_summary}</summary>\n\n```\n{req_display}\n```\n</details>\n')
 
@@ -136,13 +216,41 @@ def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, debug_tr
         response_processed, "Response", TRUNCATION_SUMMARY_MAX_LENGTH + 100,
         TRUNCATION_RESPONSE_LENGTH_THRESHOLD, debug_truncation, debug_context
     )
-    md.append(
-        f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
+
+    # Ensure code blocks are properly closed
+    resp_display = ensure_closed_code_blocks(resp_display)
+
+    # Different formatting based on response content type
+    if "> *[File edit performed on" in resp_display:
+        # Don't wrap file edits in additional code blocks
+        md.append(
+            f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
+    else:
+        # Use code blocks for regular responses
+        md.append(
+            f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
 
     # Return all lines, not just non-empty ones
     return md
 
 
+def validate_markdown(markdown_text: str) -> str:
+    """Final validation to ensure no unclosed code blocks or other issues remain."""
+    lines = markdown_text.split('\n')
+    code_block_open = False
+
+    for i, line in enumerate(lines):
+        if "```" in line:
+            # Toggle code block state for each ``` marker
+            code_markers = line.count("```")
+            for _ in range(code_markers):
+                code_block_open = not code_block_open
+
+    # If we end with an open code block, close it
+    if code_block_open:
+        return markdown_text + "\n```\n"
+
+    return markdown_text
 
 # --- Main Streaming Function ---
 def stream_conversation_recap(
@@ -151,8 +259,10 @@ def stream_conversation_recap(
         since: Optional[str],
         show_edits: bool,
         verbose: bool,
-        debug_truncation: bool
+        debug_truncation: bool,
+        validate_output: bool
 ):
+    """Process conversations and stream markdown output."""
     def write(text: str):
         output_stream.write(text + '\n')
 
@@ -168,6 +278,7 @@ def stream_conversation_recap(
         if not isinstance(conv_data, dict): return FALLBACK_DATE_STRING
         return conv_data.get("createdAtIso") or conv_data.get("lastInteractedAtIso") or FALLBACK_DATE_STRING
 
+    # Sort conversations by date (newest first)
     sorted_convs = sorted(conversations.items(), key=get_sort_key, reverse=True)
 
     def is_after_since_date(conv):
@@ -176,12 +287,14 @@ def stream_conversation_recap(
         conv_date = _parse_iso_date(date_str)
         return conv_date >= since_date if conv_date else False
 
+    # Filter conversations by date if needed
     filtered_convs = [(cid, c) for cid, c in sorted_convs if is_after_since_date(c)]
 
     if verbose:
         print(f"INFO: Found {len(conversations)} total conversations.", file=sys.stderr)
         print(f"INFO: Sorted and filtered down to {len(filtered_convs)} conversations.", file=sys.stderr)
 
+    # Write header and table of contents
     write("# Project Recap")
     write("## Table of Contents")
     if not filtered_convs:
@@ -208,6 +321,12 @@ def stream_conversation_recap(
     # Track processed conversation IDs to prevent duplicates
     processed_conv_ids = set()
 
+    # Buffer for collecting all output if validation is needed
+    output_buffer = StringIO() if validate_output else None
+
+    # Use the appropriate output target
+    out = output_buffer if output_buffer else output_stream
+
     for i, (conv_id, conv) in enumerate(filtered_convs, 1):
         # Skip duplicates
         if conv_id in processed_conv_ids:
@@ -220,7 +339,7 @@ def stream_conversation_recap(
         title = "Unknown Title"
         try:
             if not isinstance(conv, dict):
-                write(f"\n---\n\n> **[WARNING]** Skipping malformed entry with ID `{conv_id[:8]}`.")
+                out.write(f"\n---\n\n> **[WARNING]** Skipping malformed entry with ID `{conv_id[:8]}`.\n")
                 continue
 
             title = get_conversation_title(conv)
@@ -234,30 +353,30 @@ def stream_conversation_recap(
                 print(f"\nINFO: Processing conversation {i}/{len(filtered_convs)}: '{title}' ({conv_id[:8]})",
                       file=sys.stderr)
 
-            write("\n---\n")
+            out.write("\n---\n\n")
             pin_icon = "📌 " if conv.get("isPinned") else ""
-            write(f"## {pin_icon}{title}")
+            out.write(f"## {pin_icon}{title}\n")
 
             created_at = conv.get("createdAtIso", "N/A")
             last_interaction = conv.get("lastInteractedAtIso", "N/A")
-            write(f"| ID | Created | Last Interaction |")
-            write(f"|:---|:---|:---|")
-            write(f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |")
+            out.write(f"| ID | Created | Last Interaction |\n")
+            out.write(f"|:---|:---|:---|\n")
+            out.write(f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |\n")
 
             chat_history = conv.get("chatHistory", [])
             if not chat_history:
-                write("\n*This conversation has no messages.*")
+                out.write("\n*This conversation has no messages.*\n")
                 continue
 
             mentioned_files = {f"`{item['name']}`" for msg in chat_history if isinstance(msg, dict) for item in
                                msg.get("mentioned_items", []) if isinstance(item, dict) and item.get("name")}
             if mentioned_files:
-                write(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
+                out.write(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}\n")
 
             for j, msg in enumerate(chat_history, 1):
                 if verbose: print(f"  -> Processing Turn {j}...", file=sys.stderr)
                 if not isinstance(msg, dict):
-                    write(f"\n> **[WARNING]** Skipping malformed turn `{j}`.")
+                    out.write(f"\n> **[WARNING]** Skipping malformed turn `{j}`.\n")
                     continue
 
                 turn = ConversationTurn(
@@ -270,18 +389,28 @@ def stream_conversation_recap(
 
                 turn_md_lines = _format_conversation_turn(turn, show_edits, debug_truncation, title)
                 for line in turn_md_lines:
-                    write(line)
+                    out.write(line + "\n")
+
                 if verbose: print(f"  -> Turn {j} completed.", file=sys.stderr)
 
         except Exception as e:
-            write(f"\n\n> **[ERROR]** An unexpected error occurred while processing '{title}'. Skipping.")
-            write(f"> ```\n> {type(e).__name__}: {e}\n> ```")
+            out.write(f"\n\n> **[ERROR]** An unexpected error occurred while processing '{title}'. Skipping.\n")
+            out.write(f"> ```\n> {type(e).__name__}: {e}\n> ```\n")
             print(f"--- ⚠️ ERROR ---", file=sys.stderr)
             print(f"Skipping conversation {i}/{len(filtered_convs)} ('{title}') due to an exception:", file=sys.stderr)
             print(f"  - ID: {conv_id}\n  - Exception: {type(e).__name__}: {e}", file=sys.stderr)
             continue
 
-    if verbose: print("\nINFO: All conversations processed. Stream complete.", file=sys.stderr)
+    if verbose:
+        print("\nINFO: All conversations processed.", file=sys.stderr)
+
+    # If validation was requested, validate and write the final output
+    if validate_output and output_buffer:
+        final_markdown = output_buffer.getvalue()
+        validated_markdown = validate_markdown(final_markdown)
+        output_stream.write(validated_markdown)
+        if verbose:
+            print("INFO: Markdown validation completed.", file=sys.stderr)
 
 
 def main():
@@ -295,6 +424,9 @@ def main():
     parser.add_argument("--show-edits", action="store_true", help="Include full content of agent file edits.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Print progress and canary logs to stderr.")
     parser.add_argument("--debug-truncation", action="store_true", help="Print detailed truncation logic to stderr.")
+    parser.add_argument("--validate", action="store_true",
+                        help="Validate the final markdown for unclosed code blocks.")
+
     args = parser.parse_args()
 
     try:
@@ -310,7 +442,8 @@ def main():
         try:
             with open(args.output, 'w', encoding='utf-8') as f:
                 stream_conversation_recap(
-                    json_data, f, args.since, args.show_edits, args.verbose, args.debug_truncation
+                    json_data, f, args.since, args.show_edits, args.verbose,
+                    args.debug_truncation, args.validate  # Add the validate parameter
                 )
             print(f"Recap successfully written to {args.output}", file=sys.stderr)
         except IOError as e:
@@ -320,7 +453,8 @@ def main():
         if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
             sys.stdout.reconfigure(encoding='utf-8')
         stream_conversation_recap(
-            json_data, sys.stdout, args.since, args.show_edits, args.verbose, args.debug_truncation
+            json_data, sys.stdout, args.since, args.show_edits, args.verbose,
+            args.debug_truncation, args.validate  # Add the validate parameter
         )
 
 
