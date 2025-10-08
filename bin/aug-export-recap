@@ -3,43 +3,69 @@
 A tool to generate a readable Markdown recap from an Agent AI state file.
 
 This script parses a JSON state file, extracts conversation histories,
-and generates a structured, navigable Markdown document.
+and generates a structured, navigable Markdown document. It filters out
+agent file-edit code blocks for cleaner output.
 """
 import sys
-import os
 import re
 import argparse
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
 
 
 # --- Text Processing Utilities ---
 
+def filter_file_edits(text: str) -> str:
+    """
+    Finds agent-generated file edit blocks and replaces them with a summary message.
+    """
+    if not text:
+        return ""
+
+    # Regex to find code blocks with path and mode attributes.
+    # It's non-greedy and handles multiline content.
+    pattern = re.compile(
+        r"`` `(\w*)\s*path=([^\s]+)\s+mode=\w+\n.*?\n`` `",
+        re.DOTALL
+    )
+
+    def replacer(match: re.Match) -> str:
+        """Replacement function to create a summary line."""
+        path = match.group(2)
+        return f"\n> *[File edit performed on `{path}`]*\n"
+
+    return pattern.sub(replacer, text)
+
+
 def clean_text_content(text: Optional[str]) -> str:
     """
     Non-destructively clean text content for Markdown display.
-    Handles JSON escape sequences without removing essential formatting.
+    Handles JSON escape sequences and filters file edits.
     """
     if not text:
         return ""
 
     text = str(text)
 
-    # Decode unicode escapes like \u2705
-    try:
-        text = text.encode('utf-8').decode('unicode-escape')
-    except UnicodeDecodeError:
-        # Fallback for malformed escapes
-        pass
+    # Decode unicode escapes like \u2705 first
+    # This regex-based approach is safer than encode/decode for malformed strings
+    def decode_unicode_escapes(match):
+        try:
+            return chr(int(match.group(1), 16))
+        except (ValueError, TypeError):
+            return match.group(0)  # Return original if conversion fails
+
+    text = re.sub(r'\\u([0-9a-fA-F]{4})', decode_unicode_escapes, text)
 
     # Normalize escaped newlines to actual newlines
     text = text.replace('\\n', '\n')
 
     # Remove only ASCII control characters, preserving tabs and newlines
-    # This prevents binary garbage from breaking the markdown display
-    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+    return text
 
 
 def smart_truncate(text: str, max_length: int) -> str:
@@ -50,32 +76,28 @@ def smart_truncate(text: str, max_length: int) -> str:
     if not text:
         return ""
 
-    # Use the first non-empty line as a base for the summary
     first_line = next((line for line in text.splitlines() if line.strip()), "").strip()
 
     if len(first_line) > max_length:
         return first_line[:max_length].strip() + "..."
-    if len(first_line) > 60:  # If the first line is reasonably long, just use it
+    if len(first_line) > 60:
         return first_line
 
-    # If the first line is short, try to get more context
     if len(text) <= max_length:
         return text.replace('\n', ' ')
 
     truncated = text[:max_length]
 
-    # Try to find a good break point like a sentence end
     sentence_ends = ['. ', '.\n', '? ', '?\n', '! ', '!\n', '```']
     best_cut = -1
     for ending in sentence_ends:
         pos = truncated.rfind(ending)
-        if pos > max_length * 0.6:  # Don't cut too early
+        if pos > max_length * 0.6:
             best_cut = max(best_cut, pos + len(ending))
 
     if best_cut > 0:
         return text[:best_cut].replace('\n', ' ') + "..."
 
-    # Fallback to word boundary
     last_space = truncated.rfind(' ')
     if last_space > max_length * 0.7:
         return text[:last_space].replace('\n', ' ') + "..."
@@ -100,7 +122,6 @@ def get_conversation_title(conv: Dict[str, Any]) -> str:
         return "Untitled Conversation"
 
     first_line = first_message_request.split('\n')[0].strip()
-    # Remove common conversational prefixes for a cleaner title
     title = re.sub(
         r'^(act as|please|can you|explain|help me with|i need)\s+',
         '', first_line, flags=re.IGNORECASE
@@ -121,7 +142,6 @@ def _parse_iso_date(date_str: str) -> Optional[datetime]:
     if not date_str:
         return None
     try:
-        # Ensure timezone-aware datetime object for comparison
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
     except (ValueError, TypeError):
         return None
@@ -132,7 +152,6 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
     conversations = json_data.get("conversations", {})
     since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
 
-    # Sort and filter conversations
     sorted_convs: List[Tuple[str, Dict[str, Any]]] = sorted(
         conversations.items(),
         key=lambda item: item[1].get("createdAtIso", ""),
@@ -141,13 +160,12 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
 
     filtered_convs = [
         (conv_id, conv) for conv_id, conv in sorted_convs
-        if not since_date or (_parse_iso_date(conv.get("createdAtIso")) or datetime.min.replace(
-            tzinfo=None)) >= since_date.replace(tzinfo=None)
+        if not since_date or (_parse_iso_date(conv.get("createdAtIso", "")) or datetime.min.replace(
+            tzinfo=timezone.utc)) >= since_date
     ]
 
     md = ["# Project Recap"]
 
-    # 1. Generate Table of Contents
     md.append("\n## Table of Contents\n")
     if not filtered_convs:
         md.append("*No conversations found for the selected period.*")
@@ -159,7 +177,6 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
             pin_icon = "📌 " if conv.get("isPinned") else ""
             md.append(f"- [{pin_icon}{title}](#{anchor}) *({created_at})*")
 
-    # 2. Generate Detailed Conversation Logs
     for conv_id, conv in filtered_convs:
         md.append("\n---\n")
         title = get_conversation_title(conv)
@@ -178,7 +195,6 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
             md.append("\n*This conversation has no messages.*")
             continue
 
-        # Summary of mentioned files
         mentioned_files = set()
         for msg in chat_history:
             for item in msg.get("mentioned_items", []):
@@ -188,8 +204,12 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
             md.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
 
         for i, msg in enumerate(chat_history, 1):
-            request = clean_text_content(msg.get("request_message"))
-            response = clean_text_content(msg.get("response_text"))
+            request_clean = clean_text_content(msg.get("request_message"))
+
+            # Clean and then filter the response
+            response_clean = clean_text_content(msg.get("response_text"))
+            response_filtered = filter_file_edits(response_clean)
+
             status = msg.get("status", "unknown")
             timestamp = msg.get("timestamp", "")
 
@@ -202,17 +222,17 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
             if timestamp:
                 md.append(f"*{timestamp}*\n")
 
-            if request:
-                summary = smart_truncate(request, 200)
+            if request_clean:
+                summary = smart_truncate(request_clean, 200)
                 md.append(f'<details>')
                 md.append(f'  <summary><strong>Request:</strong> {summary}</summary>')
-                md.append(f'\n```\n{request}\n```\n</details>\n')
+                md.append(f'\n```\n{request_clean}\n```\n</details>\n')
 
-            if response:
-                summary = smart_truncate(response, 300)
+            if response_filtered:
+                summary = smart_truncate(response_filtered, 300)
                 md.append(f'<details>')
                 md.append(f'  <summary><strong>Response:</strong> {summary}</summary>')
-                md.append(f'\n```markdown\n{response}\n```\n</details>\n')
+                md.append(f'\n{response_filtered}\n</details>\n')
 
     return "\n".join(md)
 
@@ -241,12 +261,13 @@ def main():
     args = parser.parse_args()
 
     try:
+        # Explicitly handle encoding for robust unicode support
         if args.input_file == '-':
             json_data = json.load(sys.stdin)
         else:
             with open(args.input_file, 'r', encoding='utf-8') as f:
                 json_data = json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError) as e:
+    except (json.JSONDecodeError, FileNotFoundError, UnicodeDecodeError) as e:
         print(f"Error reading input file: {e}", file=sys.stderr)
         sys.exit(1)
 
@@ -261,6 +282,8 @@ def main():
             print(f"Error writing to output file: {e}", file=sys.stderr)
             sys.exit(1)
     else:
+        # Ensure stdout is configured for UTF-8
+        sys.stdout.reconfigure(encoding='utf-8')
         print(markdown_output)
 
 
