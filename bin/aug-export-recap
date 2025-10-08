@@ -20,10 +20,6 @@ def sanitize_markdown(text):
     
     text = str(text)
     
-    # DEBUG: Show what we're starting with
-    if '\\n' in text or '\n' in text:
-        print(f"🐛 DEBUG: Input contains newlines: {repr(text[:100])}", file=sys.stderr)
-    
     # Handle unicode escape sequences with regex instead of unicode_escape
     def decode_unicode_escapes(match):
         try:
@@ -35,35 +31,20 @@ def sanitize_markdown(text):
     text = re.sub(r'\\u([0-9a-fA-F]{4})', decode_unicode_escapes, text)
     
     # Replace literal \n with actual newlines, then normalize to spaces
-    original_text = text
     text = text.replace('\\n', '\n')
-    
-    # Also handle escaped newlines that might be double-escaped
     text = text.replace('\\\\n', '\n')
     
-    # DEBUG: Show after newline replacement
-    if original_text != text:
-        print(f"🐛 DEBUG: After newline replacement: {repr(text[:100])}", file=sys.stderr)
-    
     # Normalize all whitespace to single spaces
-    before_normalize = text
     text = re.sub(r'\s+', ' ', text)
     
-    # DEBUG: Show after normalization
-    if before_normalize != text:
-        print(f"🐛 DEBUG: After normalization: {repr(text[:100])}", file=sys.stderr)
-    
-    # Only escape problematic markdown chars that would break structure
-    dangerous_chars = ['`', '#', '[', ']']
+    # DON'T escape markdown characters - they're needed for formatting
+    # Only escape truly dangerous characters that break structure
+    dangerous_chars = ['<', '>']  # Only HTML-like chars
     for char in dangerous_chars:
         text = text.replace(char, f'\\{char}')
     
     # Remove control characters
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
-    
-    # DEBUG: Final check for remaining \n
-    if '\\n' in text:
-        print(f"🐛 DEBUG: Still has \\n after processing: {repr(text[:100])}", file=sys.stderr)
     
     return text.strip()
 
@@ -133,8 +114,15 @@ def get_conversation_title(conv):
     
     return title or "Untitled Conversation"
 
+def create_markdown_anchor(text):
+    """Create a markdown anchor from text (GitHub-style)."""
+    # Convert to lowercase, replace spaces with hyphens, remove special chars
+    anchor = re.sub(r'[^\w\s-]', '', text.lower())
+    anchor = re.sub(r'[-\s]+', '-', anchor)
+    return anchor.strip('-')
+
 def extract_conversations_markdown(json_data, options):
-    """Extract all conversations in markdown format with truncated content."""
+    """Extract all conversations in markdown format with TOC and full content."""
     conversations = json_data.get("conversations", {})
     
     # Filter by date if specified
@@ -149,9 +137,6 @@ def extract_conversations_markdown(json_data, options):
             since_str = f"{since_str}+00:00"
         since_date = datetime.fromisoformat(since_str)
     
-    markdown_output = []
-    markdown_output.append("# All Conversations Overview\n")
-    
     # Sort conversations by creation date
     sorted_convs = sorted(
         conversations.items(),
@@ -159,24 +144,42 @@ def extract_conversations_markdown(json_data, options):
         reverse=True
     )
     
+    # Filter conversations
+    filtered_convs = []
     for conv_id, conv in sorted_convs:
-        # Skip if filtering by date
         if since_date:
             created_iso = conv.get("createdAtIso", "")
             if created_iso:
                 created = datetime.fromisoformat(created_iso.replace('Z', '+00:00'))
                 if created < since_date:
                     continue
+        filtered_convs.append((conv_id, conv))
+    
+    markdown_output = []
+    markdown_output.append("# All Conversations Overview\n")
+    
+    # Create Table of Contents
+    markdown_output.append("## Table of Contents\n")
+    for conv_id, conv in filtered_convs:
+        title = get_conversation_title(conv)
+        anchor = create_markdown_anchor(title)
+        created_at = conv.get("createdAtIso", "Unknown")[:10]  # Just date
+        is_pinned = "📌 " if conv.get("isPinned", False) else ""
         
+        markdown_output.append(f"- [{is_pinned}{title}](#{anchor}) *({created_at})*")
+    
+    markdown_output.append("\n---\n")
+    
+    # Full Content
+    for conv_id, conv in filtered_convs:
         created_at = conv.get("createdAtIso", "Unknown")
         last_interaction = conv.get("lastInteractedAtIso", "Unknown")
-        is_pinned = "📌" if conv.get("isPinned", False) else ""
+        is_pinned = "📌 " if conv.get("isPinned", False) else ""
         
-        # Get conversation title from first message
         title = get_conversation_title(conv)
         safe_conv_id = sanitize_markdown(conv_id[:8])
         
-        markdown_output.append(f"## {is_pinned} {title}")
+        markdown_output.append(f"## {is_pinned}{title}")
         markdown_output.append(f"**ID:** {safe_conv_id}...")
         markdown_output.append(f"**Created:** {created_at}")
         markdown_output.append(f"**Last Interaction:** {last_interaction}")
@@ -193,12 +196,9 @@ def extract_conversations_markdown(json_data, options):
             status = message.get("status", "unknown")
             timestamp = message.get("timestamp", "")
             
-            # Sanitize and truncate content
-            request_clean = sanitize_markdown(request)
-            response_clean = sanitize_markdown(response)
-            
-            request_short = (request_clean[:47] + "...") if len(request_clean) > 50 else request_clean
-            response_short = (response_clean[:47] + "...") if len(response_clean) > 50 else response_clean
+            # Sanitize content but keep it full (not truncated)
+            request_clean = sanitize_markdown(request) if request else ""
+            response_clean = sanitize_markdown(response) if response else ""
             
             status_icon = {
                 "success": "✅",
@@ -213,10 +213,10 @@ def extract_conversations_markdown(json_data, options):
                 safe_timestamp = sanitize_markdown(timestamp)
                 markdown_output.append(f"*{safe_timestamp}*")
             
-            if request_short:
-                markdown_output.append(f"**Request:** {request_short}")
-            if response_short:
-                markdown_output.append(f"**Response:** {response_short}")
+            if request_clean:
+                markdown_output.append(f"**Request:** {request_clean}")
+            if response_clean:
+                markdown_output.append(f"**Response:** {response_clean}")
             markdown_output.append("")
         
         markdown_output.append("---\n")
