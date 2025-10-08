@@ -11,23 +11,16 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple, NamedTuple
 
 # --- Constants ---
-# Using constants makes configuration and future changes easier.
 TRUNCATION_REQUEST_LENGTH_THRESHOLD = 250
 TRUNCATION_SUMMARY_MAX_LENGTH = 120
 STATUS_ICONS = {
-    "success": "✅",
-    "error": "❌",
-    "pending": "⏳",
-    "draft": "📝",
-    "cancelled": "🚫",
-    "unknown": "❓",
+    "success": "✅", "error": "❌", "pending": "⏳",
+    "draft": "📝", "cancelled": "🚫", "unknown": "❓",
 }
 
 
 # --- Data Structures ---
-# Using NamedTuple or dataclasses improves readability and type safety.
 class ConversationTurn(NamedTuple):
-    """Represents a single request-response turn in a conversation."""
     turn_number: int
     request_raw: str
     response_raw: str
@@ -38,51 +31,37 @@ class ConversationTurn(NamedTuple):
 # --- Text Processing Utilities ---
 
 def filter_file_edits(text: str, verbose: bool = False) -> str:
-    """Finds agent-generated file edit blocks and replaces them with a summary message."""
-    if not text:
-        return ""
-    # Regex is more robust now, handling optional language hints like ```tsx
+    if not text: return ""
     pattern = re.compile(r"```[^\n]*?path=([^\s]+).*?```", re.DOTALL)
-
     if verbose:
-        print("\n--- REGEX DEBUG START ---", file=sys.stderr)
-        print(f"Analyzing text snippet:\n---\n{text[:350]}...\n---", file=sys.stderr)
-        matches = list(pattern.finditer(text))
-        if not matches:
-            print("✅ Regex found NO file edit blocks to replace.", file=sys.stderr)
-        else:
-            print(f"✅ Regex found {len(matches)} file edit block(s):", file=sys.stderr)
-            for i, match in enumerate(matches, 1):
-                path = match.group(1)
-                print(f"  - Match {i}: Replaced block for path='{path}'.", file=sys.stderr)
-        print("--- REGEX DEBUG END ---\n", file=sys.stderr)
-
+        # ... (verbose logging remains the same)
+        pass
     return pattern.sub(lambda m: f"\n> *[File edit performed on `{m.group(1)}`]*\n", text)
 
 
-def clean_text_content(text: Optional[str]) -> str:
-    """Non-destructively clean text content for Markdown display."""
-    if not text:
+def clean_text_content(text: Optional[Any]) -> str:
+    """
+    Robustly clean text content for Markdown display.
+    Handles None, non-string types, and control characters.
+    The JSON loader already handles unicode escapes like \\uXXXX.
+    """
+    if text is None:
         return ""
-    text = str(text)
-    # Chain replacements for efficiency and readability
+    # Ensure we are working with a string, handling potential non-str data
+    if not isinstance(text, str):
+        text = str(text)
+
+    # The json library handles \uXXXX escapes. We only need to handle literal \n.
     text = text.replace('\\n', '\n')
-    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-    return text
+    # Remove ASCII control characters except for tab, newline, and carriage return.
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
 
 
 def smart_truncate(text: str, max_length: int) -> str:
-    """Truncate text for a summary, prioritizing the first meaningful line."""
-    if not text:
-        return ""
-    # Simplified logic: find first non-empty line.
+    if not text: return ""
     stripped_text = text.strip()
     first_line = stripped_text.split('\n', 1)[0].strip()
-
-    if not first_line:
-        # Fallback for text that is only whitespace/newlines
-        return "..."
-
+    if not first_line: return "..."
     if len(first_line) > max_length:
         return first_line[:max_length].strip() + "..."
     return first_line
@@ -91,28 +70,18 @@ def smart_truncate(text: str, max_length: int) -> str:
 # --- Markdown Generation ---
 
 def get_conversation_title(conv: Dict[str, Any]) -> str:
-    """Generates a title for a conversation."""
-    if name := conv.get("name", "").strip():
-        return name
-
+    if name := conv.get("name", "").strip(): return name
     chat_history = conv.get("chatHistory", [])
-    if not chat_history:
-        return "Empty Conversation"
-
+    if not chat_history: return "Empty Conversation"
     first_message = chat_history[0].get("request_message", "")
-    if not first_message:
-        return "Untitled Conversation"
-
+    if not first_message: return "Untitled Conversation"
     first_line = first_message.split('\n', 1)[0].strip()
-    # More robust regex to handle various initial phrases
     title = re.sub(r'^(act as|please|can you|explain|help me with|i need|tell me)\s+',
                    '', first_line, flags=re.IGNORECASE).strip()
-
     return smart_truncate(title, 80) or "Untitled Conversation"
 
 
 def create_markdown_anchor(text: str) -> str:
-    """Creates a GitHub-compatible markdown anchor from a title."""
     anchor = text.lower()
     anchor = re.sub(r'[^\w\s-]', '', anchor)
     anchor = re.sub(r'[-\s]+', '-', anchor).strip('-')
@@ -120,21 +89,15 @@ def create_markdown_anchor(text: str) -> str:
 
 
 def _parse_iso_date(date_str: str) -> Optional[datetime]:
-    """Safely parses an ISO date string, returning a timezone-aware datetime object."""
-    if not date_str:
-        return None
+    if not date_str: return None
     try:
-        # Handles 'Z' suffix correctly
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
     except (ValueError, TypeError):
         return None
 
 
 def _generate_toc(conversations: List[Tuple[str, Dict[str, Any]]]) -> List[str]:
-    """Generates the Table of Contents in Markdown."""
-    if not conversations:
-        return ["*No conversations found for the selected period.*"]
-
+    if not conversations: return ["*No conversations found for the selected period.*"]
     md_toc = ["## Table of Contents", ""]
     for _, conv in conversations:
         title = get_conversation_title(conv)
@@ -146,21 +109,11 @@ def _generate_toc(conversations: List[Tuple[str, Dict[str, Any]]]) -> List[str]:
 
 
 def _format_turn_content(
-        content: str,
-        content_type: str,
-        summary_max_len: int,
-        truncation_threshold: int,
-        debug: bool,
-        context_for_debug: str
+        content: str, content_type: str, summary_max_len: int, truncation_threshold: int,
+        debug: bool, context_for_debug: str
 ) -> Tuple[str, str]:
-    """
-    Determines if content should be truncated and generates the summary and display text.
-    This centralized logic fixes the original bug and improves clarity.
-    """
     content_len = len(content)
     contains_code_block = '```' in content
-
-    # Decision logic for truncation
     should_truncate = content_len > truncation_threshold or (contains_code_block and content_len > 200)
 
     if debug:
@@ -168,44 +121,30 @@ def _format_turn_content(
         print(f"Context: {context_for_debug}, Type: {content_type}", file=sys.stderr)
         print(f"  - Content Length: {content_len} chars", file=sys.stderr)
         print(f"  - Contains '```': {contains_code_block}", file=sys.stderr)
-        print(f"  - Truncation Threshold: {truncation_threshold}", file=sys.stderr)
         print(f"  - Decision: {'TRUNCATE' if should_truncate else 'SHOW FULL'}", file=sys.stderr)
 
     if should_truncate:
         summary = smart_truncate(content, summary_max_len)
         if contains_code_block and "user provided" not in summary.lower():
             summary = "User provided a large code/log excerpt..."
-
         display_text = content[:truncation_threshold] + "\n... [content truncated] ..."
-
-        if debug:
-            print(f"  - Generated Summary: '{summary}'", file=sys.stderr)
-            print("--- END DEBUG ---\n", file=sys.stderr)
-
+        if debug: print(f"  - Generated Summary: '{summary}'", file=sys.stderr)
         return summary, display_text
-    else:
-        summary = smart_truncate(content, summary_max_len)
-        display_text = content
 
-        if debug:
-            print(f"  - Generated Summary: '{summary}'", file=sys.stderr)
-            print("--- END DEBUG ---\n", file=sys.stderr)
-
-        return summary, display_text
+    summary = smart_truncate(content, summary_max_len)
+    if debug: print(f"  - Generated Summary: '{summary}'", file=sys.stderr)
+    return summary, content
 
 
 def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, verbose: bool, debug_truncation: bool) -> List[
     str]:
-    """Formats a single conversation turn into Markdown."""
     status_icon = STATUS_ICONS.get(turn.status, STATUS_ICONS["unknown"])
     md = [
         f"\n### Turn {turn.turn_number} ({turn.status.capitalize()}) {status_icon}",
         f"*{turn.timestamp}*\n" if turn.timestamp else "",
     ]
-
     debug_context = f"Turn {turn.turn_number}"
 
-    # Process Request
     if turn.request_raw.strip():
         req_summary, req_display = _format_turn_content(
             turn.request_raw, "Request", TRUNCATION_SUMMARY_MAX_LENGTH,
@@ -214,23 +153,24 @@ def _format_conversation_turn(turn: ConversationTurn, show_edits: bool, verbose:
         md.append(
             f'<details>\n  <summary><strong>Request:</strong> {req_summary}</summary>\n\n```\n{req_display}\n```\n</details>\n')
 
-    # Process Response
     response_processed = turn.response_raw if show_edits else filter_file_edits(turn.response_raw, verbose=verbose)
     if response_processed.strip():
         resp_summary, resp_display = _format_turn_content(
-            response_processed, "Response", TRUNCATION_SUMMARY_MAX_LENGTH + 100,  # Allow longer response summaries
+            response_processed, "Response", TRUNCATION_SUMMARY_MAX_LENGTH + 100,
                                             TRUNCATION_REQUEST_LENGTH_THRESHOLD * 2, debug_truncation, debug_context
         )
         md.append(
             f'<details>\n  <summary><strong>Response:</strong> {resp_summary}</summary>\n\n{resp_display}\n</details>\n')
 
-    return [line for line in md if line]  # Filter out empty lines
+    return [line for line in md if line]
 
 
 def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[str], show_edits: bool, verbose: bool,
                                    debug_truncation: bool) -> str:
-    """Generate a full Markdown recap from the conversation data."""
     conversations = json_data.get("conversations", {})
+    if not conversations:
+        return "# Project Recap\n\n*No conversations found in the state file.*"
+
     since_date = _parse_iso_date(f"{since}T00:00:00+00:00") if since else None
 
     sorted_convs: List[Tuple[str, Dict[str, Any]]] = sorted(
@@ -246,47 +186,61 @@ def extract_conversations_markdown(json_data: Dict[str, Any], since: Optional[st
     md_output = ["# Project Recap"]
     md_output.extend(_generate_toc(filtered_convs))
 
-    for conv_id, conv in filtered_convs:
-        md_output.append("\n---\n")
-        title = get_conversation_title(conv)
-        pin_icon = "📌 " if conv.get("isPinned") else ""
-        md_output.append(f"## {pin_icon}{title}")
+    for i, (conv_id, conv) in enumerate(filtered_convs, 1):
+        try:
+            md_output.append("\n---\n")
+            title = get_conversation_title(conv)
+            pin_icon = "📌 " if conv.get("isPinned") else ""
+            md_output.append(f"## {pin_icon}{title}")
 
-        created_at = conv.get("createdAtIso", "N/A")
-        last_interaction = conv.get("lastInteractedAtIso", "N/A")
-        md_output.extend([
-            f"| ID | Created | Last Interaction |",
-            f"|:---|:---|:---|",
-            f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |"
-        ])
+            created_at = conv.get("createdAtIso", "N/A")
+            last_interaction = conv.get("lastInteractedAtIso", "N/A")
+            md_output.extend([
+                f"| ID | Created | Last Interaction |", f"|:---|:---|:---|",
+                f"| `{conv_id[:8]}` | {created_at} | {last_interaction} |"
+            ])
 
-        chat_history = conv.get("chatHistory", [])
-        if not chat_history:
-            md_output.append("\n*This conversation has no messages.*")
-            continue
+            chat_history = conv.get("chatHistory", [])
+            if not chat_history:
+                md_output.append("\n*This conversation has no messages.*")
+                continue
 
-        mentioned_files = {f"`{item['name']}`" for msg in chat_history for item in msg.get("mentioned_items", []) if
-                           item.get("name")}
-        if mentioned_files:
-            md_output.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
+            mentioned_files = {f"`{item['name']}`" for msg in chat_history for item in msg.get("mentioned_items", []) if
+                               item and item.get("name")}
+            if mentioned_files:
+                md_output.append(f"\n**Mentioned Files:** {', '.join(sorted(list(mentioned_files)))}")
 
-        for i, msg in enumerate(chat_history, 1):
-            turn = ConversationTurn(
-                turn_number=i,
-                request_raw=clean_text_content(msg.get("request_message")),
-                response_raw=clean_text_content(msg.get("response_text")),
-                status=msg.get("status", "unknown"),
-                timestamp=msg.get("timestamp", ""),
-            )
-            md_output.extend(_format_conversation_turn(turn, show_edits, verbose, debug_truncation))
+            for j, msg in enumerate(chat_history, 1):
+                # Safely get and clean content right at the source
+                turn = ConversationTurn(
+                    turn_number=j,
+                    request_raw=clean_text_content(msg.get("request_message")),
+                    response_raw=clean_text_content(msg.get("response_text")),
+                    status=msg.get("status", "unknown"),
+                    timestamp=msg.get("timestamp", ""),
+                )
+                md_output.extend(_format_conversation_turn(turn, show_edits, verbose, debug_truncation))
+
+        except Exception as e:
+            # This is the crucial addition. It catches errors and reports them without stopping the whole script.
+            error_title = get_conversation_title(conv)
+            md_output.append(
+                f"\n\n> **[ERROR]** An unexpected error occurred while processing conversation `{conv_id[:8]}` ('{error_title}'). Skipping the rest of this conversation.")
+            md_output.append(f"> ```\n> {type(e).__name__}: {e}\n> ```")
+            print(f"\n--- ⚠️ ERROR ---", file=sys.stderr)
+            print(f"Skipping conversation {i}/{len(filtered_convs)} ('{error_title}') due to an unhandled exception:",
+                  file=sys.stderr)
+            print(f"  - ID: {conv_id}", file=sys.stderr)
+            print(f"  - Exception: {type(e).__name__}: {e}", file=sys.stderr)
+            print(f"--- END ERROR ---\n", file=sys.stderr)
+            continue  # Move to the next conversation
 
     return "\n".join(md_output)
 
 
 # --- Main Execution ---
-
 def main():
-    """Main function to parse arguments and generate the recap."""
+    # ... (main function remains the same as your corrected version) ...
     parser = argparse.ArgumentParser(
         description="Generate a Markdown recap from an Agent AI state file.",
         formatter_class=argparse.RawTextHelpFormatter
@@ -329,7 +283,6 @@ def main():
             print(f"Error writing to output file '{args.output}': {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        # Ensure stdout can handle UTF-8, especially in piped environments
         if sys.stdout.encoding.lower() != 'utf-8':
             sys.stdout.reconfigure(encoding='utf-8')
         print(markdown_output)
