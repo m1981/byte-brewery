@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""
+AI Chat Export Tool - List folders with chat counts
+"""
+
+import json
+import sys
+from collections import defaultdict
+from pathlib import Path
+import argparse
+
+def load_state_file(file_path):
+    """Load and parse the state file JSON"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: File not found: {file_path}")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in file: {file_path}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error loading state file: {e}")
+        sys.exit(1)
+
+def list_folders_with_chat_counts(state_data):
+    """Print all folders with the number of chats in each"""
+    # Count chats per folder
+    folder_chat_counts = defaultdict(int)
+
+    # Count chats in each folder
+    for chat in state_data.get("chats", []):
+        folder_id = chat.get("folder")
+        if folder_id:
+            folder_chat_counts[folder_id] += 1
+
+    # Get folder details and print with counts
+    folders = state_data.get("folders", {})
+
+    # Sort folders by their order field
+    sorted_folders = sorted(
+        folders.values(),
+        key=lambda f: f.get("order", 0)
+    )
+
+    # Print header
+    print("\nFOLDERS AND CHAT COUNTS")
+    print("=" * 50)
+    print(f"{'FOLDER ID':<38} {'NAME':<20} {'CHATS':<8} {'COLOR'}")
+    print("-" * 80)
+
+    # Print each folder with chat count
+    for folder in sorted_folders:
+        folder_id = folder.get("id", "")
+        folder_name = folder.get("name", "Unnamed")
+        chat_count = folder_chat_counts[folder_id]
+        color = folder.get("color", "")
+
+        print(f"{folder_id:<38} {folder_name:<20} {chat_count:<8} {color}")
+
+    # Print total
+    total_chats = sum(folder_chat_counts.values())
+    unassigned_chats = len(state_data.get("chats", [])) - total_chats
+
+    print("-" * 80)
+    if unassigned_chats > 0:
+        print(f"{'Unassigned chats:':<60} {unassigned_chats}")
+    print(f"{'Total chats:':<60} {len(state_data.get('chats', []))}")
+    print("=" * 80)
+
+def main():
+    parser = argparse.ArgumentParser(description="List folders with chat counts from AI chat state file")
+    parser.add_argument("state_file", help="Path to the state file (JSON)")
+    args = parser.parse_args()
+
+    state_data = load_state_file(args.state_file)
+    list_folders_with_chat_counts(state_data)
+
+if __name__ == "__main__":
+    main()
