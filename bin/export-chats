@@ -1,81 +1,163 @@
 #!/usr/bin/env python3
 """
-AI Chat Export Tool - List folders with chat counts
+AI Chat Export Tool - Export chats from a specific folder to JSON
 """
 
 import json
 import sys
-from collections import defaultdict
-from pathlib import Path
 import argparse
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Union
 
-def load_state_file(file_path):
-    """Load and parse the state file JSON"""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"Error: File not found: {file_path}")
-        sys.exit(1)
-    except json.JSONDecodeError:
-        print(f"Error: Invalid JSON in file: {file_path}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error loading state file: {e}")
-        sys.exit(1)
 
-def list_folders_with_chat_counts(state_data):
-    """Print all folders with the number of chats in each"""
-    # Count chats per folder
-    folder_chat_counts = defaultdict(int)
+class ChatExporter:
+    def __init__(self, state_file_path: Union[str, Path]):
+        """Initialize with the path to the state file"""
+        self.state_file_path = Path(state_file_path)
+        self.state_data = self._load_state_file()
 
-    # Count chats in each folder
-    for chat in state_data.get("chats", []):
-        folder_id = chat.get("folder")
-        if folder_id:
-            folder_chat_counts[folder_id] += 1
+    def _load_state_file(self) -> Dict[str, Any]:
+        """Load and parse the state file JSON"""
+        try:
+            with open(self.state_file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print(f"Error: File not found: {self.state_file_path}")
+            sys.exit(1)
+        except json.JSONDecodeError:
+            print(f"Error: Invalid JSON in file: {self.state_file_path}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error loading state file: {e}")
+            sys.exit(1)
 
-    # Get folder details and print with counts
-    folders = state_data.get("folders", {})
+    def list_folders(self) -> None:
+        """Print all folders with the number of chats in each"""
+        # Count chats per folder
+        folder_chat_counts = self._count_chats_per_folder()
 
-    # Sort folders by their order field
-    sorted_folders = sorted(
-        folders.values(),
-        key=lambda f: f.get("order", 0)
-    )
+        # Get folder details and print with counts
+        folders = self.state_data.get("folders", {})
 
-    # Print header
-    print("\nFOLDERS AND CHAT COUNTS")
-    print("=" * 50)
-    print(f"{'FOLDER ID':<38} {'NAME':<20} {'CHATS':<8} {'COLOR'}")
-    print("-" * 80)
+        # Sort folders by their order field
+        sorted_folders = sorted(
+            folders.values(),
+            key=lambda f: f.get("order", 0)
+        )
 
-    # Print each folder with chat count
-    for folder in sorted_folders:
-        folder_id = folder.get("id", "")
-        folder_name = folder.get("name", "Unnamed")
-        chat_count = folder_chat_counts[folder_id]
-        color = folder.get("color", "")
+        # Print header
+        print("\nFOLDERS AND CHAT COUNTS")
+        print("=" * 50)
+        print(f"{'FOLDER ID':<38} {'NAME':<20} {'CHATS':<8} {'COLOR'}")
+        print("-" * 80)
 
-        print(f"{folder_id:<38} {folder_name:<20} {chat_count:<8} {color}")
+        # Print each folder with chat count
+        for folder in sorted_folders:
+            folder_id = folder.get("id", "")
+            folder_name = folder.get("name", "Unnamed")
+            chat_count = folder_chat_counts[folder_id]
+            color = folder.get("color", "")
 
-    # Print total
-    total_chats = sum(folder_chat_counts.values())
-    unassigned_chats = len(state_data.get("chats", [])) - total_chats
+            print(f"{folder_id:<38} {folder_name:<20} {chat_count:<8} {color}")
 
-    print("-" * 80)
-    if unassigned_chats > 0:
-        print(f"{'Unassigned chats:':<60} {unassigned_chats}")
-    print(f"{'Total chats:':<60} {len(state_data.get('chats', []))}")
-    print("=" * 80)
+        # Print total
+        total_chats = sum(folder_chat_counts.values())
+        unassigned_chats = len(self.state_data.get("chats", [])) - total_chats
+
+        print("-" * 80)
+        if unassigned_chats > 0:
+            print(f"{'Unassigned chats:':<60} {unassigned_chats}")
+        print(f"{'Total chats:':<60} {len(self.state_data.get('chats', []))}")
+        print("=" * 80)
+
+    def _count_chats_per_folder(self) -> Dict[str, int]:
+        """Count the number of chats in each folder"""
+        folder_chat_counts = {folder_id: 0 for folder_id in self.state_data.get("folders", {})}
+
+        for chat in self.state_data.get("chats", []):
+            folder_id = chat.get("folder")
+            if folder_id:
+                folder_chat_counts[folder_id] = folder_chat_counts.get(folder_id, 0) + 1
+
+        return folder_chat_counts
+
+    def _get_folder_id_by_name(self, folder_name: str) -> Optional[str]:
+        """Get folder ID by its name (case-insensitive)"""
+        folders = self.state_data.get("folders", {})
+
+        # Try exact match first
+        for folder_id, folder in folders.items():
+            if folder.get("name") == folder_name:
+                return folder_id
+
+        # Try case-insensitive match if exact match not found
+        for folder_id, folder in folders.items():
+            if folder.get("name", "").lower() == folder_name.lower():
+                return folder_id
+
+        return None
+
+    def export_folder_chats(self, folder_name: str, output_file: Union[str, Path]) -> None:
+        """Export all chats from a specific folder to a JSON file"""
+        folder_id = self._get_folder_id_by_name(folder_name)
+
+        if not folder_id:
+            print(f"Error: Folder '{folder_name}' not found. Please check the folder name.")
+            print("Available folders:")
+            self.list_folders()
+            sys.exit(1)
+
+        # Create a new state object with the same structure
+        export_data = {
+            "version": self.state_data.get("version", 1),
+            "chats": [],
+            "folders": {
+                folder_id: self.state_data["folders"][folder_id]
+            }
+        }
+
+        # Find chats in the specified folder
+        for chat in self.state_data.get("chats", []):
+            if chat.get("folder") == folder_id:
+                export_data["chats"].append(chat)
+
+        # Save to output file
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, ensure_ascii=False, indent=2)
+            print(
+                f"Successfully exported {len(export_data['chats'])} chats from folder '{folder_name}' to {output_file}")
+        except Exception as e:
+            print(f"Error exporting chats: {e}")
+            sys.exit(1)
+
 
 def main():
-    parser = argparse.ArgumentParser(description="List folders with chat counts from AI chat state file")
+    parser = argparse.ArgumentParser(description="Export AI chats from a specific folder")
     parser.add_argument("state_file", help="Path to the state file (JSON)")
+    parser.add_argument("--list", "-l", action="store_true", help="List all folders with chat counts")
+    parser.add_argument("--folder", "-f", help="Name of the folder to export chats from")
+    parser.add_argument("--output", "-o", help="Output JSON file path")
     args = parser.parse_args()
 
-    state_data = load_state_file(args.state_file)
-    list_folders_with_chat_counts(state_data)
+    exporter = ChatExporter(args.state_file)
+
+    if args.list:
+        exporter.list_folders()
+        return
+
+    if not args.folder:
+        print("Error: Please specify a folder name with --folder")
+        parser.print_help()
+        sys.exit(1)
+
+    if not args.output:
+        print("Error: Please specify an output file with --output")
+        parser.print_help()
+        sys.exit(1)
+
+    exporter.export_folder_chats(args.folder, args.output)
+
 
 if __name__ == "__main__":
     main()
