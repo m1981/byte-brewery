@@ -399,8 +399,8 @@ def stream_conversation_recap(
     # At the end of processing, add:
     if validate_output:
         # Get the full output
-        if isinstance(output_stream, StringIO):
-            final_markdown = output_stream.getvalue()
+        if isinstance(output_buffer, StringIO) and output_buffer:  # Check output_buffer instead
+            final_markdown = output_buffer.getvalue()
             # Check for unclosed code blocks
             code_block_open = False
             for line in final_markdown.split('\n'):
@@ -483,7 +483,7 @@ def main():
         if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
             sys.stdout.reconfigure(encoding='utf-8')
         stream_conversation_recap(
-        json_data, f, args.since, args.show_edits, args.verbose,
+            json_data, sys.stdout, args.since, args.show_edits, args.verbose,  # Use sys.stdout instead of f
         args.debug_truncation, args.validate
         )
 
