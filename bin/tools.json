@@ -7,6 +7,7 @@
     "export-chats": "Export chats from json chats file",
     "rsum": "React Summary - Analyzes React component and test files to generate structured summaries",
     "pysum": "Python project structure generator - Creates Markdown documentation from Python files",
-    "lsproj": "Project file lister - Uses .projlist config for pattern-based file discovery"
+    "lsproj": "Project file lister - Uses .projlist config for pattern-based file discovery",
+    "git-recent": "Extract recent commits with diffs for AI analysis, excluding build artifacts"
   }
 }

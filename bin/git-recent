@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# git-recent - Extract recent commits for AI analysis
+# Usage: git-recent [options] [number_of_commits]
+
+set -e
+
+# Default values
+NUM_COMMITS=5
+OUTPUT_FILE=""
+EXCLUDE_PATTERNS=(':!*AugmentWebviewStateStore.*' ':!*pnpm-lock*')
+SHOW_HELP=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -n|--num)
+            NUM_COMMITS="$2"
+            shift 2
+            ;;
+        -o|--output)
+            OUTPUT_FILE="$2"
+            shift 2
+            ;;
+        --exclude)
+            EXCLUDE_PATTERNS+=("$2")
+            shift 2
+            ;;
+        -h|--help)
+            SHOW_HELP=true
+            shift
+            ;;
+        [0-9]*)
+            NUM_COMMITS="$1"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$SHOW_HELP" = true ]; then
+    cat << EOF
+git-recent - Extract recent commits for AI analysis
+
+Usage: git-recent [options] [number_of_commits]
+
+Options:
+  -n, --num NUM        Number of commits to show (default: 5)
+  -o, --output FILE    Output to file instead of stdout
+  --exclude PATTERN    Additional exclude pattern (can be used multiple times)
+  -h, --help          Show this help
+
+Examples:
+  git-recent                    # Last 5 commits to stdout
+  git-recent 10                 # Last 10 commits to stdout
+  git-recent -o recent.txt      # Last 5 commits to recent.txt
+  git-recent -n 3 -o changes.md # Last 3 commits to changes.md
+  git-recent --exclude ':!*.log' # Exclude log files too
+
+Default excludes: AugmentWebviewStateStore.*, pnpm-lock*
+EOF
+    exit 0
+fi
+
+# Build git command
+GIT_CMD="git log -p -${NUM_COMMITS} -- ."
+for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+    GIT_CMD+=" '$pattern'"
+done
+
+# Execute and output
+if [ -n "$OUTPUT_FILE" ]; then
+    eval "$GIT_CMD" > "$OUTPUT_FILE"
+    echo "Recent $NUM_COMMITS commits written to $OUTPUT_FILE" >&2
+else
+    eval "$GIT_CMD"
+fi
