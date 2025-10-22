@@ -347,9 +347,9 @@ Examples:
   pysum /path/to/project > api_docs.md     # Analyze specific directory
   pysum | less                             # View output in pager
   
-  find . -name "*.py" | pysum > filtered.md    # Pipe Python files to analyze
-  find . -name "*.py" -not -path "*/tests/*" | pysum > api_structure.md
-  find . -path "*/src/*.py" | pysum > src_only.md
+  find . -name '*.py' | pysum > filtered.md    # Pipe Python files to analyze
+  find . -name '*.py' -not -path "*/tests/*" | pysum > api_structure.md
+  find . -path '*/src/*.py' | pysum > src_only.md
         """
     )
     parser.add_argument('project_dir', nargs='?', default='.',

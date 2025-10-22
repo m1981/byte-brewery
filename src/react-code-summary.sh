@@ -246,8 +246,8 @@ else
         if [ -z "$1" ]; then
             echo "Error: Please provide a directory path or pipe input"
             echo "Usage: rsum "
-            echo "       find . -name \"*.ts\" | rsum"
-            echo '       find . -path '*/src/*.ts' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test' | rsum'
+            echo "       find . -name '*.ts' | rsum"
+            echo "       find . -path '*/src/*.ts' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test' | rsum"
             exit 1
         fi
     fi
