@@ -445,8 +445,40 @@ def clean_nested_code_blocks(text: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate a Markdown recap from an Agent AI state file.",
-        formatter_class=argparse.RawTextHelpFormatter
+        description="Generate a readable Markdown recap from an Agent AI state file.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+-------------------------------------------------------------------------
+USAGE EXAMPLES:
+
+  1. Generate a Clean Report (Recommended)
+     $ ./aug-recap output/chat_state.json -v --validate -o recap.md
+     
+     > Generates a full report with verbose logging (-v).
+     > The --validate flag ensures all code blocks (```) are properly closed, 
+       preventing broken Markdown rendering in large files.
+
+  2. Daily Standup Summary
+     $ ./aug-recap output/chat_state.json --since 2025-01-01 -o daily_update.md
+     
+     > Filters the history to show only conversations created or modified 
+       on or after the specified date.
+     > Perfect for generating "What I did this week" reports.
+
+  3. Debugging Truncation Logic
+     $ ./aug-recap output/chat_state.json --debug-truncation -o debug.md
+     
+     > If your report feels like it's missing content, use this flag.
+     > It prints detailed logic to stderr explaining why specific text blocks 
+       were shortened or summarized.
+
+  4. Full Fidelity (Show All Edits)
+     $ ./aug-recap output/chat_state.json --show-edits > full_log.md
+     
+     > By default, file edits are summarized to save space.
+     > Use --show-edits to include the actual code changes in the output.
+-------------------------------------------------------------------------
+        """
     )
     parser.add_argument("input_file", nargs='?', default='-', help="Input JSON file path.")
     parser.add_argument("-o", "--output", help="Output file path. Bypasses stdout for reliability.")

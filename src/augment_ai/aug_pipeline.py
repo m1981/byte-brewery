@@ -96,29 +96,56 @@ def process_chat_pipeline(input_xml: str, output_dir: str) -> bool:
         print(f"Error during processing: {e}", file=sys.stderr)
         return False
 
+
 def create_parser():
     """Create argument parser with all options."""
     parser = argparse.ArgumentParser(
-        description="Process chat data through extraction, analysis, and schema generation",
+        description="Augment AI State Pipeline: Extract, Analyze, and Transform IDE State Data.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  aug input.xml                     # Process with default output directory
-  aug input.xml -o /path/to/output  # Process with custom output directory
-  aug input.xml --extract-responses <conversation_id>  # Extract responses from specific conversation
-  aug input.xml --extract-user-prompts  # Extract only user prompts in markdown format
+-------------------------------------------------------------------------
+WORKFLOW EXAMPLES:
+
+  1. Standard Pipeline Processing
+     $ aug .idea/AugmentWebviewStateStore.xml
+
+     > Processes the raw XML state file.
+     > Generates 'chat_state.json', 'prompts.json', and schemas in the default './output' dir.
+     > Use this to refresh your data before running reports.
+
+  2. Custom Output Directory
+     $ aug .idea/AugmentWebviewStateStore.xml -o ./reports/sprint-24
+
+     > Keeps your analysis organized by directing artifacts to a specific folder.
+     > Useful for archiving state data from different development sprints.
+
+  3. The "Time Machine" (Extract Single Conversation)
+     $ aug .idea/AugmentWebviewStateStore.xml --extract-responses 5ecd3665-9a59-4ea1-b342-9c3e33590c74
+
+     > Recovers a specific chat session as a readable Markdown file.
+     > Critical for documenting a specific solution or recovering lost code snippets 
+       from a previous session without processing the entire history.
+
+  4. Prompt Mining (User Prompts Only)
+     $ aug .idea/AugmentWebviewStateStore.xml --extract-user-prompts
+     
+     > Extracts ONLY what you typed (the user prompts) into 'user_prompts.md'.
+     > Excellent for analyzing your own prompting patterns or creating 
+       fine-tuning datasets for other models.
+-------------------------------------------------------------------------
         """
     )
-    parser.add_argument("input_xml", 
-                       nargs="?", 
-                       help="Input XML file path")
-    parser.add_argument("--output-dir", "-o", 
-                       default="output",
-                       help="Output directory for all generated files (default: output)")
+    parser.add_argument("input_xml",
+                        nargs="?",
+                        help="Input XML file path (e.g., .idea/AugmentWebviewStateStore.xml)")
+    parser.add_argument("--output-dir", "-o",
+                        default="output",
+                        help="Directory to store extracted JSON and analysis files")
     parser.add_argument("--extract-responses",
-                       help="Extract responses from specific conversation ID")
+                        metavar="CONVERSATION_ID",
+                        help="Extract a specific conversation to Markdown by ID")
     parser.add_argument("--extract-user-prompts", action="store_true",
-                       help="Extract only user prompts in markdown format")
+                        help="Extract only user prompts to user_prompts.md")
     return parser
 
 def main():
