@@ -1,31 +1,94 @@
 #!/usr/bin/env python3
-
 import json
 import os
+import sys
+import argparse
+import subprocess
+import shutil
 from pathlib import Path
 
+# ANSI Colors for better readability
+CYAN = '\033[96m'
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+RESET = '\033[0m'
+BOLD = '\033[1m'
+
+
+def print_header(tool_name, description):
+    print(f"\n{CYAN}{'=' * 80}{RESET}")
+    print(f"{GREEN}{BOLD}TOOL: {tool_name}{RESET}")
+    print(f"{YELLOW}DESC: {description}{RESET}")
+    print(f"{CYAN}{'-' * 80}{RESET}")
+
+
 def main():
+    parser = argparse.ArgumentParser(description="List available tools or show detailed help for all.")
+    parser.add_argument("--detailed", "-d", action="store_true",
+                        help="Run --help on every tool listed in the manifest.")
+    args = parser.parse_args()
+
     # Get the directory where byte-help is installed
     script_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-
-    # Load tools manifest
     manifest_path = script_dir / "tools.json"
-    print(manifest_path)
+
     try:
         with open(manifest_path) as f:
-            tools = json.load(f)
+            data = json.load(f)
+            tools = data.get("tools", {})
 
-        print("\nAvailable tools:\n")
-        for tool, description in tools["tools"].items():
-            print(f"  {tool:12} - {description}")
-        print()
+        if not args.detailed:
+            # Standard List View
+            print(f"\n{BOLD}Available Tools:{RESET}\n")
+            print(f"{'Name':<15} {'Description'}")
+            print(f"{'-' * 15} {'-' * 60}")
+            for tool, description in tools.items():
+                print(f"{GREEN}{tool:<15}{RESET} {description}")
+            print(f"\n{YELLOW}Tip: Run 'byte-help --detailed' to see usage examples for all tools.{RESET}\n")
+
+        else:
+            # Detailed View - Iterates and runs --help
+            print(f"\n{BOLD}Generating Detailed Help Manual...{RESET}")
+
+            for tool, description in tools.items():
+                print_header(tool, description)
+
+                # Check if tool exists in path
+                if shutil.which(tool) is None:
+                    print(f"❌ {tool} is not found in your PATH. Skipping.")
+                    continue
+
+                try:
+                    # Run the tool with --help
+                    # We capture stdout/stderr to prevent it from messing up our formatting if it fails
+                    result = subprocess.run(
+                        [tool, "--help"],
+                        text=True,
+                        capture_output=True,
+                        timeout=3  # Safety timeout
+                    )
+
+                    if result.returncode == 0:
+                        print(result.stdout)
+                    else:
+                        # Fallback if the tool doesn't support --help cleanly
+                        print(result.stdout)
+                        print(f"{YELLOW}[Note] Tool exited with code {result.returncode}{RESET}")
+                        if result.stderr:
+                            print(f"Error output:\n{result.stderr}")
+
+                except subprocess.TimeoutExpired:
+                    print(f"❌ Timed out trying to get help for {tool}.")
+                except Exception as e:
+                    print(f"❌ Error running {tool}: {e}")
 
     except FileNotFoundError:
-        print("Error: tools.json not found")
-        return 1
+        print(f"Error: tools.json not found at {manifest_path}")
+        sys.exit(1)
     except json.JSONDecodeError:
         print("Error: tools.json is invalid")
-        return 1
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
