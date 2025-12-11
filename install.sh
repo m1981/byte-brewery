@@ -1,95 +1,40 @@
 #!/bin/bash
 set -e
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+echo "🍺 Brewing byte-brewery installation..."
 
-# Function to install Python dependencies
-install_python_deps() {
-    echo "Installing Python dependencies..."
-    if command_exists pip3; then
-        pip3 install --user -r requirements.txt
-    else
-        echo "Error: pip3 not found. Please install Python3 and pip."
-        exit 1
-    fi
-}
+# 1. Check for pipx (The modern way to run python tools)
+if ! command -v pipx &> /dev/null; then
+    echo "❌ pipx is not installed."
+    echo "   Please install it first:"
+    echo "   - Mac: brew install pipx"
+    echo "   - Linux: sudo apt install pipx (or pip install --user pipx)"
+    echo "   Then run: pipx ensurepath"
+    exit 1
+fi
 
-# Function to install Python package
-install_python_package() {
-    echo "Installing Python package..."
-    cd "$TMP_DIR"
-    
-    # Try with --user flag first
-    if pip3 install --user . >/dev/null 2>&1; then
-        echo "Package installed successfully."
-    # If that fails, try with break-system-packages
-    elif pip3 install --user --break-system-packages . >/dev/null 2>&1; then
-        echo "Package installed with --break-system-packages flag."
-    # If both fail, create a virtual environment
-    else
-        echo "Creating virtual environment for byte-brewery..."
-        VENV_DIR="$HOME/.local/venvs/byte-brewery"
-        python3 -m venv "$VENV_DIR"
-        source "$VENV_DIR/bin/activate"
-        pip3 install .
-        deactivate
-        
-        # Create wrapper scripts that activate the venv before running
-        for script in "$INSTALL_DIR"/aug*; do
-            if [ -f "$script" ]; then
-                mv "$script" "${script}.original"
-                cat > "$script" << EOF
-#!/bin/bash
-source "$VENV_DIR/bin/activate"
-"${script}.original" "\$@"
-deactivate
-EOF
-                chmod +x "$script"
-            fi
-        done
-        echo "Package installed in virtual environment at $VENV_DIR"
-    fi
-    
-    cd - > /dev/null
-}
+# 2. Install the Python Package using pipx
+# This reads pyproject.toml, installs dependencies, and creates the 'aug' command
+echo "📦 Installing Python tools via pipx..."
+pipx install . --force
 
-# Create installation directory
+# 3. Install Shell Scripts (The only manual part)
+# We only copy non-python scripts now
 INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$INSTALL_DIR"
 
-# Clone the repository to a temporary location
-TMP_DIR=$(mktemp -d)
-echo "Cloning repository to $TMP_DIR..."
-git clone https://github.com/m1981/byte-brewery.git "$TMP_DIR"
+echo "🐚 Installing shell scripts to $INSTALL_DIR..."
 
-# Install Python dependencies if any exist
-if [ -f "$TMP_DIR/requirements.txt" ]; then
-    install_python_deps
+# Copy rsum and ensure it's executable
+if [ -f "bin/rsum" ]; then
+    cp "bin/rsum" "$INSTALL_DIR/"
+    chmod +x "$INSTALL_DIR/rsum"
 fi
 
-# Install the Python package
-install_python_package
-
-# Copy all scripts to installation directory
-echo "Installing scripts to $INSTALL_DIR..."
-cp "$TMP_DIR/bin/"* "$INSTALL_DIR/"
-chmod +x "$INSTALL_DIR"/*
-
-# Add installation directory to PATH if not already there
+# Add to path if missing (Standard check)
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc" 2>/dev/null || true
-    echo "Added $INSTALL_DIR to PATH in .bashrc and .zshrc"
+    echo "⚠️  $INSTALL_DIR is not in your PATH."
+    echo "   Add this to your shell config: export PATH=\"\$HOME/.local/bin:\$PATH\""
 fi
 
-# Clean up
-rm -rf "$TMP_DIR"
-
-echo "Installation complete! All tools are now available."
-echo "You may need to restart your terminal or run 'source ~/.bashrc' for the changes to take effect."
-echo "Available tools: $(ls -1 $INSTALL_DIR | tr '\n' ' ')"
-
-
+echo "✅ Installation complete! Run 'aug --help' to test."
