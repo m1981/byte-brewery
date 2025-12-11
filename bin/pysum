@@ -1,83 +1,22 @@
 #!/usr/bin/env python3
 """
 Project Structure Generator
-
-This script parses Python files in a project directory and generates a simplified
-structure in Markdown format, showing classes and functions with their signatures.
-It respects .gitignore patterns to skip irrelevant files and directories.
+Parses Python files to generate a Markdown structure summary.
 """
 
 import os
+import sys
 import ast
-import re
-import fnmatch
-from typing import List, Dict, Any, Optional, Set
-
-class GitignoreParser:
-    """Parser for .gitignore files to determine which files to skip."""
+from typing import List, Dict, Any, Optional
+from pathlib import Path
     
-    def __init__(self, project_dir: str):
-        self.project_dir = project_dir
-        self.ignore_patterns = self._load_gitignore()
-    
-    def _load_gitignore(self) -> List[str]:
-        """Load patterns from .gitignore file."""
-        patterns = []
-        gitignore_path = os.path.join(self.project_dir, '.gitignore')
-        
-        if os.path.exists(gitignore_path):
-            with open(gitignore_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    # Skip empty lines and comments
-                    if line and not line.startswith('#'):
-                        # Convert .gitignore pattern to fnmatch pattern
-                        # Remove leading slash if present (for root-relative patterns)
-                        if line.startswith('/'):
-                            line = line[1:]
-                        # Handle directory patterns (ending with /)
-                        if line.endswith('/'):
-                            line = line + '**'
-                        # Add the pattern
-                        patterns.append(line)
-        
-        # Add common patterns to ignore even if not in .gitignore
-        common_patterns = [
-            '.git/**', '.venv/**', 'venv/**', 'env/**', '__pycache__/**', 
-            '*.pyc', '*.pyo', '*.pyd', '.Python', 'build/**', 'develop-eggs/**',
-            'dist/**', 'downloads/**', 'eggs/**', '.eggs/**', 'lib/**', 'lib64/**',
-            'parts/**', 'sdist/**', 'var/**', '*.egg-info/**', '.installed.cfg',
-            '*.egg', '.env', '.venv', '.idea/**', '.vscode/**', '*.so', '.coverage',
-            'htmlcov/**', '.tox/**', '.nox/**', '.hypothesis/**', '.pytest_cache/**',
-            '**/site-packages/**'
-        ]
-        
-        patterns.extend(common_patterns)
-        return patterns
-    
-    def should_ignore(self, path: str) -> bool:
-        """Check if a path should be ignored based on gitignore patterns."""
-        # Get path relative to project root
-        rel_path = os.path.relpath(path, self.project_dir)
-        
-        # Always ignore hidden files and directories
-        if os.path.basename(rel_path).startswith('.'):
-            return True
-            
-        # Check against gitignore patterns
-        for pattern in self.ignore_patterns:
-            # Check if pattern matches the path
-            if fnmatch.fnmatch(rel_path, pattern):
-                return True
-            # Check if pattern matches any parent directory
-            path_parts = rel_path.split(os.sep)
-            for i in range(1, len(path_parts)):
-                partial_path = os.sep.join(path_parts[:i])
-                if fnmatch.fnmatch(partial_path, pattern):
-                    return True
-        
-        return False
-
+# Import the shared parser
+try:
+    from ignore_utils import GitignoreParser
+except ImportError:
+    # Fallback for standalone usage if necessary, or strict error
+    print("Error: ignore_utils.py not found.", file=sys.stderr)
+    sys.exit(1)
 
 class PyFileParser:
     """Parses Python files to extract class and function definitions."""
@@ -102,7 +41,7 @@ class PyFileParser:
                 'functions': functions
             }
         except Exception as e:
-            print(f"Error parsing {file_path}: {e}")
+            print(f"Error parsing {file_path}: {e}", file=sys.stderr)
             return None
     
     def _extract_imports(self, tree: ast.Module) -> List[str]:
@@ -285,7 +224,11 @@ class ProjectStructureGenerator:
 
         for root, dirs, files in os.walk(self.project_dir):
             # Modify dirs in-place to skip ignored directories
-            dirs[:] = [d for d in dirs if not self.gitignore_parser.should_ignore(os.path.join(root, d))]
+            # Using the shared parser logic
+            for i in range(len(dirs) - 1, -1, -1):
+                dir_path = os.path.join(root, dirs[i])
+                if self.gitignore_parser.should_ignore(dir_path):
+                    del dirs[i]
 
             for file in files:
                 if file.endswith('.py'):
@@ -336,7 +279,6 @@ class ProjectStructureGenerator:
 def main():
     """Main entry point for the script."""
     import argparse
-    import sys
 
     parser = argparse.ArgumentParser(
         description='Generate a simplified project structure document.',

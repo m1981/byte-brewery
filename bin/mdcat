@@ -2,43 +2,77 @@
 
 set -euo pipefail
 
+# Initialize variables
+OUTPUT_FILE=""
+
+# Function to resolve absolute path, even if file doesn't exist yet
+get_abs_path() {
+    local path="$1"
+    # Python's os.path.abspath works even if the file doesn't exist
+    python3 -c "import os, sys; print(os.path.abspath(sys.argv[1]))" "$path"
+}
+
+# Parse arguments
+while getopts ":o:" opt; do
+  case ${opt} in
+    o)
+      OUTPUT_FILE=$(get_abs_path "$OPTARG")
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
+# --- LOGIC CHANGE: Handle Output Redirection ---
+if [ -n "$OUTPUT_FILE" ]; then
+    # Create/Truncate the file immediately so it exists
+    : > "$OUTPUT_FILE"
+    # Redirect stdout to the file
+    exec 1> "$OUTPUT_FILE"
+fi
+
 # Function to safely handle each file
 handle_file() {
     local file="$1"
-    # Echo the filename, then the code block start marker to stdout
+
+    if [ ! -f "$file" ]; then
+        echo "Warning: File '$file' not found. Skipping." >&2
+        return
+    fi
+
+    # Check against the output file to prevent loops
+    if [ -n "$OUTPUT_FILE" ]; then
+        local current_abs_path
+        current_abs_path=$(get_abs_path "$file")
+
+        if [ "$current_abs_path" == "$OUTPUT_FILE" ]; then
+            echo "Skipping output file: $file" >&2
+            return
+        fi
+    fi
+
     echo "File: $file"
     echo '```'
-    # Echo the contents of the current file to stdout
     cat "$file"
-    # Echo the code block end marker to stdout
     echo -e "\n"
     echo '```'
-    # Add a newline for spacing between files entries
     echo -e "\n"
 }
 
-# Check if any arguments were passed
 if [ "$#" -eq 0 ]; then
-  echo "Concatenate Source Files For GPT"
-	echo "--------------------------------"
-  echo "No files specified." >&2
-	echo "Usage: mdcat file1 [file2 ...] > output.md"
-  echo "Examples:"
-  echo "  mdcat  file1.js file2.js > output.md"
-  echo "  grep -l -r "currentChatIndex" . | xargs mdcat"
-  echo "  find . -name '*.tsx' | xargs mdcat"
-  echo "  find . -path '*/src/*.js' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test'"
+  echo "Usage: mdcat [-o output_file] file1 [file2 ...]" >&2
   exit 1
 fi
 
-# Iterate over the positional parameters
 for file in "$@"; do
-    # Check if file exists and is a regular file
-    if [ -f "$file" ]; then
-        handle_file "$file"
-    else
-        echo "Warning: File $file does not exist or is not a regular file. Skipping." >&2
-    fi
+    handle_file "$file"
 done
 
 echo "Concatenation complete." >&2

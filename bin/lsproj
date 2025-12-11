@@ -1,43 +1,82 @@
-#!/bin/bash
+#!/usr/bin/env python3
+"""
+lsproj
+Simple Project File Lister.
+Reads whitelist patterns from .projlist and excludes files based on .gitignore.
+"""
 
-# lsproj - Simple SvelteKit Project File Lister
-# Usage:
-#   tool $(lsproj)        # Direct use with tools
-#   lsproj | xargs tool   # Use with xargs
+import sys
+import os
+import fnmatch
+from pathlib import Path
+from typing import List
 
-CONFIG_FILE=.projlist
-EXCLUDE_DIRS="node_modules .svelte-kit build .git"
+# Import the shared parser
+try:
+    from ignore_utils import GitignoreParser
+except ImportError:
+    print("Error: ignore_utils.py not found. Please ensure it is in the same directory.", file=sys.stderr)
+    sys.exit(1)
 
-# Check if config file exists
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo >&2 "Error: Config file '$CONFIG_FILE' not found."
-    echo >&2 "Please create a .projlist file with patterns like:"
-    echo >&2 "*.ts"
-    echo >&2 "*.svelte"
-    exit 1
-fi
+CONFIG_FILE = ".projlist"
 
-# Build exclude pattern
-EXCLUDE_PATTERN=""
-for dir in $EXCLUDE_DIRS; do
-    EXCLUDE_PATTERN="$EXCLUDE_PATTERN -not -path './$dir/*'"
-done
+def load_whitelist(project_dir: Path) -> List[str]:
+    """Load whitelist patterns from config file."""
+    config_path = project_dir / CONFIG_FILE
+    patterns = []
 
-# Build find expression from patterns in config file
-FIND_EXPR=""
-FIRST=true
+    if not config_path.exists():
+        print(f"Error: Config file '{CONFIG_FILE}' not found in {project_dir}", file=sys.stderr)
+        print("Please create a .projlist file with patterns like:", file=sys.stderr)
+        print("*.ts\n*.svelte", file=sys.stderr)
+        sys.exit(1)
 
-while IFS= read -r pattern || [[ -n "$pattern" ]]; do
-    # Skip empty lines and comments
-    [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+    with open(config_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                patterns.append(line)
+    return patterns
 
-    if [ "$FIRST" = true ]; then
-        FIND_EXPR="-name \"$pattern\""
-        FIRST=false
-    else
-        FIND_EXPR="$FIND_EXPR -o -name \"$pattern\""
-    fi
-done < "$CONFIG_FILE"
+def matches_whitelist(filename: str, patterns: List[str]) -> bool:
+    """Check if filename matches any whitelist pattern."""
+    for pattern in patterns:
+        if fnmatch.fnmatch(filename, pattern):
+            return True
+    return False
 
-# Execute find command
-eval "find . -type f \( $FIND_EXPR \) $EXCLUDE_PATTERN"
+def main():
+    # Allow optional directory argument, default to current
+    root_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
+
+    if not root_dir.exists():
+        print(f"Error: Directory {root_dir} does not exist.", file=sys.stderr)
+        sys.exit(1)
+
+    ignore_parser = GitignoreParser(root_dir)
+    whitelist = load_whitelist(root_dir)
+
+    # Walk the directory tree
+    for root, dirs, files in os.walk(root_dir):
+        # 1. Prune directories in-place based on ignore rules
+        # We iterate backwards to safely remove items from the list we are iterating
+        for i in range(len(dirs) - 1, -1, -1):
+            dir_path = Path(root) / dirs[i]
+            if ignore_parser.should_ignore(dir_path):
+                del dirs[i]
+
+        # 2. Process files
+        for file in files:
+            file_path = Path(root) / file
+
+            # Skip if ignored
+            if ignore_parser.should_ignore(file_path):
+                continue
+
+            # Check whitelist
+            if matches_whitelist(file, whitelist):
+                # Print relative path for clean output
+                print(os.path.relpath(file_path, root_dir))
+
+if __name__ == "__main__":
+    main()
