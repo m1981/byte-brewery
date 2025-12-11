@@ -2,13 +2,19 @@
 
 set -euo pipefail
 
+# Help Handler
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "Usage: mdcat [-o output_file] file1 [file2 ...]"
+    echo "Concatenates files into markdown code blocks."
+    exit 0
+fi
+
 # Initialize variables
 OUTPUT_FILE=""
 
-# Function to resolve absolute path, even if file doesn't exist yet
+# Function to resolve absolute path
 get_abs_path() {
     local path="$1"
-    # Python's os.path.abspath works even if the file doesn't exist
     python3 -c "import os, sys; print(os.path.abspath(sys.argv[1]))" "$path"
 }
 
@@ -30,12 +36,10 @@ while getopts ":o:" opt; do
 done
 shift $((OPTIND -1))
 
-# --- LOGIC CHANGE: Handle Output Redirection ---
+# Handle Output Redirection
 if [ -n "$OUTPUT_FILE" ]; then
-    # Create/Truncate the file immediately so it exists
-    : > "$OUTPUT_FILE"
-    # Redirect stdout to the file
-    exec 1> "$OUTPUT_FILE"
+    : > "$OUTPUT_FILE" # Truncate
+    exec 1> "$OUTPUT_FILE" # Redirect stdout
 fi
 
 # Function to safely handle each file

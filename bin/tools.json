@@ -1,6 +1,6 @@
 {
   "tools": {
-    "mdcat2": "Formats source files into markdown for GPT chat",
+    "mdcat": "Formats source files into markdown for GPT chat",
     "pext": "Extracts User prompts from ChatGPT chats (in json)",
     "aug": "Augment AI Pipeline - Process chat exports through extraction, analysis, and schema generation",
     "aug-recap": "Extract esence from AugmentedAI plugin chats",

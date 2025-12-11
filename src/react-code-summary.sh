@@ -1,5 +1,13 @@
   #!/bin/bash
 
+# Help Handler
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "Usage: rsum [directory]"
+    echo "       find . -name '*.tsx' | rsum"
+    echo "Analyzes React/TS files and prints a summary."
+    exit 0
+fi
+
 process_file() {
     local file="$1"
     local relative_file=$(basename "$file")
@@ -222,13 +230,13 @@ run_regression_test() {
 
 
 # Main script logic
-if [ "$1" == "--test" ]; then
-    if [ -z "$2" ]; then
+if [ "${1:-}" == "--test" ]; then
+    if [ -z "${2:-}" ]; then
         echo "Error: Please provide test directory path"
         echo "Usage for test: rsum --test <test_directory_path>"
         exit 1
     fi
-    run_regression_test "$2"  # Pass the second argument to run_regression_test
+    run_regression_test "$2"
 else
     echo "🔮 Ultimate File Analysis Magic V11 - FINAL PERFECTION ✨"
     echo "=================================================="
@@ -243,12 +251,17 @@ else
         done
     else
         # Original directory processing logic
-        if [ -z "$1" ]; then
+        if [ -z "${1:-}" ]; then
             echo "Error: Please provide a directory path or pipe input"
-            echo "Usage: rsum "
-            echo "       find . -name '*.ts' | rsum"
-            echo "       find . -path '*/src/*.ts' | grep -v 'node_modules' | grep -v 'stryker' | grep -v 'test' | rsum"
+            echo "Usage: rsum <directory>"
             exit 1
         fi
+
+        # Find files in directory and process
+        find "$1" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) | \
+        grep -v "node_modules" | \
+        while read -r file; do
+            process_file "$file"
+        done
     fi
 fi

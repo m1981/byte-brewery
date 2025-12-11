@@ -5,6 +5,7 @@ import subprocess
 import os
 import sys
 import re
+import argparse
 
 # Path to the JSON configuration file
 CONFIG_FILE = './.dce.json'
@@ -136,32 +137,36 @@ class CommandRunner:
         return True
 
 
-def determine_service_choice(config, args, user_interactions):
-    if len(args) < 2 or args[1] not in config['services']:
+def determine_service_choice(config, args_service, user_interactions):
+    """Modified to take parsed args instead of sys.argv"""
+    if not args_service or args_service not in config['services']:
         service_choice = user_interactions.get_user_choice(config['services'], "Select a service:")
         if not service_choice:
             print("No valid service provided.")
             sys.exit(1)
     else:
-        service_choice = args[1]
+        service_choice = args_service
     return service_choice
 
-
-def get_command_from_args_or_prompt(commands, args, arg_index, prompt_message, user_interactions):
-    if len(args) > arg_index and args[arg_index] in commands:
-        return args[arg_index]
+def get_command_from_args_or_prompt(commands, provided_command, prompt_message, user_interactions):
+    """Modified to take parsed args instead of sys.argv"""
+    if provided_command and provided_command in commands:
+        return provided_command
     return user_interactions.get_user_choice(list(commands.keys()), prompt_message)
 
-def determine_command_choice(service, args, user_interactions):
+def determine_command_choice(service, args_command, args_subcommand, user_interactions):
+    """Modified to take parsed args instead of sys.argv"""
     commands = service['commands']
-    command_choice = get_command_from_args_or_prompt(commands, args, 2, "Select a command:", user_interactions)
 
+    # Determine main command
+    command_choice = get_command_from_args_or_prompt(commands, args_command, "Select a command:", user_interactions)
     command_data = commands[command_choice]
 
     # Check if selected command is a command group with sub-commands
     if isinstance(command_data, dict) and all(isinstance(value, dict) for value in command_data.values()):
         sub_commands = command_data
-        sub_command_choice = get_command_from_args_or_prompt(sub_commands, args, 3, "Select a sub-command:", user_interactions)
+        # Determine sub command
+        sub_command_choice = get_command_from_args_or_prompt(sub_commands, args_subcommand, "Select a sub-command:", user_interactions)
         command_data = sub_commands[sub_command_choice]
 
     return command_choice, command_data
@@ -204,11 +209,28 @@ def build_full_command(service, command_data):
 
 
 def main(command_runner, config_loader, user_interactions, info_displayer):
+    # --- NEW ARGPARSE IMPLEMENTATION ---
+    parser = argparse.ArgumentParser(
+        description="Docker Compose Executor wrapper.",
+        epilog="If arguments are omitted, interactive mode is launched."
+    )
+    parser.add_argument("service", nargs="?", help="The service key from .dce.json")
+    parser.add_argument("command", nargs="?", help="The command key defined in the service")
+    parser.add_argument("subcommand", nargs="?", help="The sub-command key (if applicable)")
+
+    args = parser.parse_args()
+    # -----------------------------------
+
+    try:
     config = config_loader.load(CONFIG_FILE)
-    service_choice = determine_service_choice(config, sys.argv, user_interactions)
+    except FileNotFoundError:
+        print(f"Error: Configuration file {CONFIG_FILE} not found.")
+        sys.exit(1)
+
+    service_choice = determine_service_choice(config, args.service, user_interactions)
     service = config['services'][service_choice]
 
-    command_choice, command_data = determine_command_choice(service, sys.argv, user_interactions)
+    command_choice, command_data = determine_command_choice(service, args.command, args.subcommand, user_interactions)
 
     env_vars, command = extract_command_data(command_data)
 
@@ -221,8 +243,6 @@ def main(command_runner, config_loader, user_interactions, info_displayer):
 if __name__ == "__main__":
     command_runner = CommandRunner()
     config_loader = ConfigLoader()
-    print("DEBUG: sys.argv:", sys.argv)
-
     user_interactions = UserInteractions()
     info_displayer = InfoDisplayer()
     main(command_runner, config_loader, user_interactions, info_displayer)
