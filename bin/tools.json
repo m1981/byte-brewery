@@ -3,11 +3,12 @@
     "mdcat": "Formats source files into markdown for GPT chat",
     "pext": "Extracts User prompts from ChatGPT chats (in json)",
     "aug": "Augment AI Pipeline - Process chat exports through extraction, analysis, and schema generation",
-    "aug-recap": "Extract esence from AugmentedAI plugin chats",
+    "aug-recap": "Extract essence from AugmentedAI plugin chats",
     "export-chats": "Export chats from json chats file",
     "rsum": "React Summary - Analyzes React component and test files to generate structured summaries",
     "pysum": "Python project structure generator - Creates Markdown documentation from Python files",
     "lsproj": "Project file lister - Uses .projlist config for pattern-based file discovery",
-    "git-recent": "Extract recent commits with diffs for AI analysis, excluding build artifacts"
+    "git-recent": "Extract recent commits with diffs for AI analysis, excluding build artifacts",
+    "aireview": "AI-powered code review and pre-push validation tool"
   }
 }
