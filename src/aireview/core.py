@@ -10,11 +10,12 @@
 # DECISION:
 #   When a context command returns empty output, the tool MUST provide actionable
 #   feedback to the user based on the command type.
-#
-# RATIONALE:
-#   A generic "Empty Context" message is confusing. Users need to know if they
-#   forgot to stage files, if the branch is clean, or if a file is missing.
-#   The Engine will heuristically analyze the command to generate these hints.
+# ==============================================================================
+# ARCHITECTURE DECISION RECORD (ADR) - INTERNAL COMMAND SYNTAX
+# ==============================================================================
+# DECISION:
+#   Internal/Native commands use the 'internal:' URI scheme.
+#   NO MAGIC INJECTION: Users must explicitly define these commands in their config.
 # ==============================================================================
 
 import os
@@ -91,18 +92,24 @@ class Config:
 
         # 1. Load User Definitions
         for d in data.get('definitions', []):
-            defs[d['id']] = ContextDefinition(d['id'], d.get('tag', d['id']), d['cmd'])
+            # VALIDATION: Check for unknown keys in definitions
+            valid_keys = {'id', 'tag', 'cmd'}
+            unknown = set(d.keys()) - valid_keys
+            if unknown:
+                logger.critical(f"❌ Config Error: Definition '{d.get('id', 'unknown')}' has unknown keys: {unknown}. Valid keys are: {valid_keys}")
+                sys.exit(1)
 
-        # 2. Inject Internal "push_diff" if not overridden by user
-        if 'push_diff' not in defs:
-            defs['push_diff'] = ContextDefinition(
-                id='push_diff',
-                tag='git_changes_with_context',
-                cmd='__INTERNAL_PUSH_DIFF__'
-            )
+            defs[d['id']] = ContextDefinition(d['id'], d.get('tag', d['id']), d['cmd'])
 
         prompts = {}
         for p in data.get('prompts', []):
+            # VALIDATION: Check for unknown keys in prompts
+            valid_keys = {'id', 'text', 'file'}
+            unknown = set(p.keys()) - valid_keys
+            if unknown:
+                logger.critical(f"❌ Config Error: Prompt '{p.get('id', 'unknown')}' has unknown keys: {unknown}. Valid keys are: {valid_keys}")
+                sys.exit(1)
+
             p_id = p.get('id')
             text = ""
             if 'file' in p:
@@ -122,6 +129,15 @@ class Config:
 
         checks = []
         for c in data.get('checks', []):
+            valid_keys = {'id', 'prompt_id', 'model', 'context', 'max_chars', 'system_prompt'}
+            unknown = set(c.keys()) - valid_keys
+            if unknown:
+                hint = ""
+                if 'cmd' in unknown:
+                    hint = " (Did you mean 'context'?)"
+                logger.critical(f"❌ Config Error: Check '{c.get('id', 'unknown')}' has unknown keys: {unknown}{hint}. Valid keys are: {valid_keys}")
+                sys.exit(1)
+
             prompt_id = c.get('prompt_id')
             if not prompt_id and 'system_prompt' in c:
                 virtual_id = f"inline_{c['id']}"
@@ -134,19 +150,44 @@ class Config:
                     prompts['basic_reviewer'] = PromptDefinition('basic_reviewer',
                                                                  "You are a code reviewer. Return JSON: {\"status\": \"PASS\" | \"FAIL\", \"reason\": \"...\"}")
 
+            # Handle String vs List for context
+            raw_context = c.get('context', [])
+            if isinstance(raw_context, str):
+                context_ids = [raw_context]
+            else:
+                context_ids = raw_context
+
             checks.append(CheckDefinition(
                 id=c['id'],
                 prompt_id=prompt_id,
                 model=c.get('model', 'gpt-3.5-turbo'),
-                context_ids=c.get('context', []),
+                context_ids=context_ids,
                 max_chars=c.get('max_chars', 16000)
             ))
+
+        # Strict Validation of References
+        for check in checks:
+            for ctx_id in check.context_ids:
+                if ctx_id not in defs:
+                    hint = ""
+                    if ctx_id.startswith("internal:") or ctx_id.startswith("@"):
+                        hint = f" (Did you mean to define a context with cmd: '{ctx_id}'?)"
+                    elif ctx_id == "push_diff":
+                        hint = " (You must define 'push_diff' in 'definitions' with cmd: 'internal:push_diff')"
+
+                    logger.critical(f"❌ Config Error: Check '{check.id}' references unknown context ID '{ctx_id}'{hint}")
+                    sys.exit(1)
+
         return cls(definitions=defs, prompts=prompts, checks=checks)
 
 
 # ==========================================
 # 2. INTERFACES & PROVIDERS
 # ==========================================
+
+# --- NEW: Custom Exception for Command Failures ---
+class CommandError(Exception):
+    pass
 
 class CommandRunner(Protocol):
     def run(self, command: str) -> str: ...
@@ -159,6 +200,9 @@ class AIProvider(Protocol):
 
 
 class ShellCommandRunner:
+    # Registry of valid internal commands
+    VALID_INTERNAL_COMMANDS = {"push_diff"}
+
     def _run_internal_push_diff(self) -> str:
         target = os.environ.get("AI_DIFF_TARGET", "--cached")
         buffer = []
@@ -190,23 +234,36 @@ class ShellCommandRunner:
             return "\n".join(buffer)
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Internal push_diff failed: {e}")
-            return ""  # Return empty on error so engine handles it
+            # Raise exception instead of returning error string
+            raise CommandError(f"Internal push_diff failed: {e}")
 
     def run(self, command: str) -> str:
         if not command: return ""
 
-        if command == "__INTERNAL_PUSH_DIFF__":
-            return self._run_internal_push_diff()
+        # Check for "internal:" prefix
+        if command.startswith("internal:"):
+            action = command.split(":", 1)[1]
 
+            # Validate against registry
+            if action not in self.VALID_INTERNAL_COMMANDS:
+                valid_list = ", ".join([f"internal:{c}" for c in self.VALID_INTERNAL_COMMANDS])
+                # Raise exception to stop execution
+                raise CommandError(f"Unknown internal command 'internal:{action}'. Available commands: {valid_list}")
+
+            if action == "push_diff":
+                return self._run_internal_push_diff()
+
+            raise CommandError(f"Unimplemented internal command '{action}'")
+
+        # Fallback to Shell
         try:
             result = subprocess.run(
                 command, shell=True, check=True, capture_output=True, text=True
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
-            logger.error(f"Command failed: '{command}' -> {e.stderr}")
-            return ""
+            # Raise exception to stop execution
+            raise CommandError(f"Command failed: '{command}'\nStderr: {e.stderr}")
 
 
 class OpenAIProvider:
@@ -273,7 +330,7 @@ class MockAIProvider:
 
 
 # ==========================================
-# 3. ENGINE (Refined UI + Context Feedback)
+# 3. ENGINE
 # ==========================================
 
 class ReviewEngine:
@@ -284,18 +341,15 @@ class ReviewEngine:
 
     def _get_empty_context_hint(self, cmd: str) -> str:
         """Generates a helpful hint based on the command that returned nothing."""
-        if cmd == "__INTERNAL_PUSH_DIFF__":
+        if cmd == "internal:push_diff":
             target = os.environ.get("AI_DIFF_TARGET", "--cached")
             if target == "--cached":
                 return "No staged changes found. Did you forget to `git add`?"
             return f"No changes found in range: {target}"
-
         if "git diff" in cmd and "--cached" in cmd:
             return "No staged changes found. Did you forget to `git add`?"
-
         if "git diff" in cmd:
             return "No changes found in working directory."
-
         return "Command returned empty output."
 
     def build_context(self, check: CheckDefinition) -> str:
@@ -304,13 +358,19 @@ class ReviewEngine:
 
         for ctx_id in check.context_ids:
             definition = self.config.definitions.get(ctx_id)
+
             if not definition:
+                logger.error(f"Context ID '{ctx_id}' not found in definitions. Skipping.")
                 continue
 
-            output = self.runner.run(definition.cmd)
+            # --- UPDATED: Catch CommandError here ---
+            try:
+                output = self.runner.run(definition.cmd)
+            except CommandError as e:
+                # Re-raise to stop the check immediately
+                raise e
 
             if not output or not output.strip():
-                # (ADR Compliance) Provide specific feedback
                 hint = self._get_empty_context_hint(definition.cmd)
                 print(f"  ⚠️  Context '{ctx_id}' is empty. ({hint})")
                 continue
@@ -361,7 +421,14 @@ class ReviewEngine:
         print("=" * 80)
 
         prompt_def = self.config.prompts.get(check.prompt_id)
-        context = self.build_context(check)
+
+        # --- UPDATED: Catch CommandError from build_context ---
+        try:
+            context = self.build_context(check)
+        except CommandError as e:
+            print(f"  ❌ Error gathering context: {e}")
+            print("")
+            return False # Fail the check immediately
 
         if not context.strip():
             print("")
@@ -444,8 +511,12 @@ exit 0
 # 5. CLI & CONFIG
 # ==========================================
 
+# Updated Default Config to be EXPLICIT
 DEFAULT_CONFIG = """
 definitions:
+  - id: push_diff
+    tag: git_changes
+    cmd: "internal:push_diff"
   - id: file_tree
     tag: project_structure
     cmd: "ls -R"

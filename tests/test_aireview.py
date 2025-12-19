@@ -4,6 +4,7 @@ import os
 import subprocess
 from unittest.mock import MagicMock, patch, mock_open
 from dataclasses import asdict
+from aireview.core import CommandError
 
 # Import your module.
 # Assuming the code is in 'aireview.core'. Adjust import if needed.
@@ -17,6 +18,22 @@ from aireview.core import (
     UniversalAIProvider
 )
 
+
+@patch("subprocess.run")
+def test_shell_runner_failure(mock_subproc):
+    """Test shell runner raises CommandError on failure."""
+    # Simulate a subprocess error
+    mock_subproc.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="Not found")
+
+    runner = ShellCommandRunner()
+
+    # Expect the new CommandError exception
+    with pytest.raises(CommandError) as excinfo:
+        runner.run("bad_cmd")
+
+    # Verify the error message contains the stderr details
+    assert "Command failed" in str(excinfo.value)
+    assert "Not found" in str(excinfo.value)
 
 # ==========================================
 # 1. CONFIGURATION TESTS
@@ -189,13 +206,7 @@ def test_shell_runner_success(mock_subproc):
     assert output == "file.py"
 
 
-@patch("subprocess.run")
-def test_shell_runner_failure(mock_subproc):
-    """Test shell runner handles errors gracefully."""
-    mock_subproc.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="Not found")
-    runner = ShellCommandRunner()
-    output = runner.run("bad_cmd")
-    assert "ERROR" in output
+
 
 
 @patch("openai.OpenAI")
