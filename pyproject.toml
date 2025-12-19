@@ -8,6 +8,8 @@ version = "1.0.0"
 description = "Scripts crafted like fine, magical ales for AI development"
 requires-python = ">=3.10"
 dependencies = [
+    "anthropic>=0.75.0",
+    "google-genai>=1.56.0",
     "openai>=2.14.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",

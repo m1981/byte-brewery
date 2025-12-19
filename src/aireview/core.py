@@ -77,7 +77,12 @@ class Config:
                     logger.error(f"Failed to load prompt file '{p['file']}': {e}")
                     text = "ERROR: Prompt file missing."
             else:
-                text = p.get('text', 'You are a code reviewer.')
+                text = p.get('text', '')
+
+            # Fallback warning if text is empty
+            if not text:
+                logger.warning(f"Prompt '{p_id}' is empty. Using default fallback.")
+                text = "You are a code reviewer."
 
             prompts[p_id] = PromptDefinition(id=p_id, text=text)
 
@@ -94,6 +99,13 @@ class Config:
                 virtual_id = f"inline_{c['id']}"
                 prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
                 prompt_id = virtual_id
+
+            # Handle missing prompt ID (Default Fallback)
+            if not prompt_id:
+                logger.warning(f"Check '{c['id']}' has no 'prompt_id'. Using default 'basic_reviewer'.")
+                if 'basic_reviewer' not in prompts:
+                    prompts['basic_reviewer'] = PromptDefinition('basic_reviewer', "You are a code reviewer. Say PASS or FAIL.")
+                prompt_id = 'basic_reviewer'
 
             checks.append(CheckDefinition(
                 id=c['id'],
@@ -163,7 +175,7 @@ class OpenAIProvider:
 
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
         if not self.client:
-            return "ERROR: OpenAI client not initialized (missing key or package)."
+            return "ERROR: OpenAI client not initialized."
         try:
             logger.info(f"Sending request to OpenAI (Model: {model})...")
             response = self.client.chat.completions.create(
@@ -197,7 +209,7 @@ class AnthropicProvider:
 
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
         if not self.client:
-            return "ERROR: Anthropic client not initialized (missing key or package)."
+            return "ERROR: Anthropic client not initialized."
         try:
             logger.info(f"Sending request to Anthropic (Model: {model})...")
             message = self.client.messages.create(
@@ -233,7 +245,7 @@ class GeminiProvider:
 
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
         if not self.genai:
-            return "ERROR: Google GenAI client not initialized (missing key or package)."
+            return "ERROR: Google GenAI client not initialized."
         try:
             logger.info(f"Sending request to Google (Model: {model})...")
             model_instance = self.genai.GenerativeModel(
@@ -272,8 +284,6 @@ class UniversalAIProvider:
 class MockAIProvider:
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
         logger.info(f"[DRY-RUN] Routing to provider for model: {model}")
-        logger.info(f"[DRY-RUN] System Prompt: {system_prompt[:50]}...")
-        logger.info(f"[DRY-RUN] Payload size: {len(user_content)} chars")
         return "DRY RUN: PASS"
 
 
@@ -307,6 +317,16 @@ class ReviewEngine:
 
         return "\n".join(buffer)
 
+    def _print_debug_payload(self, model: str, system_prompt: str, user_content: str):
+        """Prints the full payload to stdout for debugging."""
+        print("\n" + "="*30 + " FULL REQUEST PAYLOAD " + "="*30)
+        print(f"MODEL: {model}")
+        print("-" * 80)
+        print(f"SYSTEM PROMPT:\n{system_prompt}")
+        print("-" * 80)
+        print(f"USER CONTEXT (XML):\n{user_content}")
+        print("="*82 + "\n")
+
     def run_check(self, check_id: str) -> bool:
         try:
             check = next((c for c in self.config.checks if c.id == check_id), None)
@@ -329,7 +349,11 @@ class ReviewEngine:
                 logger.warning(f"Context for '{check_id}' is empty. Skipping AI call.")
                 return True
 
-            # 3. Analyze
+            # 3. DEBUG LOGGING (Visible in --verbose mode)
+            if logger.isEnabledFor(logging.DEBUG):
+                self._print_debug_payload(check.model, system_prompt, context)
+
+            # 4. Analyze
             verdict = self.ai.analyze(check.model, system_prompt, context)
 
             print(f"\n--- REPORT: {check_id} ({check.model}) ---")
