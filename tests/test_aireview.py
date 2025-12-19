@@ -217,3 +217,25 @@ def test_openai_provider_call(mock_openai_cls):
         call_args = mock_client.chat.completions.create.call_args[1]
         assert call_args["model"] == "gpt-4"
         assert call_args["response_format"] == {"type": "json_object"}  # Ensure JSON mode is on
+
+
+def test_dry_run_verbose_output(basic_config, mock_runner, capsys):
+    """Test that dry-run prints the full payload details to stdout."""
+    from aireview.core import MockAIProvider
+
+    # Setup
+    mock_ai = MockAIProvider()
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
+
+    # Execute
+    engine.run_check("c1")
+
+    # Capture stdout
+    captured = capsys.readouterr()
+
+    # Assertions
+    assert "🧪 DRY RUN SIMULATION" in captured.out
+    assert "PAYLOAD CONTENT:" in captured.out
+    assert "Review this" in captured.out  # The prompt text
+    assert "some code changes" in captured.out  # The context text
+    assert "temperature" in captured.out

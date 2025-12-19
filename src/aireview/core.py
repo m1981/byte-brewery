@@ -1,3 +1,11 @@
+# ==============================================================================
+# ARCHITECTURE DECISION RECORD (ADR) - PAYLOAD VISIBILITY
+# ==============================================================================
+# DECISION:
+#   The ReviewEngine must explicitly print the full prompt payload AND request metadata
+#   (temperature, max_tokens, etc.) to stdout when running in DEBUG/VERBOSE mode.
+# ==============================================================================
+
 import os
 import sys
 import subprocess
@@ -19,28 +27,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("aireview")
 
-# (Ad 7) Load .env file if present
 try:
     from dotenv import load_dotenv
 
     load_dotenv()
+    logger.debug("Loaded environment variables from .env")
 except ImportError:
-    logger.debug("python-dotenv not installed. Skipping .env loading.")
+    logger.debug("python-dotenv not installed. Skipping .env file loading.")
 
-# (Ad 5) Graceful PyYAML handling
 try:
     import yaml
-
-    HAS_YAML = True
 except ImportError:
-    HAS_YAML = False
-    logger.warning("PyYAML not found. Only JSON configs supported unless installed.")
+    logger.critical("❌ CRITICAL ERROR: PyYAML is missing.")
+    sys.exit(1)
 
 
 # ==========================================
 # 1. DOMAIN LAYER
 # ==========================================
-
+# ... (No changes to Domain Layer classes: ContextDefinition, PromptDefinition, CheckDefinition, Config) ...
 @dataclass
 class ContextDefinition:
     id: str
@@ -60,7 +65,6 @@ class CheckDefinition:
     prompt_id: str
     model: str
     context_ids: List[str]
-    # (Ad 4) Configurable character limit
     max_chars: int = 16000
 
 
@@ -90,7 +94,6 @@ class Config:
             else:
                 text = p.get('text', '')
 
-            # (Ad 2) Append JSON instruction automatically to ensure structured output
             if "JSON" not in text:
                 text += "\n\nIMPORTANT: Return your response in raw JSON format: {\"status\": \"PASS\" | \"FAIL\", \"reason\": \"...\"}"
 
@@ -99,7 +102,6 @@ class Config:
         checks = []
         for c in data.get('checks', []):
             prompt_id = c.get('prompt_id')
-            # Handle inline prompts
             if not prompt_id and 'system_prompt' in c:
                 virtual_id = f"inline_{c['id']}"
                 prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
@@ -116,7 +118,7 @@ class Config:
                 prompt_id=prompt_id,
                 model=c.get('model', 'gpt-3.5-turbo'),
                 context_ids=c.get('context', []),
-                max_chars=c.get('max_chars', 16000)  # (Ad 4) Default limit
+                max_chars=c.get('max_chars', 16000)
             ))
         return cls(definitions=defs, prompts=prompts, checks=checks)
 
@@ -132,15 +134,15 @@ class CommandRunner(Protocol):
 class AIProvider(Protocol):
     def analyze(self, model: str, full_message: str) -> str: ...
 
+    # NEW: Method to expose configuration details
+    def get_metadata(self, model: str) -> Dict[str, Any]: ...
+
 
 class ShellCommandRunner:
     def run(self, command: str) -> str:
         if not command or not command.strip():
             return ""
         try:
-            # (Ad 6) Support dynamic commit ranges if passed via ENV
-            # If the command contains placeholders, we could swap them here.
-            # For now, we assume the command is static or set by the user.
             result = subprocess.run(
                 command, shell=True, check=True, capture_output=True, text=True
             )
@@ -150,7 +152,6 @@ class ShellCommandRunner:
             return f"ERROR executing '{command}'"
 
 
-# --- AI PROVIDERS (Simplified for brevity, logic remains same as original) ---
 class OpenAIProvider:
     def __init__(self):
         self.client = None
@@ -161,12 +162,27 @@ class OpenAIProvider:
             except ImportError:
                 pass
 
+    def get_metadata(self, model: str) -> Dict[str, Any]:
+        # Define standard OpenAI params here
+        is_json_mode = "gpt-4" in model or "gpt-3.5-turbo-1106" in model
+        return {
+            "provider": "OpenAI",
+            "model": model,
+            "temperature": 1.0,  # Default
+            "max_tokens": "Model Default (Inf)",
+            "response_format": "json_object" if is_json_mode else "text"
+        }
+
     def analyze(self, model: str, full_message: str) -> str:
         if not self.client: return '{"status": "FAIL", "reason": "OpenAI client not ready"}'
         try:
-            # Force JSON mode for newer models
-            kwargs = {"model": model, "messages": [{"role": "user", "content": full_message}]}
-            if "gpt-4" in model or "gpt-3.5-turbo-1106" in model:
+            meta = self.get_metadata(model)
+            kwargs = {
+                "model": model,
+                "messages": [{"role": "user", "content": full_message}],
+                "temperature": meta["temperature"]
+            }
+            if meta["response_format"] == "json_object":
                 kwargs["response_format"] = {"type": "json_object"}
 
             response = self.client.chat.completions.create(**kwargs)
@@ -178,21 +194,30 @@ class OpenAIProvider:
 class UniversalAIProvider:
     def __init__(self):
         self.openai = OpenAIProvider()
-        # ... (Anthropic/Gemini would go here) ...
+
+    def get_metadata(self, model: str) -> Dict[str, Any]:
+        return self.openai.get_metadata(model)
 
     def analyze(self, model: str, full_message: str) -> str:
-        # Routing logic
         return self.openai.analyze(model, full_message)
 
 
 class MockAIProvider:
+    def get_metadata(self, model: str) -> Dict[str, Any]:
+        return {
+            "provider": "Mock (Dry Run)",
+            "model": model,
+            "temperature": 0.0,
+            "max_tokens": 4096,
+            "response_format": "json_object"
+        }
+
     def analyze(self, model: str, full_message: str) -> str:
-        logger.info(f"[DRY-RUN] Model: {model}")
         return '{"status": "PASS", "reason": "Dry Run Successful"}'
 
 
 # ==========================================
-# 3. ENGINE
+# 3. ENGINE (With Detailed Metadata UI)
 # ==========================================
 
 class ReviewEngine:
@@ -212,21 +237,16 @@ class ReviewEngine:
 
             output = self.runner.run(definition.cmd)
 
-            # --- FIX START: Skip if output is empty ---
             if not output or not output.strip():
                 logger.debug(f"Context '{ctx_id}' returned empty output. Skipping.")
                 continue
-            # --- FIX END ---
 
-            # (Ad 4) Truncation Logic
             remaining_chars = check.max_chars - total_chars
             if len(output) > remaining_chars:
                 logger.warning(f"Truncating output for context '{ctx_id}' (Limit: {check.max_chars})")
-                output = output[:remaining_chars] + "\n... [TRUNCATED DUE TO LENGTH LIMIT] ..."
+                output = output[:remaining_chars] + "\n... [TRUNCATED]"
 
             total_chars += len(output)
-
-            # (Ad 3) Context Injection Safety: Use Markdown fencing instead of XML
             buffer.append(f"### Context: {definition.tag}\n```text\n{output}\n```\n")
 
             if total_chars >= check.max_chars:
@@ -235,49 +255,71 @@ class ReviewEngine:
         return "\n".join(buffer)
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
-        """Robustly extracts JSON from AI response."""
         try:
             return json.loads(response)
         except json.JSONDecodeError:
-            # AI often wraps JSON in markdown code blocks
             match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
             if match:
                 try:
                     return json.loads(match.group(1))
                 except:
                     pass
-
-            # Fallback: Look for simple PASS/FAIL if JSON fails
             if "FAIL" in response.upper():
                 return {"status": "FAIL",
                         "reason": "Could not parse JSON, but keyword FAIL found. Raw: " + response[:50]}
             return {"status": "PASS", "reason": "Could not parse JSON, assumed PASS. Raw: " + response[:50]}
 
+    def _print_debug_info(self, metadata: Dict[str, Any], full_message: str):
+        """Prints compact metadata and indented payload."""
+        # Compact Metadata Line
+        meta_str = " | ".join(f"{k}: {v}" for k, v in metadata.items())
+        print(f"\033[90m[DEBUG] {meta_str}\033[0m")  # Grey color if terminal supports it, else just text
+
+        print("")
+        # Indent payload with a vertical bar for visual grouping
+        for line in full_message.splitlines():
+            print(f"  \033[90m│\033[0m {line}")
+        print("")
+
     def run_check(self, check_id: str) -> bool:
         check = next((c for c in self.config.checks if c.id == check_id), None)
         if not check: return False
+
+        # 1. Print Header First (Clear separation)
+        print("=" * 80)
+        print(f"CHECK: {check_id}")
+        print("=" * 80)
 
         prompt_def = self.config.prompts.get(check.prompt_id)
         context = self.build_context(check)
 
         if not context.strip():
-            logger.warning(f"Context empty for {check_id}. Skipping.")
+            print("  ⚠️  Skipped (Empty Context)")
+            print("")
             return True
 
         full_message = f"{prompt_def.text}\n\n{context}"
 
-        # Call AI
+        # 2. Print Debug Info (Compact)
+        if logger.isEnabledFor(logging.DEBUG):
+            metadata = self.ai.get_metadata(check.model)
+            self._print_debug_info(metadata, full_message)
+
+        # 3. Call AI
         raw_response = self.ai.analyze(check.model, full_message)
 
-        # (Ad 2) Structured Output Parsing
         result = self._parse_json_response(raw_response)
-
         status = result.get("status", "FAIL").upper()
         reason = result.get("reason", "No reason provided")
 
-        print(f"\n--- CHECK: {check_id} [{status}] ---")
-        print(f"Reason: {reason}")
-        print("-----------------------------------\n")
+        # 4. Print Result (Distinct Footer)
+        if logger.isEnabledFor(logging.DEBUG):
+            print("-" * 80)
+
+        symbol = "✔" if status == "PASS" else "✘"
+        # Optional: Add color codes if you want (Green for Pass, Red for Fail)
+        print(f"{symbol} {status} | Reason: {reason}")
+        print("")
 
         return status == "PASS"
 
@@ -285,9 +327,8 @@ class ReviewEngine:
 # ==========================================
 # 4. INSTALLATION (GIT HOOK)
 # ==========================================
-
+# ... (No changes to install_hook) ...
 def install_hook():
-    # (Ad 6) Robust Pre-Push Hook
     if not os.path.exists(".git"):
         logger.error("Not a git repository.")
         sys.exit(1)
@@ -295,28 +336,22 @@ def install_hook():
     hook_path = os.path.join(".git", "hooks", "pre-push")
     script_path = os.path.abspath(__file__)
 
-    # This shell script logic handles the pre-push arguments
     hook_content = f"""#!/bin/sh
 # AI Review Pre-Push Hook
 echo "🤖 AI Review: Checking push..."
 
-# Read stdin to get the range of commits being pushed
 while read local_ref local_sha remote_ref remote_sha
 do
     if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
-        # Deleting a remote branch, skip check
         exit 0
     fi
 
     if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-        # New branch, check against origin/main or HEAD
         export AI_DIFF_TARGET="origin/main"
     else
-        # Existing branch, check range
         export AI_DIFF_TARGET="$remote_sha..$local_sha"
     fi
 
-    # Run Python Tool
     "{sys.executable}" "{script_path}" run
 
     if [ $? -ne 0 ]; then
@@ -341,8 +376,7 @@ exit 0
 # ==========================================
 # 5. CLI & CONFIG
 # ==========================================
-
-# (Ad 1) Fixed Default Config: Removed --name-only
+# ... (No changes to CLI/Config logic) ...
 DEFAULT_CONFIG = """
 definitions:
   - id: git_diff
@@ -367,19 +401,15 @@ checks:
 
 def load_config(path: str) -> Config:
     if not os.path.exists(path):
-        # Create default
         with open(path, 'w') as f: f.write(DEFAULT_CONFIG)
 
     with open(path, 'r') as f:
-        if HAS_YAML:
+        try:
             data = yaml.safe_load(f) or {}
-        else:
-            # Fallback for JSON config if YAML missing
-            try:
-                data = json.load(f)
-            except:
-                logger.error("PyYAML not installed and file is not valid JSON.")
-                sys.exit(1)
+        except yaml.YAMLError as e:
+            logger.critical(f"❌ Invalid YAML in configuration file '{path}': {e}")
+            sys.exit(1)
+
     return Config.from_dict(data)
 
 
@@ -389,15 +419,12 @@ def main():
     parser.add_argument("--config", default="ai-checks.yaml")
     parser.add_argument("--check", help="Specific check ID")
     parser.add_argument("--dry-run", action="store_true", help="Simulate without calling AI")
-    # ADDED BACK: The verbose flag
     parser.add_argument("--verbose", action="store_true", help="Enable debug logs")
 
     args = parser.parse_args()
 
-    # ADDED BACK: Set logging level based on flag
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-        logger.debug("Debug logging enabled.")
 
     if args.command == "install":
         install_hook()
@@ -410,11 +437,9 @@ def main():
 
     config = load_config(args.config)
 
-    # Check for the bad config pattern from user snippet
     git_def = config.definitions.get('git_diff')
     if git_def and "--name-only" in git_def.cmd:
-        logger.warning(
-            "⚠️  CONFIGURATION WARNING: 'git_diff' uses '--name-only'. The AI cannot see your code, only filenames. Please remove '--name-only' from your config.")
+        logger.warning("⚠️  Config Warning: 'git_diff' uses '--name-only'. AI cannot see code content.")
 
     ai_provider = MockAIProvider() if args.dry_run else UniversalAIProvider()
     runner = ShellCommandRunner()
@@ -426,16 +451,18 @@ def main():
         logger.error(f"No checks found matching '{args.check}'" if args.check else "No checks defined in config.")
         sys.exit(1)
 
+    print("\n🤖 AI Code Review\n")
+
     success = True
     for check in checks:
         if not engine.run_check(check.id):
             success = False
 
     if not success:
-        logger.error("❌ Some checks failed.")
+        print("❌ Review Failed. Please fix the issues above.")
         sys.exit(1)
 
-    logger.info("✅ All checks passed.")
+    print("✅ All checks passed.")
     sys.exit(0)
 
 
