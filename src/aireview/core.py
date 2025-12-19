@@ -5,6 +5,17 @@
 #   The ReviewEngine must explicitly print the full prompt payload AND request metadata
 #   (temperature, max_tokens, etc.) to stdout when running in DEBUG/VERBOSE mode.
 # ==============================================================================
+# ARCHITECTURE DECISION RECORD (ADR) - CONTEXT FEEDBACK
+# ==============================================================================
+# DECISION:
+#   When a context command returns empty output, the tool MUST provide actionable
+#   feedback to the user based on the command type.
+#
+# RATIONALE:
+#   A generic "Empty Context" message is confusing. Users need to know if they
+#   forgot to stage files, if the branch is clean, or if a file is missing.
+#   The Engine will heuristically analyze the command to generate these hints.
+# ==============================================================================
 
 import os
 import sys
@@ -45,7 +56,7 @@ except ImportError:
 # ==========================================
 # 1. DOMAIN LAYER
 # ==========================================
-# ... (No changes to Domain Layer classes: ContextDefinition, PromptDefinition, CheckDefinition, Config) ...
+
 @dataclass
 class ContextDefinition:
     id: str
@@ -77,8 +88,18 @@ class Config:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Config':
         defs = {}
+
+        # 1. Load User Definitions
         for d in data.get('definitions', []):
             defs[d['id']] = ContextDefinition(d['id'], d.get('tag', d['id']), d['cmd'])
+
+        # 2. Inject Internal "push_diff" if not overridden by user
+        if 'push_diff' not in defs:
+            defs['push_diff'] = ContextDefinition(
+                id='push_diff',
+                tag='git_changes_with_context',
+                cmd='__INTERNAL_PUSH_DIFF__'
+            )
 
         prompts = {}
         for p in data.get('prompts', []):
@@ -134,14 +155,50 @@ class CommandRunner(Protocol):
 class AIProvider(Protocol):
     def analyze(self, model: str, full_message: str) -> str: ...
 
-    # NEW: Method to expose configuration details
     def get_metadata(self, model: str) -> Dict[str, Any]: ...
 
 
 class ShellCommandRunner:
+    def _run_internal_push_diff(self) -> str:
+        target = os.environ.get("AI_DIFF_TARGET", "--cached")
+        buffer = []
+
+        try:
+            diff_cmd = f"git diff {target}"
+            diff_output = subprocess.check_output(diff_cmd, shell=True, text=True).strip()
+
+            if not diff_output:
+                return ""
+
+            buffer.append(f"=== GIT DIFF ({target}) ===")
+            buffer.append(diff_output)
+            buffer.append("\n=== FULL FILE CONTEXT ===")
+
+            files_cmd = f"git diff --name-only --diff-filter=d {target}"
+            files_output = subprocess.check_output(files_cmd, shell=True, text=True).strip()
+
+            if files_output:
+                for filename in files_output.splitlines():
+                    if os.path.exists(filename) and os.path.isfile(filename):
+                        buffer.append(f"\n--- FILE: {filename} ---")
+                        try:
+                            with open(filename, 'r', encoding='utf-8', errors='replace') as f:
+                                buffer.append(f.read())
+                        except Exception as e:
+                            buffer.append(f"[Error reading file: {e}]")
+
+            return "\n".join(buffer)
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Internal push_diff failed: {e}")
+            return ""  # Return empty on error so engine handles it
+
     def run(self, command: str) -> str:
-        if not command or not command.strip():
-            return ""
+        if not command: return ""
+
+        if command == "__INTERNAL_PUSH_DIFF__":
+            return self._run_internal_push_diff()
+
         try:
             result = subprocess.run(
                 command, shell=True, check=True, capture_output=True, text=True
@@ -149,7 +206,7 @@ class ShellCommandRunner:
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
             logger.error(f"Command failed: '{command}' -> {e.stderr}")
-            return f"ERROR executing '{command}'"
+            return ""
 
 
 class OpenAIProvider:
@@ -163,13 +220,12 @@ class OpenAIProvider:
                 pass
 
     def get_metadata(self, model: str) -> Dict[str, Any]:
-        # Define standard OpenAI params here
         is_json_mode = "gpt-4" in model or "gpt-3.5-turbo-1106" in model
         return {
             "provider": "OpenAI",
             "model": model,
-            "temperature": 1.0,  # Default
-            "max_tokens": "Model Default (Inf)",
+            "temperature": 1.0,
+            "max_tokens": "Model Default",
             "response_format": "json_object" if is_json_mode else "text"
         }
 
@@ -217,7 +273,7 @@ class MockAIProvider:
 
 
 # ==========================================
-# 3. ENGINE (With Detailed Metadata UI)
+# 3. ENGINE (Refined UI + Context Feedback)
 # ==========================================
 
 class ReviewEngine:
@@ -225,6 +281,22 @@ class ReviewEngine:
         self.config = config
         self.runner = runner
         self.ai = ai
+
+    def _get_empty_context_hint(self, cmd: str) -> str:
+        """Generates a helpful hint based on the command that returned nothing."""
+        if cmd == "__INTERNAL_PUSH_DIFF__":
+            target = os.environ.get("AI_DIFF_TARGET", "--cached")
+            if target == "--cached":
+                return "No staged changes found. Did you forget to `git add`?"
+            return f"No changes found in range: {target}"
+
+        if "git diff" in cmd and "--cached" in cmd:
+            return "No staged changes found. Did you forget to `git add`?"
+
+        if "git diff" in cmd:
+            return "No changes found in working directory."
+
+        return "Command returned empty output."
 
     def build_context(self, check: CheckDefinition) -> str:
         buffer = []
@@ -238,7 +310,9 @@ class ReviewEngine:
             output = self.runner.run(definition.cmd)
 
             if not output or not output.strip():
-                logger.debug(f"Context '{ctx_id}' returned empty output. Skipping.")
+                # (ADR Compliance) Provide specific feedback
+                hint = self._get_empty_context_hint(definition.cmd)
+                print(f"  ⚠️  Context '{ctx_id}' is empty. ({hint})")
                 continue
 
             remaining_chars = check.max_chars - total_chars
@@ -270,13 +344,10 @@ class ReviewEngine:
             return {"status": "PASS", "reason": "Could not parse JSON, assumed PASS. Raw: " + response[:50]}
 
     def _print_debug_info(self, metadata: Dict[str, Any], full_message: str):
-        """Prints compact metadata and indented payload."""
-        # Compact Metadata Line
         meta_str = " | ".join(f"{k}: {v}" for k, v in metadata.items())
-        print(f"\033[90m[DEBUG] {meta_str}\033[0m")  # Grey color if terminal supports it, else just text
+        print(f"\033[90m[DEBUG] {meta_str}\033[0m")
 
         print("")
-        # Indent payload with a vertical bar for visual grouping
         for line in full_message.splitlines():
             print(f"  \033[90m│\033[0m {line}")
         print("")
@@ -285,7 +356,6 @@ class ReviewEngine:
         check = next((c for c in self.config.checks if c.id == check_id), None)
         if not check: return False
 
-        # 1. Print Header First (Clear separation)
         print("=" * 80)
         print(f"CHECK: {check_id}")
         print("=" * 80)
@@ -294,30 +364,27 @@ class ReviewEngine:
         context = self.build_context(check)
 
         if not context.strip():
-            print("  ⚠️  Skipped (Empty Context)")
+            print("")
+            print("  ⏭️  Skipped Check (No context available)")
             print("")
             return True
 
         full_message = f"{prompt_def.text}\n\n{context}"
 
-        # 2. Print Debug Info (Compact)
         if logger.isEnabledFor(logging.DEBUG):
             metadata = self.ai.get_metadata(check.model)
             self._print_debug_info(metadata, full_message)
 
-        # 3. Call AI
         raw_response = self.ai.analyze(check.model, full_message)
 
         result = self._parse_json_response(raw_response)
         status = result.get("status", "FAIL").upper()
         reason = result.get("reason", "No reason provided")
 
-        # 4. Print Result (Distinct Footer)
         if logger.isEnabledFor(logging.DEBUG):
             print("-" * 80)
 
         symbol = "✔" if status == "PASS" else "✘"
-        # Optional: Add color codes if you want (Green for Pass, Red for Fail)
         print(f"{symbol} {status} | Reason: {reason}")
         print("")
 
@@ -327,7 +394,7 @@ class ReviewEngine:
 # ==========================================
 # 4. INSTALLATION (GIT HOOK)
 # ==========================================
-# ... (No changes to install_hook) ...
+
 def install_hook():
     if not os.path.exists(".git"):
         logger.error("Not a git repository.")
@@ -376,12 +443,9 @@ exit 0
 # ==========================================
 # 5. CLI & CONFIG
 # ==========================================
-# ... (No changes to CLI/Config logic) ...
+
 DEFAULT_CONFIG = """
 definitions:
-  - id: git_diff
-    tag: git_changes
-    cmd: "git diff --cached" 
   - id: file_tree
     tag: project_structure
     cmd: "ls -R"
@@ -394,7 +458,7 @@ checks:
   - id: sanity_check
     prompt_id: basic_reviewer
     model: gpt-3.5-turbo
-    context: [git_diff]
+    context: [push_diff]
     max_chars: 16000
 """
 
