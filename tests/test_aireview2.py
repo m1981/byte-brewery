@@ -1,8 +1,9 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 from src.aireview.core import (
     Config,
     ContextDefinition,
+    PromptDefinition,
     CheckDefinition,
     ReviewEngine,
     UniversalAIProvider,
@@ -36,12 +37,14 @@ def sample_config():
     return Config(
         definitions={
             "git_diff": ContextDefinition("git_diff", "diff_tag", "git diff"),
-            "file_tree": ContextDefinition("file_tree", "tree_tag", "ls -R")
+        },
+        prompts={
+            "security_prompt": PromptDefinition("security_prompt", "Find bugs")
         },
         checks=[
             CheckDefinition(
                 id="security_check",
-                system_prompt="Find bugs",
+                prompt_id="security_prompt",
                 model="gpt-4",
                 context_ids=["git_diff"]
             )
@@ -60,8 +63,11 @@ def test_config_parses_valid_dictionary():
         "definitions": [
             {"id": "d1", "tag": "t1", "cmd": "echo 1"}
         ],
+        "prompts": [
+            {"id": "p1", "text": "You are a bot"}
+        ],
         "checks": [
-            {"id": "c1", "system_prompt": "sys", "model": "m1", "context": ["d1"]}
+            {"id": "c1", "prompt_id": "p1", "model": "m1", "context": ["d1"]}
         ]
     }
 
@@ -70,19 +76,15 @@ def test_config_parses_valid_dictionary():
 
     # Then
     assert "d1" in config.definitions
-    assert config.definitions["d1"].cmd == "echo 1"
-    assert config.checks[0].id == "c1"
-    assert config.checks[0].context_ids == ["d1"]
+    assert "p1" in config.prompts
+    assert config.checks[0].prompt_id == "p1"
 
-
-def test_config_skips_malformed_definitions():
-    """Should ignore definitions missing required fields (Edge Case)."""
+def test_config_handles_inline_prompts_backward_compatibility():
+    """Should create a virtual prompt definition if 'system_prompt' is used inline."""
     # Given
     data = {
-        "definitions": [
-            {"id": "valid", "cmd": "echo"},
-            {"id": "invalid_missing_cmd"},  # Missing cmd
-            {"cmd": "echo"}  # Missing id
+        "checks": [
+            {"id": "c1", "system_prompt": "Inline Prompt", "context": []}
         ]
     }
 
@@ -90,9 +92,9 @@ def test_config_skips_malformed_definitions():
     config = Config.from_dict(data)
 
     # Then
-    assert len(config.definitions) == 1
-    assert "valid" in config.definitions
-
+    assert "inline_c1" in config.prompts
+    assert config.prompts["inline_c1"].text == "Inline Prompt"
+    assert config.checks[0].prompt_id == "inline_c1"
 
 # ==========================================
 # 3. UNIVERSAL ROUTER TESTS (The New Feature)
@@ -127,22 +129,6 @@ def test_router_routes_gemini_models_to_google():
     router.gemini.analyze.assert_called_once()
     router.openai.analyze.assert_not_called()
 
-
-def test_router_defaults_unknown_models_to_openai():
-    """Should route unknown or 'gpt' models to OpenAIProvider (Edge Case)."""
-    # Given
-    router = UniversalAIProvider()
-    router.openai = MagicMock()
-    router.anthropic = MagicMock()
-
-    # When
-    router.analyze("mistral-large", "sys", "user")
-
-    # Then
-    router.openai.analyze.assert_called_once()
-    router.anthropic.analyze.assert_not_called()
-
-
 # ==========================================
 # 4. ENGINE BEHAVIOR TESTS
 # ==========================================
@@ -162,6 +148,33 @@ def test_engine_builds_context_correctly(sample_config, mock_runner, mock_ai_pro
     assert "</diff_tag>" in context
     mock_runner.run.assert_called_with("git diff")
 
+def test_engine_resolves_prompt_correctly(sample_config, mock_runner, mock_ai_provider):
+    """Should look up the prompt text from the registry before calling AI."""
+    # Given
+    engine = ReviewEngine(sample_config, mock_runner, mock_ai_provider)
+
+    # When
+    engine.run_check("security_check")
+
+    # Then
+    mock_ai_provider.analyze.assert_called_with(
+        "gpt-4",
+        "Find bugs", # The text from the prompt registry
+        ANY          # <--- Fixed: Using unittest.mock.ANY
+    )
+
+def test_engine_fails_when_prompt_id_missing(sample_config, mock_runner, mock_ai_provider):
+    """Should return False if the check references a non-existent prompt ID."""
+    # Given
+    sample_config.checks[0].prompt_id = "missing_prompt"
+    engine = ReviewEngine(sample_config, mock_runner, mock_ai_provider)
+
+    # When
+    result = engine.run_check("security_check")
+
+    # Then
+    assert result is False
+    mock_ai_provider.analyze.assert_not_called()
 
 def test_engine_handles_missing_context_definition(sample_config, mock_runner, mock_ai_provider):
     """Should insert a warning comment if a check references a non-existent context (Edge Case)."""

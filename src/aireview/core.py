@@ -31,9 +31,15 @@ class ContextDefinition:
 
 
 @dataclass
+class PromptDefinition:
+    id: str
+    text: str
+
+
+@dataclass
 class CheckDefinition:
     id: str
-    system_prompt: str
+    prompt_id: str
     model: str
     context_ids: List[str]
 
@@ -41,10 +47,12 @@ class CheckDefinition:
 @dataclass
 class Config:
     definitions: Dict[str, ContextDefinition]
+    prompts: Dict[str, PromptDefinition]
     checks: List[CheckDefinition]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Config':
+        # 1. Parse Context Definitions
         defs = {}
         for d in data.get('definitions', []):
             if 'id' not in d or 'cmd' not in d:
@@ -52,18 +60,48 @@ class Config:
                 continue
             defs[d['id']] = ContextDefinition(d['id'], d.get('tag', d['id']), d['cmd'])
 
+        # 2. Parse Prompt Definitions
+        prompts = {}
+        for p in data.get('prompts', []):
+            p_id = p.get('id')
+            if not p_id:
+                logger.warning(f"Skipping prompt without ID: {p}")
+                continue
+
+            text = ""
+            if 'file' in p:
+                try:
+                    with open(p['file'], 'r') as f:
+                        text = f.read()
+                except Exception as e:
+                    logger.error(f"Failed to load prompt file '{p['file']}': {e}")
+                    text = "ERROR: Prompt file missing."
+            else:
+                text = p.get('text', 'You are a code reviewer.')
+
+            prompts[p_id] = PromptDefinition(id=p_id, text=text)
+
+        # 3. Parse Checks
         checks = []
         for c in data.get('checks', []):
             if 'id' not in c:
                 logger.warning(f"Skipping malformed check: {c}")
                 continue
+
+            # Support inline 'system_prompt' for backward compatibility
+            prompt_id = c.get('prompt_id')
+            if not prompt_id and 'system_prompt' in c:
+                virtual_id = f"inline_{c['id']}"
+                prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
+                prompt_id = virtual_id
+
             checks.append(CheckDefinition(
                 id=c['id'],
-                system_prompt=c.get('system_prompt', 'You are a code reviewer.'),
+                prompt_id=prompt_id,
                 model=c.get('model', 'gpt-3.5-turbo'),
                 context_ids=c.get('context', [])
             ))
-        return cls(definitions=defs, checks=checks)
+        return cls(definitions=defs, prompts=prompts, checks=checks)
 
 
 # ==========================================
@@ -162,7 +200,6 @@ class AnthropicProvider:
             return "ERROR: Anthropic client not initialized (missing key or package)."
         try:
             logger.info(f"Sending request to Anthropic (Model: {model})...")
-            # Claude API treats system prompt as a top-level parameter
             message = self.client.messages.create(
                 model=model,
                 max_tokens=4000,
@@ -199,7 +236,6 @@ class GeminiProvider:
             return "ERROR: Google GenAI client not initialized (missing key or package)."
         try:
             logger.info(f"Sending request to Google (Model: {model})...")
-            # Gemini configuration for system instructions
             model_instance = self.genai.GenerativeModel(
                 model_name=model,
                 system_instruction=system_prompt
@@ -235,17 +271,8 @@ class UniversalAIProvider:
 
 class MockAIProvider:
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
-        # Print the header
-        print(f"\n{'='*20} DRY RUN PREVIEW ({model}) {'='*20}")
-
-        # Print System Prompt
-        print(f"\n--- [SYSTEM PROMPT] ---\n{system_prompt}")
-
-        # Print User Context (The assembled XML)
-        print(f"\n--- [USER CONTEXT] ---\n{user_content}")
-
-        print(f"\n{'='*60}\n")
-
+        logger.info(f"[DRY-RUN] Routing to provider for model: {model}")
+        logger.info(f"[DRY-RUN] System Prompt: {system_prompt[:50]}...")
         logger.info(f"[DRY-RUN] Payload size: {len(user_content)} chars")
         return "DRY RUN: PASS"
 
@@ -287,13 +314,23 @@ class ReviewEngine:
                 logger.error(f"Check ID '{check_id}' not found in configuration.")
                 return False
 
+            # 1. Resolve Prompt
+            prompt_def = self.config.prompts.get(check.prompt_id)
+            if not prompt_def:
+                logger.error(f"Prompt ID '{check.prompt_id}' not found in config.")
+                return False
+
+            system_prompt = prompt_def.text
+
+            # 2. Build Context
             context = self.build_context(check_id)
 
             if not context.strip():
                 logger.warning(f"Context for '{check_id}' is empty. Skipping AI call.")
                 return True
 
-            verdict = self.ai.analyze(check.model, check.system_prompt, context)
+            # 3. Analyze
+            verdict = self.ai.analyze(check.model, system_prompt, context)
 
             print(f"\n--- REPORT: {check_id} ({check.model}) ---")
             print(verdict)
@@ -357,20 +394,14 @@ definitions:
     tag: project_structure
     cmd: "ls -R"
 
+prompts:
+  - id: basic_reviewer
+    text: "You are a code reviewer. Say PASS if good, FAIL if bad."
+
 checks:
-  - id: openai_check
-    system_prompt: "Say PASS if good."
+  - id: sanity_check
+    prompt_id: basic_reviewer
     model: gpt-3.5-turbo
-    context: [git_diff]
-
-  - id: claude_check
-    system_prompt: "Say PASS if good."
-    model: claude-3-opus-20240229
-    context: [git_diff]
-
-  - id: gemini_check
-    system_prompt: "Say PASS if good."
-    model: gemini-1.5-pro
     context: [git_diff]
 """
 
@@ -393,8 +424,8 @@ def load_config(path: str) -> Config:
         logger.critical(f"Invalid YAML in '{path}': {e}")
         sys.exit(1)
 
+
 def main():
-    # Custom help formatter to keep newlines in the description/epilog
     parser = argparse.ArgumentParser(
         description="🤖 AI Pre-Push Review Tool\n"
                     "Automated code review using OpenAI, Claude, or Gemini before you push.",
@@ -425,19 +456,12 @@ ENVIRONMENT VARIABLES:
   GOOGLE_API_KEY      Required for gemini-* models
 """
     )
+    parser.add_argument("command", choices=["run", "init", "validate", "install"], help="Action to perform")
+    parser.add_argument("--config", default="ai-checks.yaml", help="Path to config file")
+    parser.add_argument("--check", help="Run a specific check ID only")
+    parser.add_argument("--dry-run", action="store_true", help="Don't call AI API")
+    parser.add_argument("--verbose", action="store_true", help="Enable debug logs")
 
-    parser.add_argument("command", choices=["run", "init", "validate", "install"],
-                        help="Action to perform")
-    parser.add_argument("--config", default="ai-checks.yaml",
-                        help="Path to config file (default: ai-checks.yaml)")
-    parser.add_argument("--check",
-                        help="Run a specific check ID only (e.g., 'security-audit')")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Simulate execution without calling AI APIs")
-    parser.add_argument("--verbose", action="store_true",
-                        help="Enable detailed debug logging")
-
-    # Handle no-argument case
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -459,7 +483,7 @@ ENVIRONMENT VARIABLES:
     config = load_config(args.config)
 
     if args.command == "validate":
-        logger.info("Configuration is valid.")
+        logger.info(f"Configuration is valid. Loaded {len(config.prompts)} prompts and {len(config.checks)} checks.")
         return
 
     # --- RUN LOGIC ---
@@ -468,7 +492,6 @@ ENVIRONMENT VARIABLES:
     if args.dry_run:
         ai_provider = MockAIProvider()
     else:
-        # Use the Universal Router
         ai_provider = UniversalAIProvider()
 
     engine = ReviewEngine(config, runner, ai_provider)
