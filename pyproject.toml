@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "byte-brewery"
 version = "1.0.0"
 description = "Scripts crafted like fine, magical ales for AI development"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "openai>=2.14.0",
     "pytest>=9.0.2",

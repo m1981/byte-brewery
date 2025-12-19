@@ -6,7 +6,7 @@ import logging
 import yaml
 import stat
 from dataclasses import dataclass
-from typing import List, Dict, Protocol, Any
+from typing import List, Dict, Protocol, Any, Optional
 
 # ==========================================
 # 0. LOGGING SETUP
@@ -79,7 +79,7 @@ class AIProvider(Protocol):
 
 
 # ==========================================
-# 3. IMPLEMENTATIONS
+# 3. IMPLEMENTATIONS (PROVIDERS)
 # ==========================================
 
 class ShellCommandRunner:
@@ -107,16 +107,25 @@ class ShellCommandRunner:
             return "ERROR: Shell environment issue."
 
 
+# --- OPENAI ---
 class OpenAIProvider:
-    def __init__(self, api_key: str):
+    def __init__(self):
+        self.api_key = os.environ.get("OPENAI_API_KEY")
+        if not self.api_key:
+            logger.warning("OPENAI_API_KEY not set. OpenAI models will fail.")
+            self.client = None
+            return
+
         try:
             import openai
-            self.client = openai.OpenAI(api_key=api_key)
+            self.client = openai.OpenAI(api_key=self.api_key)
         except ImportError:
-            logger.critical("Python package 'openai' is missing. Install it via pip.")
-            sys.exit(1)
+            logger.error("Python package 'openai' is missing. Run: pip install openai")
+            self.client = None
 
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+        if not self.client:
+            return "ERROR: OpenAI client not initialized (missing key or package)."
         try:
             logger.info(f"Sending request to OpenAI (Model: {model})...")
             response = self.client.chat.completions.create(
@@ -132,9 +141,102 @@ class OpenAIProvider:
             return f"AI API ERROR: {str(e)}"
 
 
+# --- ANTHROPIC (CLAUDE) ---
+class AnthropicProvider:
+    def __init__(self):
+        self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not self.api_key:
+            logger.warning("ANTHROPIC_API_KEY not set. Claude models will fail.")
+            self.client = None
+            return
+
+        try:
+            import anthropic
+            self.client = anthropic.Anthropic(api_key=self.api_key)
+        except ImportError:
+            logger.error("Python package 'anthropic' is missing. Run: pip install anthropic")
+            self.client = None
+
+    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+        if not self.client:
+            return "ERROR: Anthropic client not initialized (missing key or package)."
+        try:
+            logger.info(f"Sending request to Anthropic (Model: {model})...")
+            # Claude API treats system prompt as a top-level parameter
+            message = self.client.messages.create(
+                model=model,
+                max_tokens=4000,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": user_content}
+                ]
+            )
+            return message.content[0].text
+        except Exception as e:
+            logger.error(f"Anthropic API Error: {e}")
+            return f"AI API ERROR: {str(e)}"
+
+
+# --- GOOGLE (GEMINI) ---
+class GeminiProvider:
+    def __init__(self):
+        self.api_key = os.environ.get("GOOGLE_API_KEY")
+        if not self.api_key:
+            logger.warning("GOOGLE_API_KEY not set. Gemini models will fail.")
+            self.genai = None
+            return
+
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            self.genai = genai
+        except ImportError:
+            logger.error("Python package 'google-generativeai' is missing. Run: pip install google-generativeai")
+            self.genai = None
+
+    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+        if not self.genai:
+            return "ERROR: Google GenAI client not initialized (missing key or package)."
+        try:
+            logger.info(f"Sending request to Google (Model: {model})...")
+            # Gemini configuration for system instructions
+            model_instance = self.genai.GenerativeModel(
+                model_name=model,
+                system_instruction=system_prompt
+            )
+            response = model_instance.generate_content(user_content)
+            return response.text
+        except Exception as e:
+            logger.error(f"Gemini API Error: {e}")
+            return f"AI API ERROR: {str(e)}"
+
+
+# --- UNIVERSAL ROUTER ---
+class UniversalAIProvider:
+    """Routes requests to the correct provider based on model name."""
+
+    def __init__(self):
+        self.openai = OpenAIProvider()
+        self.anthropic = AnthropicProvider()
+        self.gemini = GeminiProvider()
+
+    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+        model_lower = model.lower()
+
+        if model_lower.startswith("claude"):
+            return self.anthropic.analyze(model, system_prompt, user_content)
+
+        if model_lower.startswith("gemini"):
+            return self.gemini.analyze(model, system_prompt, user_content)
+
+        # Default to OpenAI for gpt-* or unknown models
+        return self.openai.analyze(model, system_prompt, user_content)
+
+
 class MockAIProvider:
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
-        logger.info(f"[DRY-RUN] Would send {len(user_content)} chars to {model}")
+        logger.info(f"[DRY-RUN] Routing to provider for model: {model}")
+        logger.info(f"[DRY-RUN] Payload size: {len(user_content)} chars")
         return "DRY RUN: PASS"
 
 
@@ -149,7 +251,6 @@ class ReviewEngine:
         self.ai = ai
 
     def build_context(self, check_id: str) -> str:
-        # Retrieve check definition
         check = next((c for c in self.config.checks if c.id == check_id), None)
         if not check:
             raise ValueError(f"Check ID '{check_id}' not found")
@@ -171,7 +272,6 @@ class ReviewEngine:
 
     def run_check(self, check_id: str) -> bool:
         try:
-            # FIX: Retrieve the check object here so it is available for the AI call
             check = next((c for c in self.config.checks if c.id == check_id), None)
             if not check:
                 logger.error(f"Check ID '{check_id}' not found in configuration.")
@@ -185,7 +285,7 @@ class ReviewEngine:
 
             verdict = self.ai.analyze(check.model, check.system_prompt, context)
 
-            print(f"\n--- REPORT: {check_id} ---")
+            print(f"\n--- REPORT: {check_id} ({check.model}) ---")
             print(verdict)
             print("--------------------------\n")
 
@@ -202,53 +302,32 @@ class ReviewEngine:
 # ==========================================
 
 def install_hook():
-    """Installs the pre-push hook into the .git directory."""
     if not os.path.exists(".git"):
         logger.error("Not a git repository (no .git directory found).")
         sys.exit(1)
 
     hook_path = os.path.join(".git", "hooks", "pre-push")
-
-    # Get the absolute path of the current script to ensure the hook finds it
     script_path = os.path.abspath(__file__)
 
-    # The hook script content
     hook_content = f"""#!/bin/sh
 # AI Review Pre-Push Hook
-# Auto-generated by aireview
-
 echo "🤖 Running AI Pre-Push Review..."
-
-# Check if we should skip
 if git log -1 --pretty=%B | grep -q "\\[skip-ai\\]"; then
     echo "⏩ Skipping AI checks..."
     exit 0
 fi
-
-# Run the python script
-# We use sys.executable to ensure we use the same python interpreter
 "{sys.executable}" "{script_path}" run
-
-# Capture exit code
-EXIT_CODE=$?
-
-if [ $EXIT_CODE -ne 0 ]; then
+if [ $? -ne 0 ]; then
     echo "❌ AI Review Failed. Push aborted."
-    echo "💡 To bypass, add '[skip-ai]' to your commit message."
     exit 1
 fi
-
 exit 0
 """
-
     try:
         with open(hook_path, "w") as f:
             f.write(hook_content)
-
-        # Make it executable (chmod +x)
         st = os.stat(hook_path)
         os.chmod(hook_path, st.st_mode | stat.S_IEXEC)
-
         logger.info(f"✅ Successfully installed pre-push hook at: {hook_path}")
     except Exception as e:
         logger.error(f"Failed to install hook: {e}")
@@ -269,12 +348,20 @@ definitions:
     cmd: "ls -R"
 
 checks:
-  - id: sanity_check
-    system_prompt: "Say PASS if the code looks okay, FAIL otherwise."
+  - id: openai_check
+    system_prompt: "Say PASS if good."
     model: gpt-3.5-turbo
-    context:
-      - git_diff
-      - file_tree
+    context: [git_diff]
+
+  - id: claude_check
+    system_prompt: "Say PASS if good."
+    model: claude-3-opus-20240229
+    context: [git_diff]
+
+  - id: gemini_check
+    system_prompt: "Say PASS if good."
+    model: gemini-1.5-pro
+    context: [git_diff]
 """
 
 
@@ -296,15 +383,51 @@ def load_config(path: str) -> Config:
         logger.critical(f"Invalid YAML in '{path}': {e}")
         sys.exit(1)
 
-
 def main():
-    parser = argparse.ArgumentParser(description="AI Pre-Push Review Tool")
-    parser.add_argument("command", choices=["run", "init", "validate", "install"], help="Command to execute")
-    parser.add_argument("--config", default="ai-checks.yaml", help="Path to config file")
-    parser.add_argument("--check", help="Run a specific check ID only")
-    parser.add_argument("--dry-run", action="store_true", help="Don't call AI API")
-    parser.add_argument("--verbose", action="store_true", help="Enable debug logs")
+    # Custom help formatter to keep newlines in the description/epilog
+    parser = argparse.ArgumentParser(
+        description="🤖 AI Pre-Push Review Tool\n"
+                    "Automated code review using OpenAI, Claude, or Gemini before you push.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+EXAMPLES:
+  1. Initialize a new configuration file:
+     $ aireview init
 
+  2. Install the git pre-push hook (runs automatically on git push):
+     $ aireview install
+
+  3. Run all checks manually (using API keys from env):
+     $ aireview run
+
+  4. Run a specific check only:
+     $ aireview run --check security-audit
+
+  5. Dry-run mode (see what would be sent to AI without paying):
+     $ aireview run --dry-run --verbose
+
+  6. Validate your configuration file syntax:
+     $ aireview validate
+
+ENVIRONMENT VARIABLES:
+  OPENAI_API_KEY      Required for gpt-* models
+  ANTHROPIC_API_KEY   Required for claude-* models
+  GOOGLE_API_KEY      Required for gemini-* models
+"""
+    )
+
+    parser.add_argument("command", choices=["run", "init", "validate", "install"],
+                        help="Action to perform")
+    parser.add_argument("--config", default="ai-checks.yaml",
+                        help="Path to config file (default: ai-checks.yaml)")
+    parser.add_argument("--check",
+                        help="Run a specific check ID only (e.g., 'security-audit')")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Simulate execution without calling AI APIs")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Enable detailed debug logging")
+
+    # Handle no-argument case
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -313,8 +436,6 @@ def main():
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-
-    # --- COMMAND HANDLERS ---
 
     if args.command == "install":
         install_hook()
@@ -332,17 +453,13 @@ def main():
         return
 
     # --- RUN LOGIC ---
-
     runner = ShellCommandRunner()
 
     if args.dry_run:
         ai_provider = MockAIProvider()
     else:
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            logger.critical("OPENAI_API_KEY environment variable not set.")
-            sys.exit(1)
-        ai_provider = OpenAIProvider(api_key)
+        # Use the Universal Router
+        ai_provider = UniversalAIProvider()
 
     engine = ReviewEngine(config, runner, ai_provider)
 
