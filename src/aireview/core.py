@@ -235,7 +235,17 @@ class UniversalAIProvider:
 
 class MockAIProvider:
     def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
-        logger.info(f"[DRY-RUN] Routing to provider for model: {model}")
+        # Print the header
+        print(f"\n{'='*20} DRY RUN PREVIEW ({model}) {'='*20}")
+
+        # Print System Prompt
+        print(f"\n--- [SYSTEM PROMPT] ---\n{system_prompt}")
+
+        # Print User Context (The assembled XML)
+        print(f"\n--- [USER CONTEXT] ---\n{user_content}")
+
+        print(f"\n{'='*60}\n")
+
         logger.info(f"[DRY-RUN] Payload size: {len(user_content)} chars")
         return "DRY RUN: PASS"
 
