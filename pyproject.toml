@@ -8,7 +8,11 @@ version = "1.0.0"
 description = "Scripts crafted like fine, magical ales for AI development"
 requires-python = ">=3.8"
 dependencies = [
-    # "requests",  <-- Uncomment if your scripts need these!
+    "openai>=2.14.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-watch>=4.2.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.scripts]
@@ -19,6 +23,7 @@ aug = "augment_ai.aug_pipeline:main"
 aug-recap = "augment_ai.recap:main"
 dce = "augment_ai.dce:main"
 pext = "augment_ai.pext:main"
+aireview = "aireview.core:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

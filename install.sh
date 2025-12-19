@@ -2,28 +2,37 @@
 set -e
 
 REPO_URL="https://github.com/m1981/byte-brewery.git"
-INSTALL_DIR="$HOME/.local/bin"
+# Use pipx's default bin location if available, otherwise fallback to ~/.local/bin
+INSTALL_DIR="${PIPX_BIN_DIR:-$HOME/.local/bin}"
 
 echo "🍺 Brewing byte-brewery installation..."
-echo "🔍 DEBUG: Current directory is: $(pwd)"
 
 # 1. Check for pipx
 if ! command -v pipx &> /dev/null; then
     echo "❌ pipx is not installed."
-    echo "   Please install it first (brew install pipx / sudo apt install pipx)"
+    echo "   MacOS: brew install pipx"
     exit 1
 fi
 
 # 2. Determine Source (Local vs Remote)
-# We check if pyproject.toml exists in the current folder.
+# We check if pyproject.toml exists AND if it belongs to byte-brewery.
+IS_LOCAL_SOURCE=false
+
 if [ -f "pyproject.toml" ]; then
-    echo "📂 DEBUG: Found pyproject.toml locally."
-    echo "📂 Detected local source installation."
+    # Grep for the package name to ensure we aren't in a random python project
+    if grep -q 'name = "byte-brewery"' pyproject.toml || grep -q "name = 'byte-brewery'" pyproject.toml; then
+        IS_LOCAL_SOURCE=true
+    else
+        echo "⚠️  DEBUG: Found pyproject.toml, but it belongs to another project."
+    fi
+fi
+
+if [ "$IS_LOCAL_SOURCE" = true ]; then
+    echo "📂 DEBUG: Verified local byte-brewery source."
     SOURCE_DIR="."
     CLEANUP=false
 else
-    echo "🌐 DEBUG: No pyproject.toml found here."
-    echo "🌐 Cloning repository from GitHub to temp folder..."
+    echo "🌐 DEBUG: Downloading fresh copy from GitHub..."
     SOURCE_DIR=$(mktemp -d)
     echo "🌐 DEBUG: Cloning to $SOURCE_DIR"
 
@@ -32,14 +41,12 @@ else
     CLEANUP=true
 fi
 
-# 3. Install Python Tools via pipx
-echo "📦 Installing Python tools via pipx..."
-echo "📦 DEBUG: Running 'pipx install $SOURCE_DIR --force'"
-
-# We install from the determined SOURCE_DIR
+# 3. Install Python Tools
+echo "📦 Installing Python package..."
+# Ensure we install dependencies defined in pyproject.toml
 pipx install "$SOURCE_DIR" --force
 
-# 4. Install Shell Scripts
+# 4. Install Shell Scripts (The Hybrid Part)
 echo "🐚 Installing shell scripts to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 
@@ -47,21 +54,41 @@ mkdir -p "$INSTALL_DIR"
 if [ -f "$SOURCE_DIR/bin/rsum" ]; then
     cp "$SOURCE_DIR/bin/rsum" "$INSTALL_DIR/"
     chmod +x "$INSTALL_DIR/rsum"
-    echo "🐚 DEBUG: Copied rsum"
+    echo "   - Installed: rsum"
 else
-    echo "⚠️  DEBUG: Could not find bin/rsum in $SOURCE_DIR"
+    echo "⚠️  Warning: bin/rsum not found."
 fi
+
+echo "🐚 Installing shell scripts and help tools..."
+mkdir -p "$INSTALL_DIR"
+
+# List of binary files to copy
+FILES_TO_COPY=("rsum" "byte-help" "tools.json")
+
+for file in "${FILES_TO_COPY[@]}"; do
+    if [ -f "$SOURCE_DIR/bin/$file" ]; then
+        cp "$SOURCE_DIR/bin/$file" "$INSTALL_DIR/"
+        # Only make scripts executable, not the json
+        if [[ "$file" != *.json ]]; then
+            chmod +x "$INSTALL_DIR/$file"
+        fi
+        echo "   - Installed: $file"
+    else
+        echo "⚠️  Warning: bin/$file not found in source."
+    fi
+done
 
 # 5. Cleanup (Only if we cloned)
 if [ "$CLEANUP" = true ]; then
-    echo "🧹 Cleaning up temp files..."
     rm -rf "$SOURCE_DIR"
 fi
 
-# 6. Path Check
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    echo "⚠️  $INSTALL_DIR is not in your PATH."
-    echo "   Add this to your shell config: export PATH=\"\$HOME/.local/bin:\$PATH\""
+# 6. Path Validation (Crucial for macOS)
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    echo ""
+    echo "⚠️  WARNING: $INSTALL_DIR is not in your PATH."
+    echo "   Add this to ~/.zshrc or ~/.bash_profile:"
+    echo "   export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
-echo "✅ Installation complete! Run 'aug --help' to test."
+echo "✅ Installation complete!"
