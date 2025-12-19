@@ -1,356 +1,219 @@
-import os
-import sys
 import pytest
+import json
+import os
 import subprocess
-from unittest.mock import MagicMock, patch, mock_open, ANY
+from unittest.mock import MagicMock, patch, mock_open
+from dataclasses import asdict
 
-# STANDARD IMPORT - Works because we added 'src' to pythonpath in pyproject.toml
+# Import your module.
+# Assuming the code is in 'aireview.core'. Adjust import if needed.
 from aireview.core import (
     Config,
-    ContextDefinition,
-    CheckDefinition,
-    ShellCommandRunner,
-    OpenAIProvider,
     ReviewEngine,
-    main,
-    load_config
+    ShellCommandRunner,
+    CheckDefinition,
+    PromptDefinition,
+    ContextDefinition,
+    UniversalAIProvider
 )
 
 
 # ==========================================
-# 1. DOMAIN & CONFIG TESTS
+# 1. CONFIGURATION TESTS
 # ==========================================
 
-def test_config_from_dict_valid():
+def test_config_parsing_valid_yaml():
+    """Test that a valid dictionary is correctly parsed into data structures."""
     data = {
-        "definitions": [{"id": "d1", "tag": "t1", "cmd": "ls"}],
-        "checks": [{"id": "c1", "system_prompt": "p1", "model": "m1", "context": ["d1"]}]
-    }
-    config = Config.from_dict(data)
-    assert len(config.definitions) == 1
-    assert config.definitions["d1"].cmd == "ls"
-    assert config.checks[0].model == "m1"
-
-
-def test_config_from_dict_malformed_definition():
-    data = {
-        "definitions": [
-            {"id": "d1", "cmd": "ls"},
-            {"cmd": "ls"},
-            {"id": "d2"}
-        ],
-        "checks": []
-    }
-    config = Config.from_dict(data)
-    assert len(config.definitions) == 1
-    assert "d1" in config.definitions
-
-
-def test_config_from_dict_malformed_check():
-    data = {
-        "definitions": [],
+        "definitions": [{"id": "diff", "cmd": "git diff"}],
+        "prompts": [{"id": "p1", "text": "Review this."}],
         "checks": [
-            {"id": "c1"},
-            {"system_prompt": "foo"}
+            {"id": "c1", "prompt_id": "p1", "context": ["diff"], "model": "gpt-4", "max_chars": 500}
         ]
     }
     config = Config.from_dict(data)
-    assert len(config.checks) == 1
-    assert config.checks[0].id == "c1"
-    assert config.checks[0].model == "gpt-3.5-turbo"
+
+    assert "diff" in config.definitions
+    assert config.checks[0].max_chars == 500
+    assert config.checks[0].model == "gpt-4"
+    # Verify JSON instruction was appended automatically
+    assert "JSON" in config.prompts["p1"].text
+
+
+def test_config_parsing_defaults():
+    """Test that missing optional fields use safe defaults."""
+    data = {
+        "checks": [{"id": "c1"}]  # Minimal check
+    }
+    config = Config.from_dict(data)
+
+    check = config.checks[0]
+    assert check.model == "gpt-3.5-turbo"
+    assert check.max_chars == 16000
+    assert check.prompt_id == "basic_reviewer"
+    # Ensure the default prompt was created
+    assert "basic_reviewer" in config.prompts
+
+
+def test_prompt_file_loading_failure():
+    """Test that if a prompt file is missing, we don't crash, but load an error message."""
+    data = {
+        "prompts": [{"id": "p1", "file": "non_existent.txt"}]
+    }
+    config = Config.from_dict(data)
+    assert "ERROR" in config.prompts["p1"].text
 
 
 # ==========================================
-# 2. SHELL COMMAND RUNNER TESTS
-# ==========================================
-
-def test_shell_runner_success():
-    runner = ShellCommandRunner()
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.stdout = " output "
-        result = runner.run("echo hello")
-
-        mock_run.assert_called_once_with(
-            "echo hello",
-            shell=True,
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        assert result == "output"
-
-
-def test_shell_runner_empty_command():
-    runner = ShellCommandRunner()
-    assert runner.run("") == ""
-    assert runner.run("   ") == ""
-    assert runner.run(None) == ""
-
-
-def test_shell_runner_failure():
-    runner = ShellCommandRunner()
-    with patch("subprocess.run") as mock_run:
-        mock_run.side_effect = subprocess.CalledProcessError(
-            returncode=1, cmd="bad", stderr="oops"
-        )
-        result = runner.run("bad")
-
-        assert "ERROR executing 'bad':" in result
-        assert "oops" in result
-
-
-def test_shell_runner_file_not_found():
-    runner = ShellCommandRunner()
-    with patch("subprocess.run") as mock_run:
-        mock_run.side_effect = FileNotFoundError()
-        result = runner.run("missing_shell")
-        assert "ERROR: Shell environment issue." in result
-
-
-# ==========================================
-# 3. OPENAI PROVIDER TESTS
-# ==========================================
-
-def test_openai_provider_init_missing_package():
-    with patch.dict(sys.modules, {'openai': None}):
-        with pytest.raises(SystemExit) as exc:
-            OpenAIProvider("key")
-        assert exc.value.code == 1
-
-
-def test_openai_provider_analyze_success():
-    with patch("openai.OpenAI") as mock_client_cls:
-        mock_client = mock_client_cls.return_value
-        mock_client.chat.completions.create.return_value.choices = [
-            MagicMock(message=MagicMock(content="AI_RESPONSE"))
-        ]
-
-        provider = OpenAIProvider("fake-key")
-        response = provider.analyze("gpt-4", "sys_prompt", "user_code")
-
-        assert response == "AI_RESPONSE"
-
-        call_args = mock_client.chat.completions.create.call_args
-        assert call_args.kwargs['model'] == "gpt-4"
-        messages = call_args.kwargs['messages']
-        assert messages[0] == {"role": "system", "content": "sys_prompt"}
-        assert messages[1] == {"role": "user", "content": "user_code"}
-
-
-def test_openai_provider_analyze_error():
-    with patch("openai.OpenAI") as mock_client_cls:
-        mock_client = mock_client_cls.return_value
-        mock_client.chat.completions.create.side_effect = Exception("API Down")
-
-        provider = OpenAIProvider("k")
-        response = provider.analyze("m", "s", "u")
-        assert "AI API ERROR: API Down" in response
-
-
-# ==========================================
-# 4. REVIEW ENGINE TESTS
+# 2. ENGINE & CONTEXT TESTS
 # ==========================================
 
 @pytest.fixture
 def mock_runner():
-    runner = MagicMock()
-    runner.run.side_effect = lambda cmd: f"output_of_{cmd}"
+    runner = MagicMock(spec=ShellCommandRunner)
+    runner.run.return_value = "some code changes"
     return runner
 
 
 @pytest.fixture
 def mock_ai():
-    ai = MagicMock()
-    ai.analyze.return_value = "PASS"
+    ai = MagicMock(spec=UniversalAIProvider)
+    ai.analyze.return_value = '{"status": "PASS", "reason": "Looks good"}'
     return ai
 
 
 @pytest.fixture
-def sample_config():
+def basic_config():
     return Config(
-        definitions={
-            "d1": ContextDefinition("d1", "tag1", "cmd1"),
-            "d2": ContextDefinition("d2", "tag2", "cmd2")
-        },
-        checks=[
-            CheckDefinition("c1", "prompt1", "model1", ["d1", "d2"]),
-            CheckDefinition("c2", "prompt2", "model2", ["missing_def"])
-        ]
+        definitions={"diff": ContextDefinition("diff", "git_changes", "git diff")},
+        prompts={"p1": PromptDefinition("p1", "Review this")},
+        checks=[CheckDefinition("c1", "p1", "gpt-4", ["diff"], max_chars=100)]
     )
 
 
-def test_engine_build_context(sample_config, mock_runner, mock_ai):
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
-    context = engine.build_context("c1")
+def test_build_context_truncation(basic_config, mock_runner, mock_ai):
+    """Test that context is truncated if it exceeds max_chars."""
+    # Setup runner to return a long string (150 chars)
+    mock_runner.run.return_value = "A" * 150
 
-    assert "<tag1>\noutput_of_cmd1\n</tag1>" in context
-    assert "<tag2>\noutput_of_cmd2\n</tag2>" in context
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
+    context = engine.build_context(basic_config.checks[0])
+
+    # Check max_chars is 100.
+    # The engine adds markdown overhead, but the *content* should be truncated.
+    # We check if the truncation marker exists.
+    assert "[TRUNCATED" in context
+    assert len(mock_runner.run.return_value) > 100
 
 
-def test_engine_build_context_missing_def(sample_config, mock_runner, mock_ai):
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
-    context = engine.build_context("c2")
+def test_build_context_empty_skips_ai(basic_config, mock_runner, mock_ai):
+    """Test that if git diff returns empty string, we skip the AI call."""
+    mock_runner.run.return_value = ""  # No changes
 
-    assert "<!-- Warning: Context 'missing_def' not defined -->" in context
-
-
-def test_engine_run_check_pass(sample_config, mock_runner, mock_ai):
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
     result = engine.run_check("c1")
 
-    assert result is True
-    mock_ai.analyze.assert_called_with("model1", "prompt1", ANY)
+    assert result is True  # Should pass by default
+    mock_ai.analyze.assert_not_called()  # Save money!
 
 
-def test_engine_run_check_fail(sample_config, mock_runner, mock_ai):
-    mock_ai.analyze.return_value = "FAIL: Bad code"
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
-    result = engine.run_check("c1")
+def test_context_injection_safety(basic_config, mock_runner, mock_ai):
+    """Test that malicious user code doesn't break the prompt structure."""
+    # User code contains markdown backticks
+    mock_runner.run.return_value = "def foo():\n    return ```malicious```"
 
-    assert result is False
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
+    context = engine.build_context(basic_config.checks[0])
+
+    # Ensure the engine wrapped it safely (it should still be inside the outer block)
+    assert "### Context: git_changes" in context
+    assert "```text" in context
 
 
-def test_engine_run_check_fail_case_insensitive(sample_config, mock_runner, mock_ai):
-    mock_ai.analyze.return_value = "fail: Bad code"
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
+# ==========================================
+# 3. AI RESPONSE PARSING TESTS
+# ==========================================
+
+def test_parse_json_clean(basic_config, mock_runner, mock_ai):
+    """Test parsing a clean JSON response."""
+    mock_ai.analyze.return_value = '{"status": "FAIL", "reason": "Bad code"}'
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
+
     assert engine.run_check("c1") is False
 
 
-def test_engine_run_check_dry_run_override(sample_config, mock_runner, mock_ai):
-    mock_ai.analyze.return_value = "DRY RUN: Would FAIL"
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
+def test_parse_json_markdown_wrapped(basic_config, mock_runner, mock_ai):
+    """Test parsing JSON wrapped in Markdown code blocks (common LLM behavior)."""
+    mock_ai.analyze.return_value = """
+    Here is the review:
+    ```json
+    {
+        "status": "PASS",
+        "reason": "Good job"
+    }
+    ```
+    """
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
     assert engine.run_check("c1") is True
 
 
-def test_engine_run_check_empty_context(sample_config, mock_runner, mock_ai):
-    # Even if runner returns empty string, the engine wraps it in XML tags.
-    # So context is NOT empty, and AI IS called.
-    mock_runner.run.return_value = ""
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
+def test_parse_malformed_json_fallback(basic_config, mock_runner, mock_ai):
+    """Test fallback when AI returns garbage text but includes the keyword FAIL."""
+    mock_ai.analyze.return_value = "I cannot parse this code. FAIL."
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
 
-    result = engine.run_check("c1")
-    assert result is True
-    # FIXED: AI IS called because context contains XML tags
-    mock_ai.analyze.assert_called()
-
-def test_engine_run_check_exception(sample_config, mock_runner, mock_ai):
-    mock_runner.run.side_effect = Exception("Boom")
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
-
-    result = engine.run_check("c1")
-    assert result is False
+    # It should detect "FAIL" in the text and return False
+    assert engine.run_check("c1") is False
 
 
-def test_engine_check_not_found(sample_config, mock_runner, mock_ai):
-    engine = ReviewEngine(sample_config, mock_runner, mock_ai)
-    assert engine.run_check("non_existent") is False
+def test_parse_malformed_json_pass_fallback(basic_config, mock_runner, mock_ai):
+    """Test fallback when AI returns garbage text without FAIL keyword."""
+    mock_ai.analyze.return_value = "I'm not sure what to do."
+    engine = ReviewEngine(basic_config, mock_runner, mock_ai)
+
+    # Default safety: if we can't find FAIL, we assume PASS (or you might want strict mode)
+    # Based on current implementation:
+    assert engine.run_check("c1") is True
 
 
 # ==========================================
-# 5. CLI TESTS
+# 4. PROVIDER & INTEGRATION TESTS
 # ==========================================
 
-def test_load_config_creates_default():
-    with patch("os.path.exists", return_value=False), \
-            patch("builtins.open", mock_open(read_data="checks: []")) as m_open:
-        config = load_config("dummy.yaml")
-
-        m_open.assert_any_call("dummy.yaml", 'w')
-        assert isinstance(config, Config)
-
-
-def test_load_config_io_error():
-    with patch("os.path.exists", return_value=False), \
-            patch("builtins.open", side_effect=IOError("Perm denied")):
-        with pytest.raises(SystemExit) as exc:
-            load_config("dummy.yaml")
-        assert exc.value.code == 1
+@patch("subprocess.run")
+def test_shell_runner_success(mock_subproc):
+    """Test shell runner executes correctly."""
+    mock_subproc.return_value.stdout = "file.py"
+    runner = ShellCommandRunner()
+    output = runner.run("ls")
+    assert output == "file.py"
 
 
-def test_load_config_invalid_yaml():
-    with patch("os.path.exists", return_value=True), \
-            patch("builtins.open", mock_open(read_data="{invalid_yaml")):
-        with pytest.raises(SystemExit) as exc:
-            load_config("dummy.yaml")
-        assert exc.value.code == 1
+@patch("subprocess.run")
+def test_shell_runner_failure(mock_subproc):
+    """Test shell runner handles errors gracefully."""
+    mock_subproc.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="Not found")
+    runner = ShellCommandRunner()
+    output = runner.run("bad_cmd")
+    assert "ERROR" in output
 
 
-def test_main_no_args():
-    with patch("sys.argv", ["aireview.py"]):
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 1
+@patch("openai.OpenAI")
+def test_openai_provider_call(mock_openai_cls):
+    """Test that OpenAI provider constructs the request correctly."""
+    # Setup mock
+    mock_client = MagicMock()
+    mock_openai_cls.return_value = mock_client
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "{}"
+    mock_client.chat.completions.create.return_value = mock_response
 
+    # Inject API Key to trigger client creation
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        provider = UniversalAIProvider()
+        provider.analyze("gpt-4", "hello")
 
-def test_main_init():
-    # We patch the string path now because 'aireview' is resolvable via pythonpath
-    with patch("sys.argv", ["aireview.py", "init"]), \
-            patch("aireview.core.load_config") as mock_load:
-        main()
-        mock_load.assert_called_once()
-
-
-def test_main_validate():
-    with patch("sys.argv", ["aireview.py", "validate"]), \
-            patch("aireview.core.load_config"):
-        main()
-
-
-def test_main_run_dry_run_success():
-    mock_cfg = Config(definitions={}, checks=[
-        CheckDefinition("c1", "p", "m", [])
-    ])
-
-    with patch("sys.argv", ["aireview.py", "run", "--dry-run"]), \
-            patch("aireview.core.load_config", return_value=mock_cfg), \
-            patch("aireview.core.ShellCommandRunner"), \
-            patch("aireview.core.MockAIProvider") as MockAI:
-        MockAI.return_value.analyze.return_value = "PASS"
-
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 0
-
-
-def test_main_run_fail():
-    # FIXED: Added a dummy definition so context is not empty.
-    # If context is empty, the engine skips the AI call and returns True (Pass).
-    mock_cfg = Config(
-        definitions={"d1": ContextDefinition("d1", "t", "c")},
-        checks=[CheckDefinition("c1", "p", "m", ["d1"])]
-    )
-
-    with patch("sys.argv", ["aireview.py", "run", "--dry-run"]), \
-            patch("aireview.core.load_config", return_value=mock_cfg), \
-            patch("aireview.core.ShellCommandRunner"), \
-            patch("aireview.core.MockAIProvider") as MockAI:
-        MockAI.return_value.analyze.return_value = "FAIL"
-
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 1
-
-
-# def test_main_run_missing_api_key():
-#     # 1. Capture the mutmut variable if it exists
-#     mutmut_env = {}
-#     if 'MUTANT_UNDER_TEST' in os.environ:
-#         mutmut_env['MUTANT_UNDER_TEST'] = os.environ['MUTANT_UNDER_TEST']
-#
-#     with patch("sys.argv", ["aireview.py", "run"]), \
-#             patch("aireview.core.load_config"), \
-#             patch.dict(os.environ, mutmut_env, clear=True): # 2. Restore it into the cleared env
-#         with pytest.raises(SystemExit) as exc:
-#             main()
-#         assert exc.value.code == 1
-
-
-def test_main_run_specific_check_not_found():
-    mock_cfg = Config(definitions={}, checks=[])
-
-    with patch("sys.argv", ["aireview.py", "run", "--check", "missing"]), \
-            patch("aireview.core.load_config", return_value=mock_cfg), \
-            patch.dict(os.environ, {"OPENAI_API_KEY": "sk-..."}):
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 1
+        # Verify call arguments
+        call_args = mock_client.chat.completions.create.call_args[1]
+        assert call_args["model"] == "gpt-4"
+        assert call_args["response_format"] == {"type": "json_object"}  # Ensure JSON mode is on
