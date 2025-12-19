@@ -93,14 +93,15 @@ class Config:
                 logger.warning(f"Skipping malformed check: {c}")
                 continue
 
-            # Support inline 'system_prompt' for backward compatibility
             prompt_id = c.get('prompt_id')
+
+            # Handle inline prompts
             if not prompt_id and 'system_prompt' in c:
                 virtual_id = f"inline_{c['id']}"
                 prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
                 prompt_id = virtual_id
 
-            # Handle missing prompt ID (Default Fallback)
+            # Handle missing prompt ID
             if not prompt_id:
                 logger.warning(f"Check '{c['id']}' has no 'prompt_id'. Using default 'basic_reviewer'.")
                 if 'basic_reviewer' not in prompts:
@@ -125,8 +126,7 @@ class CommandRunner(Protocol):
 
 
 class AIProvider(Protocol):
-    def analyze(self, model: str, system_prompt: str, user_content: str) -> str: ...
-
+    def analyze(self, model: str, full_message: str) -> str: ...
 
 # ==========================================
 # 3. IMPLEMENTATIONS (PROVIDERS)
@@ -173,7 +173,7 @@ class OpenAIProvider:
             logger.error("Python package 'openai' is missing. Run: pip install openai")
             self.client = None
 
-    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+    def analyze(self, model: str, full_message: str) -> str:
         if not self.client:
             return "ERROR: OpenAI client not initialized."
         try:
@@ -181,8 +181,7 @@ class OpenAIProvider:
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content}
+                    {"role": "user", "content": full_message}
                 ]
             )
             return response.choices[0].message.content
@@ -207,7 +206,7 @@ class AnthropicProvider:
             logger.error("Python package 'anthropic' is missing. Run: pip install anthropic")
             self.client = None
 
-    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+    def analyze(self, model: str, full_message: str) -> str:
         if not self.client:
             return "ERROR: Anthropic client not initialized."
         try:
@@ -215,9 +214,8 @@ class AnthropicProvider:
             message = self.client.messages.create(
                 model=model,
                 max_tokens=4000,
-                system=system_prompt,
                 messages=[
-                    {"role": "user", "content": user_content}
+                    {"role": "user", "content": full_message}
                 ]
             )
             return message.content[0].text
@@ -243,16 +241,13 @@ class GeminiProvider:
             logger.error("Python package 'google-generativeai' is missing. Run: pip install google-generativeai")
             self.genai = None
 
-    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+    def analyze(self, model: str, full_message: str) -> str:
         if not self.genai:
             return "ERROR: Google GenAI client not initialized."
         try:
             logger.info(f"Sending request to Google (Model: {model})...")
-            model_instance = self.genai.GenerativeModel(
-                model_name=model,
-                system_instruction=system_prompt
-            )
-            response = model_instance.generate_content(user_content)
+            model_instance = self.genai.GenerativeModel(model_name=model)
+            response = model_instance.generate_content(full_message)
             return response.text
         except Exception as e:
             logger.error(f"Gemini API Error: {e}")
@@ -261,28 +256,22 @@ class GeminiProvider:
 
 # --- UNIVERSAL ROUTER ---
 class UniversalAIProvider:
-    """Routes requests to the correct provider based on model name."""
-
     def __init__(self):
         self.openai = OpenAIProvider()
         self.anthropic = AnthropicProvider()
         self.gemini = GeminiProvider()
 
-    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+    def analyze(self, model: str, full_message: str) -> str:
         model_lower = model.lower()
 
         if model_lower.startswith("claude"):
-            return self.anthropic.analyze(model, system_prompt, user_content)
-
+            return self.anthropic.analyze(model, full_message)
         if model_lower.startswith("gemini"):
-            return self.gemini.analyze(model, system_prompt, user_content)
-
-        # Default to OpenAI for gpt-* or unknown models
-        return self.openai.analyze(model, system_prompt, user_content)
-
+            return self.gemini.analyze(model, full_message)
+        return self.openai.analyze(model, full_message)
 
 class MockAIProvider:
-    def analyze(self, model: str, system_prompt: str, user_content: str) -> str:
+    def analyze(self, model: str, full_message: str) -> str:
         logger.info(f"[DRY-RUN] Routing to provider for model: {model}")
         return "DRY RUN: PASS"
 
@@ -313,18 +302,17 @@ class ReviewEngine:
                 continue
 
             output = self.runner.run(definition.cmd)
-            buffer.append(f"<{definition.tag}>\n{output}\n</{definition.tag}>")
+            # Added extra newlines for separation
+            buffer.append(f"<{definition.tag}>\n{output}\n</{definition.tag}>\n\n")
 
-        return "\n".join(buffer)
+        return "".join(buffer)
 
-    def _print_debug_payload(self, model: str, system_prompt: str, user_content: str):
+    def _print_debug_payload(self, model: str, full_message: str):
         """Prints the full payload to stdout for debugging."""
         print("\n" + "="*30 + " FULL REQUEST PAYLOAD " + "="*30)
         print(f"MODEL: {model}")
         print("-" * 80)
-        print(f"SYSTEM PROMPT:\n{system_prompt}")
-        print("-" * 80)
-        print(f"USER CONTEXT (XML):\n{user_content}")
+        print(full_message)
         print("="*82 + "\n")
 
     def run_check(self, check_id: str) -> bool:
@@ -349,12 +337,15 @@ class ReviewEngine:
                 logger.warning(f"Context for '{check_id}' is empty. Skipping AI call.")
                 return True
 
-            # 3. DEBUG LOGGING (Visible in --verbose mode)
-            if logger.isEnabledFor(logging.DEBUG):
-                self._print_debug_payload(check.model, system_prompt, context)
+            # 3. Combine Prompt + Context into one message
+            full_message = f"{system_prompt}\n\n{context}"
 
-            # 4. Analyze
-            verdict = self.ai.analyze(check.model, system_prompt, context)
+            # 4. DEBUG LOGGING (Visible in --verbose mode)
+            if logger.isEnabledFor(logging.DEBUG):
+                self._print_debug_payload(check.model, full_message)
+
+            # 5. Analyze
+            verdict = self.ai.analyze(check.model, full_message)
 
             print(f"\n--- REPORT: {check_id} ({check.model}) ---")
             print(verdict)
