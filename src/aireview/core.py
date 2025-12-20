@@ -304,15 +304,86 @@ class OpenAIProvider:
             return json.dumps({"status": "FAIL", "reason": f"API Error: {str(e)}"})
 
 
+class AnthropicProvider:
+    def __init__(self):
+        self.client = None
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            try:
+                import anthropic
+                self.client = anthropic.Anthropic()
+            except ImportError:
+                pass
+
+    def get_metadata(self, model: str) -> Dict[str, Any]:
+        return {
+            "provider": "Anthropic",
+            "model": model,
+            "temperature": 1.0,
+            "max_tokens": 4096,
+            "response_format": "text" # Claude handles JSON via prompt instructions usually
+        }
+
+    def analyze(self, model: str, full_message: str) -> str:
+        if not self.client: return '{"status": "FAIL", "reason": "Anthropic client not ready (Check ANTHROPIC_API_KEY)"}'
+        try:
+            message = self.client.messages.create(
+                model=model,
+                max_tokens=4096,
+                messages=[{"role": "user", "content": full_message}]
+            )
+            return message.content[0].text
+        except Exception as e:
+            return json.dumps({"status": "FAIL", "reason": f"Anthropic API Error: {str(e)}"})
+
+class GeminiProvider:
+    def __init__(self):
+        self.genai = None
+        if os.environ.get("GOOGLE_API_KEY"):
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+                self.genai = genai
+            except ImportError:
+                pass
+
+    def get_metadata(self, model: str) -> Dict[str, Any]:
+        return {
+            "provider": "Google Gemini",
+            "model": model,
+            "temperature": 1.0,
+            "max_tokens": "Model Default",
+            "response_format": "json_mode"
+        }
+
+    def analyze(self, model: str, full_message: str) -> str:
+        if not self.genai: return '{"status": "FAIL", "reason": "Google GenAI client not ready (Check GOOGLE_API_KEY)"}'
+        try:
+            model_instance = self.genai.GenerativeModel(model)
+            # Gemini JSON mode usually requires specific config, simplified here
+            response = model_instance.generate_content(full_message)
+            return response.text
+        except Exception as e:
+            return json.dumps({"status": "FAIL", "reason": f"Gemini API Error: {str(e)}"})
+
 class UniversalAIProvider:
     def __init__(self):
         self.openai = OpenAIProvider()
+        self.anthropic = AnthropicProvider()
+        self.gemini = GeminiProvider()
+
+    def _get_provider(self, model: str):
+        if model.startswith("claude"):
+            return self.anthropic
+        if model.startswith("gemini"):
+            return self.gemini
+        return self.openai
 
     def get_metadata(self, model: str) -> Dict[str, Any]:
-        return self.openai.get_metadata(model)
+        return self._get_provider(model).get_metadata(model)
 
     def analyze(self, model: str, full_message: str) -> str:
-        return self.openai.analyze(model, full_message)
+        return self._get_provider(model).analyze(model, full_message)
+
 
 
 class MockAIProvider:
