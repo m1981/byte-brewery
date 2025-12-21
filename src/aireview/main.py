@@ -11,6 +11,8 @@ from .services.runner import ShellCommandRunner
 from .services.providers import ProviderFactory
 from .engine import ReviewEngine
 from .errors import ConfigError
+from .services.debugger import Debugger
+from .services.git_inspector import GitInspector
 
 logger = logging.getLogger("aireview")
 
@@ -68,6 +70,12 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Simulate without calling AI")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logs")
 
+    # NEW ARGUMENTS
+    parser.add_argument("--dump", action="store_true", help="Save AI request bodies to .aireview/debug/")
+    parser.add_argument("--context-file", help="Override context with content from this file")
+    parser.add_argument("--commit", help="Run checks on a specific commit SHA")
+    parser.add_argument("--force", action="store_true", help="Ignore [skip-ai] tags in commit messages")
+
     args = parser.parse_args()
 
     setup_logging(args.verbose)
@@ -85,18 +93,50 @@ def main():
         logger.info(f"Config initialized: {args.config}")
         return
 
+    # --- LOGIC START ---
+
+    # 1. Determine Git Target (Req 3)
+    # If run via hook, env var is set. If run via CLI --commit, we set it.
+    target_range = os.environ.get("AI_DIFF_TARGET", "--cached")
+
+    if args.commit:
+        # Target the specific commit (changes between parent and commit)
+        target_range = f"{args.commit}^..{args.commit}"
+        os.environ["AI_DIFF_TARGET"] = target_range
+        logger.info(f"Targeting specific commit: {args.commit}")
+
+    # 2. Check Skip Logic (Req 4)
+    inspector = GitInspector()
+    if not args.force and inspector.should_skip(target_range):
+        print("⏭️  Skipping AI Review: '[skip-ai]' found in commit messages.")
+        sys.exit(0)
+
+    # 3. Load Manual Context (Req 2)
+    manual_context = None
+    if args.context_file:
+        if not os.path.exists(args.context_file):
+            logger.error(f"Context file not found: {args.context_file}")
+            sys.exit(1)
+        try:
+            with open(args.context_file, 'r', encoding='utf-8') as f:
+                manual_context = f.read()
+        except Exception as e:
+            logger.error(f"Failed to read context file: {e}")
+            sys.exit(1)
+
     try:
         config = loader.load(args.config)
     except ConfigError as e:
         logger.critical(f"Configuration Error: {e}")
         sys.exit(1)
 
-    # 2. Setup Services
-    # Refactor: Pass factory directly, removed Router
+    # 4. Setup Services
     provider_factory = ProviderFactory(is_dry_run=args.dry_run)
     runner = ShellCommandRunner()
+    debugger = Debugger(enabled=args.dump or args.verbose) # Req 1
 
-    engine = ReviewEngine(config, runner, provider_factory)
+    # Inject Debugger
+    engine = ReviewEngine(config, runner, provider_factory, debugger)
 
     checks = [c for c in config.checks if c.id == args.check] if args.check else config.checks
 
@@ -108,7 +148,8 @@ def main():
 
     success = True
     for check in checks:
-        if not engine.run_check(check.id):
+        # Pass manual context if present
+        if not engine.run_check(check.id, override_context=manual_context):
             success = False
 
     if not success:

@@ -7,16 +7,19 @@ from typing import Any
 from .domain import Config, CheckDefinition
 from .services.runner import CommandRunner
 from .services.providers import ProviderFactory
+from .services.debugger import Debugger
 from .errors import CommandError
 
 logger = logging.getLogger("aireview")
 
 
 class ReviewEngine:
-    def __init__(self, config: Config, runner: CommandRunner, provider_factory: ProviderFactory):
+    # FIX: Added 'debugger: Debugger' to the signature
+    def __init__(self, config: Config, runner: CommandRunner, provider_factory: ProviderFactory, debugger: Debugger):
         self.config = config
         self.runner = runner
         self.provider_factory = provider_factory
+        self.debugger = debugger
 
     def build_context(self, check: CheckDefinition) -> str:
         buffer = []
@@ -34,8 +37,6 @@ class ReviewEngine:
                 raise e
 
             if not output or not output.strip():
-                # Refactor: Removed brittle string matching for hints.
-                # Keep it simple: if empty, just warn.
                 print(f"  ⚠️  Context '{ctx_id}' returned empty output.")
                 continue
 
@@ -64,8 +65,6 @@ class ReviewEngine:
                     return json.loads(match.group(1))
                 except:
                     pass
-
-            # Refactor: If we can't parse it, we can't trust it. Fail safe.
             return {
                 "status": "FAIL",
                 "reason": f"Could not parse AI response as JSON. Raw response start: {response[:50]}..."
@@ -79,7 +78,7 @@ class ReviewEngine:
             print(f"  \033[90m│\033[0m {line}")
         print("")
 
-    def run_check(self, check_id: str) -> bool:
+    def run_check(self, check_id: str, override_context: str = None) -> bool:
         check = next((c for c in self.config.checks if c.id == check_id), None)
         if not check: return False
 
@@ -89,11 +88,16 @@ class ReviewEngine:
 
         prompt_def = self.config.prompts.get(check.prompt_id)
 
-        try:
-            context = self.build_context(check)
-        except CommandError as e:
-            print(f"  ❌ Error gathering context: {e}")
-            return False
+        # 1. Handle Context (Req 2: Manual Override)
+        if override_context:
+            print(f"  ⚠️  Using MANUAL context override ({len(override_context)} chars)")
+            context = override_context
+        else:
+            try:
+                context = self.build_context(check)
+            except CommandError as e:
+                print(f"  ❌ Error gathering context: {e}")
+                return False
 
         if not context.strip():
             print("\n  ⏭️  Skipped Check (No context available)\n")
@@ -101,13 +105,16 @@ class ReviewEngine:
 
         full_message = f"{prompt_def.text}\n\n{context}"
 
-        # Refactor: Get provider from factory on demand
+        # 2. Handle Traceability (Req 1: Debug Dump)
+        self.debugger.dump_request(check_id, full_message)
+
         provider = self.provider_factory.get_provider(check.model)
 
         if logger.isEnabledFor(logging.DEBUG):
             metadata = provider.get_metadata(check.model)
             self._print_debug_info(metadata, full_message)
 
+        print("  🤖 Analyzing...")
         raw_response = provider.analyze(check.model, full_message)
 
         result = self._parse_json_response(raw_response)
@@ -118,6 +125,9 @@ class ReviewEngine:
             print("-" * 80)
 
         symbol = "✔" if status == "PASS" else "✘"
-        print(f"{symbol} {status} | Reason: {reason}\n")
+        color = "\033[92m" if status == "PASS" else "\033[91m"
+        reset = "\033[0m"
+
+        print(f"{color}{symbol} {status}{reset} | Reason: {reason}\n")
 
         return status == "PASS"

@@ -15,6 +15,7 @@ class ConfigLoader:
 
     def load(self, path: str) -> Config:
         if not os.path.exists(path):
+            logger.info(f"Config not found at {path}. Creating default.")
             with open(path, 'w') as f: f.write(DEFAULT_CONFIG_YAML)
 
         with open(path, 'r') as f:
@@ -59,24 +60,23 @@ class ConfigLoader:
                 with open(p_data['file'], 'r') as f:
                     return f.read()
             except Exception as e:
-                logger.error(f"Failed to load prompt file: {e}")
-                return "ERROR: Prompt file missing."
+                raise ConfigError(f"Failed to load prompt file '{p_data['file']}': {e}")
         return p_data.get('text', '')
 
-def _parse_checks(self, raw_checks: list, prompts: dict[str, PromptDefinition]) -> list[CheckDefinition]:
+    def _parse_checks(self, raw_checks: list, prompts: dict[str, PromptDefinition]) -> list[CheckDefinition]:
         checks = []
         for c in raw_checks:
             self._validate_keys(c, {'id', 'prompt_id', 'model', 'context', 'max_chars', 'system_prompt'}, "Check")
 
             prompt_id = c.get('prompt_id')
 
-            # Allow inline system_prompt for convenience (KISS)
+            # Handle inline prompts logic (KISS)
             if not prompt_id and 'system_prompt' in c:
                 virtual_id = f"inline_{c['id']}"
                 prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
                 prompt_id = virtual_id
 
-            # FAIL FAST: Do not auto-create 'basic_reviewer'.
+            # FAIL FAST: Do not guess. If prompt is missing, error out.
             if not prompt_id:
                 raise ConfigError(f"Check '{c['id']}' is missing 'prompt_id' or 'system_prompt'.")
 

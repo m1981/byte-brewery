@@ -2,8 +2,10 @@
 
 import os
 import json
-from typing import Protocol, Any, Dict
+import logging
+from typing import Protocol, Any, Dict, Type
 
+logger = logging.getLogger("aireview")
 
 class AIProvider(Protocol):
     def analyze(self, model: str, full_message: str) -> str: ...
@@ -18,7 +20,7 @@ class OpenAIProvider:
                 import openai
                 self.client = openai.OpenAI()
             except ImportError:
-                pass
+                logger.warning("OpenAI library not installed.")
 
     def get_metadata(self, model: str) -> dict[str, Any]:
         is_json_mode = "gpt-4" in model or "gpt-3.5-turbo-1106" in model
@@ -56,7 +58,7 @@ class AnthropicProvider:
                 import anthropic
                 self.client = anthropic.Anthropic()
             except ImportError:
-                pass
+                logger.warning("Anthropic library not installed.")
 
     def get_metadata(self, model: str) -> Dict[str, Any]:
         return {
@@ -68,7 +70,8 @@ class AnthropicProvider:
         }
 
     def analyze(self, model: str, full_message: str) -> str:
-        if not self.client: return '{"status": "FAIL", "reason": "Anthropic client not ready (Check ANTHROPIC_API_KEY)"}'
+        if not self.client:
+            return '{"status": "FAIL", "reason": "Anthropic client not ready (Check ANTHROPIC_API_KEY)"}'
         try:
             message = self.client.messages.create(
                 model=model,
@@ -89,7 +92,7 @@ class GeminiProvider:
                 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
                 self.genai = genai
             except ImportError:
-                pass
+                logger.warning("Google GenAI library not installed.")
 
     def get_metadata(self, model: str) -> Dict[str, Any]:
         return {
@@ -101,7 +104,8 @@ class GeminiProvider:
         }
 
     def analyze(self, model: str, full_message: str) -> str:
-        if not self.genai: return '{"status": "FAIL", "reason": "Google GenAI client not ready (Check GOOGLE_API_KEY)"}'
+        if not self.genai:
+            return '{"status": "FAIL", "reason": "Google GenAI client not ready (Check GOOGLE_API_KEY)"}'
         try:
             model_instance = self.genai.GenerativeModel(model)
             response = model_instance.generate_content(full_message)
@@ -124,6 +128,18 @@ class MockAIProvider:
 
 
 class ProviderFactory:
+    """
+    Factory using a Registry Pattern to adhere to OCP.
+    New providers can be registered without modifying the get_provider logic.
+    """
+
+    _registry: Dict[str, Type[AIProvider]] = {
+        "openai": OpenAIProvider,
+        "anthropic": AnthropicProvider,
+        "gemini": GeminiProvider,
+        "mock": MockAIProvider
+    }
+
     def __init__(self, is_dry_run: bool = False):
         self.is_dry_run = is_dry_run
         # Simple cache
@@ -131,21 +147,20 @@ class ProviderFactory:
 
     def get_provider(self, model: str) -> AIProvider:
         if self.is_dry_run:
-            return MockAIProvider()
+            return self._get_instance("mock")
 
-        # 1. Handle Anthropic
-        if model.startswith("claude"):
-            if "anthropic" not in self._instances:
-                self._instances["anthropic"] = AnthropicProvider()
-            return self._instances["anthropic"]
+        # OCP: Logic relies on mapping, not hardcoded strings
+        key = self._resolve_provider_key(model)
+        return self._get_instance(key)
 
-        # 2. Handle Google (Was Dead Code)
-        if model.startswith("gemini"):
-            if "gemini" not in self._instances:
-                self._instances["gemini"] = GeminiProvider()
-            return self._instances["gemini"]
+    def _resolve_provider_key(self, model: str) -> str:
+        """Map model names to provider keys."""
+        if model.startswith("claude"): return "anthropic"
+        if model.startswith("gemini"): return "gemini"
+        return "openai" # Default
 
-        # 3. Default to OpenAI
-        if "openai" not in self._instances:
-            self._instances["openai"] = OpenAIProvider()
-        return self._instances["openai"]
+    def _get_instance(self, key: str) -> AIProvider:
+        if key not in self._instances:
+            provider_cls = self._registry.get(key, OpenAIProvider)
+            self._instances[key] = provider_cls()
+        return self._instances[key]
