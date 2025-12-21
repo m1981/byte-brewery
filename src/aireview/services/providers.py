@@ -1,12 +1,13 @@
+# File: src/aireview/services/providers.py
+
 import os
 import json
-from typing import Protocol, Dict, Any
+from typing import Protocol, Any, Dict
 
 
 class AIProvider(Protocol):
     def analyze(self, model: str, full_message: str) -> str: ...
-
-    def get_metadata(self, model: str) -> Dict[str, Any]: ...
+    def get_metadata(self, model: str) -> dict[str, Any]: ...
 
 
 class OpenAIProvider:
@@ -19,18 +20,18 @@ class OpenAIProvider:
             except ImportError:
                 pass
 
-    def get_metadata(self, model: str) -> Dict[str, Any]:
+    def get_metadata(self, model: str) -> dict[str, Any]:
         is_json_mode = "gpt-4" in model or "gpt-3.5-turbo-1106" in model
         return {
             "provider": "OpenAI",
             "model": model,
             "temperature": 1.0,
-            "max_tokens": "Model Default",
             "response_format": "json_object" if is_json_mode else "text"
         }
 
     def analyze(self, model: str, full_message: str) -> str:
-        if not self.client: return '{"status": "FAIL", "reason": "OpenAI client not ready (Check OPENAI_API_KEY)"}'
+        if not self.client:
+            return '{"status": "FAIL", "reason": "OpenAI client not ready (Check OPENAI_API_KEY)"}'
         try:
             meta = self.get_metadata(model)
             kwargs = {
@@ -110,12 +111,11 @@ class GeminiProvider:
 
 
 class MockAIProvider:
-    def get_metadata(self, model: str) -> Dict[str, Any]:
+    def get_metadata(self, model: str) -> dict[str, Any]:
         return {
             "provider": "Mock (Dry Run)",
             "model": model,
             "temperature": 0.0,
-            "max_tokens": 4096,
             "response_format": "json_object"
         }
 
@@ -124,26 +124,28 @@ class MockAIProvider:
 
 
 class ProviderFactory:
-    """Factory to create and route AI providers based on model name."""
-
     def __init__(self, is_dry_run: bool = False):
         self.is_dry_run = is_dry_run
-        self._providers = {}
-
-        # Lazy loading of providers
-        if not is_dry_run:
-            self._providers['openai'] = OpenAIProvider()
-            self._providers['anthropic'] = AnthropicProvider()
-            self._providers['gemini'] = GeminiProvider()
-        else:
-            self._mock = MockAIProvider()
+        # Simple cache
+        self._instances: Dict[str, AIProvider] = {}
 
     def get_provider(self, model: str) -> AIProvider:
         if self.is_dry_run:
-            return self._mock
+            return MockAIProvider()
 
+        # 1. Handle Anthropic
         if model.startswith("claude"):
-            return self._providers['anthropic']
+            if "anthropic" not in self._instances:
+                self._instances["anthropic"] = AnthropicProvider()
+            return self._instances["anthropic"]
+
+        # 2. Handle Google (Was Dead Code)
         if model.startswith("gemini"):
-            return self._providers['gemini']
-        return self._providers['openai']
+            if "gemini" not in self._instances:
+                self._instances["gemini"] = GeminiProvider()
+            return self._instances["gemini"]
+
+        # 3. Default to OpenAI
+        if "openai" not in self._instances:
+            self._instances["openai"] = OpenAIProvider()
+        return self._instances["openai"]

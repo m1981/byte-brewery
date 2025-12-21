@@ -1,33 +1,22 @@
-import os
+# File: src/aireview/engine.py
+
 import json
 import re
 import logging
-from typing import Dict, Any
+from typing import Any
 from .domain import Config, CheckDefinition
 from .services.runner import CommandRunner
-from .services.providers import AIProvider
+from .services.providers import ProviderFactory
 from .errors import CommandError
 
 logger = logging.getLogger("aireview")
 
 
 class ReviewEngine:
-    def __init__(self, config: Config, runner: CommandRunner, ai: AIProvider):
+    def __init__(self, config: Config, runner: CommandRunner, provider_factory: ProviderFactory):
         self.config = config
         self.runner = runner
-        self.ai = ai
-
-    def _get_empty_context_hint(self, cmd: str) -> str:
-        if cmd == "internal:push_diff":
-            target = os.environ.get("AI_DIFF_TARGET", "--cached")
-            if target == "--cached":
-                return "No staged changes found. Did you forget to `git add`?"
-            return f"No changes found in range: {target}"
-        if "git diff" in cmd and "--cached" in cmd:
-            return "No staged changes found. Did you forget to `git add`?"
-        if "git diff" in cmd:
-            return "No changes found in working directory."
-        return "Command returned empty output."
+        self.provider_factory = provider_factory
 
     def build_context(self, check: CheckDefinition) -> str:
         buffer = []
@@ -36,7 +25,7 @@ class ReviewEngine:
         for ctx_id in check.context_ids:
             definition = self.config.definitions.get(ctx_id)
             if not definition:
-                logger.error(f"Context ID '{ctx_id}' not found in definitions. Skipping.")
+                logger.error(f"Context ID '{ctx_id}' not found. Skipping.")
                 continue
 
             try:
@@ -45,8 +34,9 @@ class ReviewEngine:
                 raise e
 
             if not output or not output.strip():
-                hint = self._get_empty_context_hint(definition.cmd)
-                print(f"  ⚠️  Context '{ctx_id}' is empty. ({hint})")
+                # Refactor: Removed brittle string matching for hints.
+                # Keep it simple: if empty, just warn.
+                print(f"  ⚠️  Context '{ctx_id}' returned empty output.")
                 continue
 
             remaining_chars = check.max_chars - total_chars
@@ -62,21 +52,26 @@ class ReviewEngine:
 
         return "\n".join(buffer)
 
-    def _parse_json_response(self, response: str) -> Dict[str, Any]:
+    def _parse_json_response(self, response: str) -> dict[str, Any]:
+        """Parses AI response. Defaults to FAIL if parsing fails (Fail-Safe)."""
         try:
             return json.loads(response)
         except json.JSONDecodeError:
+            # Try to find JSON block in markdown
             match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
             if match:
                 try:
                     return json.loads(match.group(1))
                 except:
                     pass
-            if "FAIL" in response.upper():
-                return {"status": "FAIL", "reason": "Could not parse JSON, but keyword FAIL found."}
-            return {"status": "PASS", "reason": "Could not parse JSON, assumed PASS."}
 
-    def _print_debug_info(self, metadata: Dict[str, Any], full_message: str):
+            # Refactor: If we can't parse it, we can't trust it. Fail safe.
+            return {
+                "status": "FAIL",
+                "reason": f"Could not parse AI response as JSON. Raw response start: {response[:50]}..."
+            }
+
+    def _print_debug_info(self, metadata: dict[str, Any], full_message: str):
         meta_str = " | ".join(f"{k}: {v}" for k, v in metadata.items())
         print(f"\033[90m[DEBUG] {meta_str}\033[0m")
         print("")
@@ -98,22 +93,22 @@ class ReviewEngine:
             context = self.build_context(check)
         except CommandError as e:
             print(f"  ❌ Error gathering context: {e}")
-            print("")
             return False
 
         if not context.strip():
-            print("")
-            print("  ⏭️  Skipped Check (No context available)")
-            print("")
+            print("\n  ⏭️  Skipped Check (No context available)\n")
             return True
 
         full_message = f"{prompt_def.text}\n\n{context}"
 
+        # Refactor: Get provider from factory on demand
+        provider = self.provider_factory.get_provider(check.model)
+
         if logger.isEnabledFor(logging.DEBUG):
-            metadata = self.ai.get_metadata(check.model)
+            metadata = provider.get_metadata(check.model)
             self._print_debug_info(metadata, full_message)
 
-        raw_response = self.ai.analyze(check.model, full_message)
+        raw_response = provider.analyze(check.model, full_message)
 
         result = self._parse_json_response(raw_response)
         status = result.get("status", "FAIL").upper()
@@ -123,7 +118,6 @@ class ReviewEngine:
             print("-" * 80)
 
         symbol = "✔" if status == "PASS" else "✘"
-        print(f"{symbol} {status} | Reason: {reason}")
-        print("")
+        print(f"{symbol} {status} | Reason: {reason}\n")
 
         return status == "PASS"

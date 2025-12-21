@@ -1,10 +1,11 @@
+# File: src/aireview/services/config_loader.py
+
 import logging
-import sys
 import os
 import yaml
-from typing import Dict, Any, List
 from ..domain import Config, ContextDefinition, PromptDefinition, CheckDefinition
 from ..const import DEFAULT_CONFIG_YAML
+from ..errors import ConfigError
 
 logger = logging.getLogger("aireview")
 
@@ -20,12 +21,11 @@ class ConfigLoader:
             try:
                 data = yaml.safe_load(f) or {}
             except yaml.YAMLError as e:
-                logger.critical(f"❌ Invalid YAML: {e}")
-                sys.exit(1)
+                raise ConfigError(f"Invalid YAML syntax: {e}")
 
         return self._parse(data)
 
-    def _parse(self, data: Dict[str, Any]) -> Config:
+    def _parse(self, data: dict[str, any]) -> Config:
         defs = self._parse_definitions(data.get('definitions', []))
         prompts = self._parse_prompts(data.get('prompts', []))
         checks = self._parse_checks(data.get('checks', []), prompts)
@@ -33,14 +33,14 @@ class ConfigLoader:
         self._validate_references(checks, defs)
         return Config(definitions=defs, prompts=prompts, checks=checks)
 
-    def _parse_definitions(self, raw_defs: list) -> Dict[str, ContextDefinition]:
+    def _parse_definitions(self, raw_defs: list) -> dict[str, ContextDefinition]:
         defs = {}
         for d in raw_defs:
             self._validate_keys(d, {'id', 'tag', 'cmd'}, "Definition")
             defs[d['id']] = ContextDefinition(d['id'], d.get('tag', d['id']), d['cmd'])
         return defs
 
-    def _parse_prompts(self, raw_prompts: list) -> Dict[str, PromptDefinition]:
+    def _parse_prompts(self, raw_prompts: list) -> dict[str, PromptDefinition]:
         prompts = {}
         for p in raw_prompts:
             self._validate_keys(p, {'id', 'text', 'file'}, "Prompt")
@@ -63,23 +63,25 @@ class ConfigLoader:
                 return "ERROR: Prompt file missing."
         return p_data.get('text', '')
 
-    def _parse_checks(self, raw_checks: list, prompts: Dict[str, PromptDefinition]) -> List[CheckDefinition]:
+def _parse_checks(self, raw_checks: list, prompts: dict[str, PromptDefinition]) -> list[CheckDefinition]:
         checks = []
         for c in raw_checks:
             self._validate_keys(c, {'id', 'prompt_id', 'model', 'context', 'max_chars', 'system_prompt'}, "Check")
 
             prompt_id = c.get('prompt_id')
-            # Handle inline prompts logic here...
+
+            # Allow inline system_prompt for convenience (KISS)
             if not prompt_id and 'system_prompt' in c:
                 virtual_id = f"inline_{c['id']}"
                 prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
                 prompt_id = virtual_id
 
+            # FAIL FAST: Do not auto-create 'basic_reviewer'.
             if not prompt_id:
-                prompt_id = 'basic_reviewer'
-                if 'basic_reviewer' not in prompts:
-                    prompts['basic_reviewer'] = PromptDefinition('basic_reviewer',
-                                                                 "You are a code reviewer. Return JSON...")
+                raise ConfigError(f"Check '{c['id']}' is missing 'prompt_id' or 'system_prompt'.")
+
+            if prompt_id not in prompts:
+                 raise ConfigError(f"Check '{c['id']}' references undefined prompt '{prompt_id}'.")
 
             raw_context = c.get('context', [])
             context_ids = [raw_context] if isinstance(raw_context, str) else raw_context
@@ -96,18 +98,13 @@ class ConfigLoader:
     def _validate_keys(self, data: dict, valid: set, name: str):
         unknown = set(data.keys()) - valid
         if unknown:
-            logger.critical(f"❌ Config Error: {name} has unknown keys: {unknown}. Valid: {valid}")
-            sys.exit(1)
+            raise ConfigError(f"{name} has unknown keys: {unknown}. Valid: {valid}")
 
-    def _validate_references(self, checks: List[CheckDefinition], defs: Dict[str, ContextDefinition]):
+    def _validate_references(self, checks: list[CheckDefinition], defs: dict[str, ContextDefinition]):
         for check in checks:
             for ctx_id in check.context_ids:
                 if ctx_id not in defs:
                     hint = ""
-                    if ctx_id.startswith("internal:") or ctx_id.startswith("@"):
-                        hint = f" (Did you mean to define a context with cmd: '{ctx_id}'?)"
-                    elif ctx_id == "push_diff":
+                    if ctx_id == "push_diff":
                         hint = " (You must define 'push_diff' in 'definitions' with cmd: 'internal:push_diff')"
-                    logger.critical(
-                        f"❌ Config Error: Check '{check.id}' references unknown context ID '{ctx_id}'{hint}")
-                    sys.exit(1)
+                    raise ConfigError(f"Check '{check.id}' references unknown context ID '{ctx_id}'{hint}")

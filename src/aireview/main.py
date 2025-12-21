@@ -1,3 +1,5 @@
+# File: src/aireview/main.py
+
 import argparse
 import sys
 import os
@@ -8,21 +10,9 @@ from .services.config_loader import ConfigLoader
 from .services.runner import ShellCommandRunner
 from .services.providers import ProviderFactory
 from .engine import ReviewEngine
+from .errors import ConfigError
 
 logger = logging.getLogger("aireview")
-
-
-class AIProviderRouter:
-    """Adapts the Factory to the AIProvider protocol expected by the Engine."""
-
-    def __init__(self, factory: ProviderFactory):
-        self.factory = factory
-
-    def analyze(self, model: str, msg: str) -> str:
-        return self.factory.get_provider(model).analyze(model, msg)
-
-    def get_metadata(self, model: str) -> dict:
-        return self.factory.get_provider(model).get_metadata(model)
 
 
 def install_hook():
@@ -31,7 +21,6 @@ def install_hook():
         sys.exit(1)
 
     hook_path = os.path.join(".git", "hooks", "pre-push")
-    # Point to the module execution
     script_cmd = f"{sys.executable} -m aireview.main"
 
     hook_content = f"""#!/bin/sh
@@ -89,26 +78,25 @@ def main():
         install_hook()
         return
 
-    # 1. Load Config (SRP: ConfigLoader)
     loader = ConfigLoader()
+
     if args.command == "init":
-        loader.load(args.config)  # Just to trigger default creation
+        loader.load(args.config)
         logger.info(f"Config initialized: {args.config}")
         return
 
-    config = loader.load(args.config)
+    try:
+        config = loader.load(args.config)
+    except ConfigError as e:
+        logger.critical(f"Configuration Error: {e}")
+        sys.exit(1)
 
-    # Check for bad config pattern (Legacy warning)
-    git_def = config.definitions.get('git_diff')
-    if git_def and "--name-only" in git_def.cmd:
-        logger.warning("⚠️  Config Warning: 'git_diff' uses '--name-only'. AI cannot see code content.")
-
-    # 2. Setup Services (OCP: Factory)
+    # 2. Setup Services
+    # Refactor: Pass factory directly, removed Router
     provider_factory = ProviderFactory(is_dry_run=args.dry_run)
-    ai_router = AIProviderRouter(provider_factory)
     runner = ShellCommandRunner()
 
-    engine = ReviewEngine(config, runner, ai_router)
+    engine = ReviewEngine(config, runner, provider_factory)
 
     checks = [c for c in config.checks if c.id == args.check] if args.check else config.checks
 
