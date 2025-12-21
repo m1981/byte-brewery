@@ -63,16 +63,45 @@ exit 0
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AI Review Tool")
-    parser.add_argument("command", choices=["run", "init", "install"], help="Action")
-    parser.add_argument("--config", default="ai-checks.yaml")
-    parser.add_argument("--check", help="Specific check ID")
-    parser.add_argument("--dry-run", action="store_true", help="Simulate without calling AI")
-    parser.add_argument("--verbose", action="store_true", help="Enable debug logs")
+    # Define examples text
+    examples = textwrap.dedent("""
+    Examples:
+      # Initialize a new config file
+      aireview init
 
-    # NEW ARGUMENTS
-    parser.add_argument("--dump", action="store_true", help="Save AI request bodies to .aireview/debug/")
-    parser.add_argument("--context-file", help="Override context with content from this file")
+      # Install the git pre-push hook
+      aireview install
+
+      # Run all checks on currently staged changes (default)
+      aireview run
+
+      # Run a specific check only
+      aireview run --check sanity_check
+
+      # Run checks on a specific commit (vs its parent)
+      aireview run --commit a1b2c3d
+
+      # Debugging: Run without calling AI, dump request to file, and show verbose logs
+      aireview run --dry-run --dump --verbose
+
+      # Test AI behavior with a specific file as context (bypass git)
+      aireview run --context-file ./test_diff.txt
+    """)
+
+    parser = argparse.ArgumentParser(
+        description="AI Review Tool - Automated Code Review CLI",
+        epilog=examples,
+        formatter_class=argparse.RawDescriptionHelpFormatter  # Keeps the formatting of the examples
+    )
+
+    # ... (rest of your arguments) ...
+    parser.add_argument("command", choices=["run", "init", "install"], help="Action to perform")
+    parser.add_argument("--config", default="ai-checks.yaml", help="Path to configuration file")
+    parser.add_argument("--check", help="Run only a specific check ID")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate execution without calling AI APIs")
+    parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
+    parser.add_argument("--dump", action="store_true", help="Save the full AI request prompt to .aireview/debug/")
+    parser.add_argument("--context-file", help="Override context with content from a specific file")
     parser.add_argument("--commit", help="Run checks on a specific commit SHA")
     parser.add_argument("--force", action="store_true", help="Ignore [skip-ai] tags in commit messages")
 

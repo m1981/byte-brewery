@@ -40,16 +40,20 @@ class ReviewEngine:
                 print(f"  ⚠️  Context '{ctx_id}' returned empty output.")
                 continue
 
-            remaining_chars = check.max_chars - total_chars
-            if len(output) > remaining_chars:
-                logger.warning(f"Truncating output for context '{ctx_id}' (Limit: {check.max_chars})")
-                output = output[:remaining_chars] + "\n... [TRUNCATED]"
+            # --- SAFETY CHECK START ---
+            output_len = len(output)
 
-            total_chars += len(output)
+            # Check if adding this specific output would breach the limit
+            if total_chars + output_len > check.max_chars:
+                raise CommandError(
+                    f"SAFETY LIMIT EXCEEDED: Context '{ctx_id}' generated {output_len} chars. "
+                    f"Total would be {total_chars + output_len}, but limit is {check.max_chars}. "
+                    "Review cannot proceed safely without full context."
+                )
+            # --- SAFETY CHECK END ---
+
+            total_chars += output_len
             buffer.append(f"### Context: {definition.tag}\n```text\n{output}\n```\n")
-
-            if total_chars >= check.max_chars:
-                break
 
         return "\n".join(buffer)
 
@@ -90,13 +94,17 @@ class ReviewEngine:
 
         # 1. Handle Context (Req 2: Manual Override)
         if override_context:
-            print(f"  ⚠️  Using MANUAL context override ({len(override_context)} chars)")
+            # Safety check for manual overrides too!
+            if len(override_context) > check.max_chars:
+                 print(f"  ❌ SAFETY ERROR: Manual context file is too large ({len(override_context)} > {check.max_chars})")
+                 return False
             context = override_context
         else:
             try:
                 context = self.build_context(check)
             except CommandError as e:
-                print(f"  ❌ Error gathering context: {e}")
+                # This will now catch our new Safety Exception
+                print(f"  ❌ {e}")
                 return False
 
         if not context.strip():
