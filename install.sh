@@ -4,6 +4,7 @@ set -e
 REPO_URL="https://github.com/m1981/byte-brewery.git"
 # Use pipx's default bin location if available, otherwise fallback to ~/.local/bin
 INSTALL_DIR="${PIPX_BIN_DIR:-$HOME/.local/bin}"
+FILES_TO_COPY=("rsum" "byte-help" "tools.json" "lsproj")
 
 echo "🍺 Brewing byte-brewery installation..."
 
@@ -50,14 +51,22 @@ pipx install "$SOURCE_DIR" --force
 echo "🐚 Installing shell scripts to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 
-# Copy rsum from the source directory
-if [ -f "$SOURCE_DIR/bin/rsum" ]; then
-    cp "$SOURCE_DIR/bin/rsum" "$INSTALL_DIR/"
-    chmod +x "$INSTALL_DIR/rsum"
-    echo "   - Installed: rsum"
-else
-    echo "⚠️  Warning: bin/rsum not found."
-fi
+# ADD "lsproj" HERE 👇
+FILES_TO_COPY=("rsum" "byte-help" "tools.json" "lsproj")
+
+for file in "${FILES_TO_COPY[@]}"; do
+    if [ -f "$SOURCE_DIR/bin/$file" ]; then
+        cp "$SOURCE_DIR/bin/$file" "$INSTALL_DIR/"
+
+        # Only make scripts executable, not the json
+        if [[ "$file" != *.json ]]; then
+            chmod +x "$INSTALL_DIR/$file"
+        fi
+        echo "   - Installed: $file"
+    else
+        echo "⚠️  Warning: bin/$file not found in source."
+    fi
+done
 
 echo "🐚 Installing shell scripts and help tools..."
 mkdir -p "$INSTALL_DIR"

@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
 lsproj
-Simple Project File Lister.
-Reads whitelist patterns from .projlist and excludes files based on .gitignore.
+Commercial-grade Project File Lister.
+
+Features:
+- Respects .gitignore (via ignore_utils).
+- Whitelists files via .projlist (supports path-specific patterns like 'src/*.py').
+- Auto-detects project root by looking for .projlist.
+- Allows ad-hoc exclusions via CLI arguments.
 """
 
 import sys
@@ -10,42 +15,78 @@ import os
 import fnmatch
 import argparse
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
-# Import the shared parser
+# -----------------------------------------------------------------------------
+# Dependency Check
+# -----------------------------------------------------------------------------
 try:
     from ignore_utils import GitignoreParser
 except ImportError:
-    print("Error: ignore_utils.py not found. Please ensure it is in the same directory.", file=sys.stderr)
+    # Commercial Note: In a real package, this would be handled by setup.py/poetry
+    # For a standalone script, we fail gracefully.
+    print("CRITICAL ERROR: 'ignore_utils.py' not found.", file=sys.stderr)
+    print("Ensure it exists in the same directory or PYTHONPATH.", file=sys.stderr)
     sys.exit(1)
 
-CONFIG_FILE = ".projlist"
+CONFIG_FILENAME = ".projlist"
 
 
-def load_whitelist(project_dir: Path) -> List[str]:
-    """Load whitelist patterns from config file."""
-    config_path = project_dir / CONFIG_FILE
+def find_project_root(start_path: Path) -> Path:
+    """
+    Searches up the directory tree for the config file.
+    Returns the directory containing the config, or the start_path if not found.
+    """
+    current = start_path.resolve()
+    # Check current and all parents
+    for path in [current] + list(current.parents):
+        if (path / CONFIG_FILENAME).exists():
+            return path
+    return start_path
+
+
+def load_patterns(config_path: Path) -> List[str]:
+    """Load patterns from config file, ignoring comments and empty lines."""
     patterns = []
-
     if not config_path.exists():
-        print(f"Error: Config file '{CONFIG_FILE}' not found in {project_dir}", file=sys.stderr)
-        print("Please create a .projlist file with patterns like:", file=sys.stderr)
-        print("*.ts\n*.py", file=sys.stderr)
-        sys.exit(1)
+        # We don't exit here anymore, we just return empty list.
+        # The main logic will decide if this is fatal or if we just scan everything.
+        return []
 
-    with open(config_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#'):
-                patterns.append(line)
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    patterns.append(line)
+    except IOError as e:
+        print(f"Warning: Could not read {config_path}: {e}", file=sys.stderr)
+
     return patterns
 
 
-def matches_whitelist(filename: str, patterns: List[str]) -> bool:
-    """Check if filename matches any whitelist pattern."""
+def is_match(rel_path_str: str, patterns: List[str]) -> bool:
+    """
+    Checks if a path matches a list of patterns.
+
+    Fixed Logic:
+    1. Check if the filename matches (e.g. "*.py" matches "src/main.py")
+    2. Check if the full path matches (e.g. "test*" matches "tests/conftest.py")
+    """
+    filename = os.path.basename(rel_path_str)
+
     for pattern in patterns:
-        if fnmatch.fnmatch(filename, pattern):
+        # Normalize pattern slashes for Windows compatibility
+        norm_pattern = pattern.replace('/', os.sep) if os.sep == '\\' else pattern
+
+        # 1. Check Filename (Convenience for *.py, etc)
+        if fnmatch.fnmatch(filename, norm_pattern):
             return True
+
+        # 2. Check Full Path (For "test*", "src/*", etc)
+        if fnmatch.fnmatch(rel_path_str, norm_pattern):
+            return True
+
     return False
 
 
@@ -53,21 +94,42 @@ def main():
     parser = argparse.ArgumentParser(
         description="Lists project files based on .projlist whitelist and .gitignore rules."
     )
-    parser.add_argument("root_dir", nargs='?', default='.', help="Root directory to scan (default: current).")
-    parser.add_argument("-o", "--output", help="Output file path. Defaults to stdout.")
+    parser.add_argument("scan_dir", nargs='?', default='.',
+                        help="Directory to scan (default: current).")
+    parser.add_argument("-o", "--output",
+                        help="Output file path. Defaults to stdout.")
+    parser.add_argument("-e", "--exclude", action='append', default=[],
+                        help="Ad-hoc patterns to exclude (e.g. -e '*test*' -e '*.md').")
+    parser.add_argument("--debug", action="store_true", help="Show debug info.")
 
     args = parser.parse_args()
 
-    root_dir = Path(args.root_dir)
-
-    if not root_dir.exists():
-        print(f"Error: Directory {root_dir} does not exist.", file=sys.stderr)
+    # 1. Setup Paths
+    scan_dir = Path(args.scan_dir).resolve()
+    if not scan_dir.exists():
+        print(f"Error: Directory {scan_dir} does not exist.", file=sys.stderr)
         sys.exit(1)
 
-    ignore_parser = GitignoreParser(root_dir)
-    whitelist = load_whitelist(root_dir)
+    # 2. Locate Project Root (where .gitignore and .projlist usually live)
+    project_root = find_project_root(scan_dir)
+    if args.debug:
+        print(f"DEBUG: Scan Dir: {scan_dir}", file=sys.stderr)
+        print(f"DEBUG: Project Root: {project_root}", file=sys.stderr)
 
-    # Prepare output stream
+    # 3. Initialize Parsers
+    # We assume GitignoreParser can handle being initialized at project_root
+    # but filtering files inside scan_dir.
+    ignore_parser = GitignoreParser(project_root)
+
+    config_file = project_root / CONFIG_FILENAME
+    whitelist_patterns = load_patterns(config_file)
+
+    if not whitelist_patterns:
+        print(f"Error: No patterns found in {config_file}", file=sys.stderr)
+        print(f"Please create {CONFIG_FILENAME} with patterns like '*.py'.", file=sys.stderr)
+        sys.exit(1)
+
+    # 4. Prepare Output
     output_stream = sys.stdout
     if args.output:
         try:
@@ -77,26 +139,61 @@ def main():
             sys.exit(1)
 
     try:
-        # Walk the directory tree
-        for root, dirs, files in os.walk(root_dir):
-            # 1. Prune directories in-place based on ignore rules
+        # 5. Walk the tree
+        # We walk relative to scan_dir, but we calculate paths relative to project_root
+        # for the whitelist/ignore logic to work correctly.
+        for root, dirs, files in os.walk(scan_dir):
+
+            # Convert current root to Path
+            root_path = Path(root)
+
+            # --- Prune Directories (Optimization) ---
+            # We must check if the directory itself is ignored relative to project root
             for i in range(len(dirs) - 1, -1, -1):
-                dir_path = Path(root) / dirs[i]
-                if ignore_parser.should_ignore(dir_path):
+                d_path = root_path / dirs[i]
+                # Check ignore relative to project root
+                if ignore_parser.should_ignore(d_path):
+                    if args.debug: print(f"DEBUG: Ignoring dir {d_path}", file=sys.stderr)
                     del dirs[i]
 
-            # 2. Process files
+            # --- Process Files ---
             for file in files:
-                file_path = Path(root) / file
+                abs_file_path = root_path / file
 
-                # Skip if ignored
-                if ignore_parser.should_ignore(file_path):
+                # Calculate path relative to the Project Root (for config matching)
+                try:
+                    rel_to_proj = abs_file_path.relative_to(project_root)
+                except ValueError:
+                    # Should not happen if scan_dir is inside project_root
                     continue
 
-                # Check whitelist
-                if matches_whitelist(file, whitelist):
-                    # Print relative path for clean output
-                    print(os.path.relpath(file_path, root_dir), file=output_stream)
+                rel_path_str = str(rel_to_proj)
+
+                # A. Check .gitignore
+                if ignore_parser.should_ignore(abs_file_path):
+                    continue
+
+                # B. Check Whitelist (.projlist)
+                if not is_match(rel_path_str, whitelist_patterns):
+                    continue
+
+                # C. Check Ad-hoc Excludes (CLI arguments)
+                # We use the same matching logic: if arg has '/', match path, else filename
+                if args.exclude and is_match(rel_path_str, args.exclude):
+                    continue
+
+                # D. Output
+                # We usually want output relative to where we ran the command (scan_dir)
+                # or relative to project root?
+                # Standard 'ls' behavior is relative to current working dir.
+                try:
+                    final_output_path = abs_file_path.relative_to(os.getcwd())
+                except ValueError:
+                    # Fallback if file is outside CWD
+                    final_output_path = abs_file_path
+
+                print(final_output_path, file=output_stream)
+
     finally:
         if args.output and output_stream is not sys.stdout:
             output_stream.close()
