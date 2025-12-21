@@ -14,4 +14,8 @@ https://aistudio.google.com/prompts/1YKCtiyqgswR8Ts_Q5HscT1OMdLITb6np
 
 
 ## AI review tool
+AI Tools Desing
+https://aistudio.google.com/app/prompts?state=%7B%22ids%22:%5B%2218zQsjpfKP6yt3HpTkNs0svc7Qys0k3re%22%5D,%22action%22:%22open%22,%22userId%22:%22106973610427566301788%22,%22resourceKeys%22:%7B%7D%7D&usp=sharing
+
+Classic Design
 https://aistudio.google.com/app/prompts?state=%7B%22ids%22:%5B%221tWMnj7AWgaY3kgMs4gCkF0eEfstLYNzC%22%5D,%22action%22:%22open%22,%22userId%22:%22106973610427566301788%22,%22resourceKeys%22:%7B%7D%7D&usp=sharing
