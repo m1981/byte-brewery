@@ -5,6 +5,7 @@ import sys
 import os
 import stat
 import logging
+import textwrap
 from .utils import setup_logging, load_environment, check_dependencies
 from .services.config_loader import ConfigLoader
 from .services.runner import ShellCommandRunner

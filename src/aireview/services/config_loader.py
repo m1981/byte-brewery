@@ -66,7 +66,11 @@ class ConfigLoader:
     def _parse_checks(self, raw_checks: list, prompts: dict[str, PromptDefinition]) -> list[CheckDefinition]:
         checks = []
         for c in raw_checks:
-            self._validate_keys(c, {'id', 'prompt_id', 'model', 'context', 'max_chars', 'system_prompt'}, "Check")
+            # FIX 1: Add 'include_patterns' and 'exclude_patterns' to valid keys
+            self._validate_keys(c, {
+                'id', 'prompt_id', 'model', 'context', 'max_chars', 'system_prompt',
+                'include_patterns', 'exclude_patterns'
+            }, "Check")
 
             prompt_id = c.get('prompt_id')
 
@@ -76,7 +80,6 @@ class ConfigLoader:
                 prompts[virtual_id] = PromptDefinition(virtual_id, c['system_prompt'])
                 prompt_id = virtual_id
 
-            # FAIL FAST: Do not guess. If prompt is missing, error out.
             if not prompt_id:
                 raise ConfigError(f"Check '{c['id']}' is missing 'prompt_id' or 'system_prompt'.")
 
@@ -91,7 +94,9 @@ class ConfigLoader:
                 prompt_id=prompt_id,
                 model=c.get('model', 'gpt-3.5-turbo'),
                 context_ids=context_ids,
-                max_chars=c.get('max_chars', 16000)
+                max_chars=c.get('max_chars', 16000),
+                include_patterns=c.get('include_patterns', []),
+                exclude_patterns=c.get('exclude_patterns', [])
             ))
         return checks
 

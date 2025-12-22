@@ -1,6 +1,6 @@
 import subprocess
 import logging
-from typing import Protocol, Dict, Callable
+from typing import Protocol, Dict, Callable, Optional, List
 from ..errors import CommandError
 from .internal_commands import InternalCommandHandler
 
@@ -8,18 +8,20 @@ logger = logging.getLogger("aireview")
 
 
 class CommandRunner(Protocol):
-    def run(self, command: str) -> str: ...
+    # Update Protocol signature
+    def run(self, command: str, include: Optional[List[str]] = None, exclude: Optional[List[str]] = None) -> str: ...
 
 
 class ShellCommandRunner:
     def __init__(self):
         self.internal_handler = InternalCommandHandler()
 
-    def run(self, command: str) -> str:
+    def run(self, command: str, include: Optional[List[str]] = None, exclude: Optional[List[str]] = None) -> str:
         if not command: return ""
 
         if command.startswith("internal:"):
-            return self.internal_handler.execute(command)
+            # Pass the filters to the internal handler
+            return self.internal_handler.execute(command, include, exclude)
 
         try:
             result = subprocess.run(

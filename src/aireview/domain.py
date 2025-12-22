@@ -19,6 +19,8 @@ class CheckDefinition:
     model: str
     context_ids: List[str]
     max_chars: int = 16000
+    include_patterns: List[str] = field(default_factory=list)
+    exclude_patterns: List[str] = field(default_factory=list)
 
 @dataclass
 class Config:

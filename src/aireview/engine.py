@@ -32,7 +32,11 @@ class ReviewEngine:
                 continue
 
             try:
-                output = self.runner.run(definition.cmd)
+                output = self.runner.run(
+                    definition.cmd,
+                    include=check.include_patterns,
+                    exclude=check.exclude_patterns
+                )
             except CommandError as e:
                 raise e
 
@@ -113,7 +117,13 @@ class ReviewEngine:
 
         full_message = f"{prompt_def.text}\n\n{context}"
 
-        # 2. Handle Traceability (Req 1: Debug Dump)
+        # --- NEW TOKEN CALCULATION ---
+        total_chars = len(full_message)
+        est_tokens = total_chars // 4
+        print(f"  📊 Request Size: {total_chars} chars (~{est_tokens} tokens)")
+        # -----------------------------
+
+        # 2. Handle Traceability
         self.debugger.dump_request(check_id, full_message)
 
         provider = self.provider_factory.get_provider(check.model)
