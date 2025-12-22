@@ -14,6 +14,7 @@ from .engine import ReviewEngine
 from .errors import ConfigError
 from .services.debugger import Debugger
 from .services.git_inspector import GitInspector
+from .services.patch_manager import PatchManager
 
 logger = logging.getLogger("aireview")
 
@@ -96,7 +97,7 @@ def main():
     )
 
     # ... (rest of your arguments) ...
-    parser.add_argument("command", choices=["run", "init", "install"], help="Action to perform")
+    parser.add_argument("command", choices=["run", "init", "install", "revert"], help="Action")
     parser.add_argument("--config", default="ai-checks.yaml", help="Path to configuration file")
     parser.add_argument("--check", help="Run only a specific check ID")
     parser.add_argument("--dry-run", action="store_true", help="Simulate execution without calling AI APIs")
@@ -105,6 +106,7 @@ def main():
     parser.add_argument("--context-file", help="Override context with content from a specific file")
     parser.add_argument("--commit", help="Run checks on a specific commit SHA")
     parser.add_argument("--force", action="store_true", help="Ignore [skip-ai] tags in commit messages")
+    parser.add_argument("--patch-file", help="Path to patch file (required for revert)")
 
     args = parser.parse_args()
 
@@ -123,6 +125,19 @@ def main():
         logger.info(f"Config initialized: {args.config}")
         return
 
+    # --- NEW REVERT LOGIC ---
+    if args.command == "revert":
+        if not args.patch_file:
+            logger.error("You must specify --patch-file to revert.")
+            sys.exit(1)
+
+        pm = PatchManager()
+        if pm.revert_patch(args.patch_file):
+            print(f"✅ Successfully reverted patch: {args.patch_file}")
+            sys.exit(0)
+        else:
+            print(f"❌ Failed to revert patch. It might not be applied, or files have changed too much.")
+            sys.exit(1)
     # --- LOGIC START ---
 
     # 1. Determine Git Target (Req 3)
@@ -164,9 +179,10 @@ def main():
     provider_factory = ProviderFactory(is_dry_run=args.dry_run)
     runner = ShellCommandRunner()
     debugger = Debugger(enabled=args.dump or args.verbose) # Req 1
+    patch_manager = PatchManager()
 
     # Inject Debugger
-    engine = ReviewEngine(config, runner, provider_factory, debugger)
+    engine = ReviewEngine(config, runner, provider_factory, debugger, patch_manager)
 
     checks = [c for c in config.checks if c.id == args.check] if args.check else config.checks
 

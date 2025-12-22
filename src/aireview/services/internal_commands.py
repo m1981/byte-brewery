@@ -46,10 +46,21 @@ class InternalCommandHandler:
                 return []
 
             all_files = files_output.splitlines()
-            logger.debug(f"Raw changed files: {all_files}")
+
+            # --- IMPROVED LOGGING START ---
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Found {len(all_files)} changed files:")
+                for f in all_files:
+                    logger.debug(f"  {f}")
+            # --- IMPROVED LOGGING END ---
 
             filtered = self._filter_files(all_files, include, exclude)
-            logger.debug(f"Files after filtering: {filtered}")
+
+            if logger.isEnabledFor(logging.DEBUG) and len(filtered) != len(all_files):
+                logger.debug(f"Files remaining after filter ({len(filtered)}):")
+                for f in filtered:
+                    logger.debug(f"  ✓ {f}")
+
             return filtered
 
         except subprocess.CalledProcessError as e:

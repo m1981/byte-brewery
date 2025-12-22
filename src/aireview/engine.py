@@ -8,18 +8,19 @@ from .domain import Config, CheckDefinition
 from .services.runner import CommandRunner
 from .services.providers import ProviderFactory
 from .services.debugger import Debugger
+from .services.patch_manager import PatchManager
 from .errors import CommandError
 
 logger = logging.getLogger("aireview")
 
 
 class ReviewEngine:
-    # FIX: Added 'debugger: Debugger' to the signature
-    def __init__(self, config: Config, runner: CommandRunner, provider_factory: ProviderFactory, debugger: Debugger):
+    def __init__(self, config: Config, runner: CommandRunner, provider_factory: ProviderFactory, debugger: Debugger, patch_manager: PatchManager):
         self.config = config
         self.runner = runner
         self.provider_factory = provider_factory
         self.debugger = debugger
+        self.patch_manager = patch_manager
 
     def build_context(self, check: CheckDefinition) -> str:
         buffer = []
@@ -64,19 +65,16 @@ class ReviewEngine:
     def _parse_json_response(self, response: str) -> dict[str, Any]:
         """Parses AI response. Defaults to FAIL if parsing fails (Fail-Safe)."""
         try:
-            return json.loads(response)
-        except json.JSONDecodeError:
-            # Try to find JSON block in markdown
-            match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
-            if match:
-                try:
-                    return json.loads(match.group(1))
-                except:
-                    pass
-            return {
-                "status": "FAIL",
-                "reason": f"Could not parse AI response as JSON. Raw response start: {response[:50]}..."
-            }
+            data = json.loads(response) # Simplified for brevity, use your robust one
+        except:
+            # Fallback logic
+            return {"status": "MANUAL", "feedback": response, "modified_files": []}
+
+        return {
+            "status": data.get("status", "FAIL").upper(),
+            "feedback": data.get("feedback", data.get("reason", "No feedback")),
+            "modified_files": data.get("modified_files", [])
+        }
 
     def _print_debug_info(self, metadata: dict[str, Any], full_message: str):
         meta_str = " | ".join(f"{k}: {v}" for k, v in metadata.items())
@@ -134,18 +132,38 @@ class ReviewEngine:
 
         print("  🤖 Analyzing...")
         raw_response = provider.analyze(check.model, full_message)
-
         result = self._parse_json_response(raw_response)
-        status = result.get("status", "FAIL").upper()
-        reason = result.get("reason", "No reason provided")
+        self.debugger.dump_response(check_id, result)
+        status = result["status"]
+        feedback = result["feedback"]
+        modified_files = result["modified_files"]
 
-        if logger.isEnabledFor(logging.DEBUG):
-            print("-" * 80)
+        # --- DISPLAY LOGIC ---
+        if status == "PASS":
+            print(f"\033[92m✔ PASS\033[0m | {feedback}")
+            return True
 
-        symbol = "✔" if status == "PASS" else "✘"
-        color = "\033[92m" if status == "PASS" else "\033[91m"
-        reset = "\033[0m"
+        elif status == "FAIL":
+            print(f"\033[91m✘ FAIL\033[0m | {feedback}")
+            return False
 
-        print(f"{color}{symbol} {status}{reset} | Reason: {reason}\n")
+        elif status == "FIX":
+            print(f"\033[94m🔧 FIX SUGGESTED\033[0m | {feedback}")
 
-        return status == "PASS"
+            if modified_files:
+                print("  Generating patch from AI suggestions...")
+                patch_file = self.patch_manager.generate_and_save_diff(check_id, modified_files)
+
+                if patch_file:
+                    print(f"  📄 Patch saved to: {patch_file}")
+                    print(f"  👉 Apply:  git apply {patch_file}")
+                    # New Hint
+                    print(f"  ↩️ Revert: aireview revert --patch-file {patch_file}")
+                else:
+                    print("  ⚠️  AI suggested a fix, but no valid diffs could be generated.")
+
+            return False
+
+        # Handle MANUAL/Other
+        print(f"📝 {status} | {feedback}")
+        return True

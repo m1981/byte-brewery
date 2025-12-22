@@ -205,3 +205,82 @@
 5. System injects the file content as the context for the AI.
 6. System performs the analysis and returns results.
 7. Developer verifies if the AI behaves correctly for that specific content.
+
+
+#### Use Case 9: Apply AI-Suggested Fix (Patching)
+**Goal Level:** 🌊 Sea-level
+**Primary Actor:** Developer
+**Preconditions:** AI returns status `FIX` with `modified_files`.
+
+**Main Success Scenario:**
+1.  System receives `FIX` status and a list of modified file contents from AI.
+2.  System (PatchManager) reads the corresponding local files from disk.
+3.  System calculates the Unified Diff between Local File and AI Content.
+4.  System saves the diff to `.aireview/patches/{timestamp}_{check_id}.patch`.
+5.  System reports "FIX SUGGESTED" and displays the command to apply the patch.
+6.  Developer reviews the patch file content.
+7.  Developer executes `git apply <patch_file>`.
+8.  Git updates the working tree with the changes.
+
+**Extensions:**
+*   **2a. AI suggests a file that doesn't exist locally:**
+    *   2a1. System logs a warning.
+    *   2a2. System skips diff generation for that specific file.
+*   **3a. AI content is identical to local content:**
+    *   3a1. System detects no diff.
+    *   3a2. System reports "AI suggested fix, but no changes detected."
+*   **7a. Patch fails to apply (Conflict):**
+    *   7a1. Git reports a conflict error.
+    *   7a2. Developer manually resolves the conflict in the code.
+
+#### Use Case 10: Manage Artifacts across Branches
+**Goal Level:** 🐟 Fish (Sub-function)
+**Primary Actor:** Developer / Git System
+**Preconditions:** `.aireview/` directory is added to `.gitignore`.
+
+**Main Success Scenario:**
+1.  Developer generates patches or debug logs on Branch A.
+2.  Files are saved to `.aireview/patches/` and `.aireview/debug/`.
+3.  Developer switches to Branch B (`git checkout branch-b`).
+4.  Git ignores the `.aireview/` directory (no "untracked files" warning).
+5.  Developer generates new patches on Branch B.
+6.  System saves new files with new timestamps.
+7.  Developer can access history from Branch A even while on Branch B (since files are local and persistent).
+
+#### Use Case 11: Debug Context Generation
+**Goal Level:** 🐟 Fish (Sub-function)
+**Primary Actor:** Developer
+**Preconditions:** Developer suspects the AI is receiving incorrect data.
+
+**Main Success Scenario:**
+1.  Developer runs `aireview run --dump`.
+2.  System constructs the full prompt (System Prompt + Context Files + Diff).
+3.  System saves the exact string sent to the API into `.aireview/debug/{timestamp}_{check_id}_req.txt`.
+4.  System prints the path to the debug file.
+5.  Developer opens the text file.
+6.  Developer verifies if the expected code/diff is present in the text.
+
+**Extensions:**
+*   **6a. Expected code is missing:**
+    *   6a1. Developer checks `ai-checks.yaml` configuration (e.g., `include_patterns`).
+    *   6a2. Developer checks `git status` (is the file staged?).
+
+
+#### Use Case 12: Revert AI Patch
+**Goal Level:** 🌊 Sea-level
+**Primary Actor:** Developer
+**Preconditions:** A patch was previously applied using `git apply`. The user has **not** committed the patch yet, and may have other uncommitted work.
+
+**Main Success Scenario:**
+1.  Developer applies an AI patch (`git apply ...`).
+2.  Developer runs tests or reviews code and realizes the AI broke a specific logic flow.
+3.  Developer wants to undo the AI's changes **without** losing the manual code they wrote in the same file 5 minutes ago.
+4.  Developer executes: `aireview revert --patch-file .aireview/patches/123.patch`.
+5.  System validates that the reverse patch applies cleanly (no conflicts).
+6.  System applies the reverse patch.
+7.  The file is restored to its state *before* the patch, but *preserving* other uncommitted changes.
+
+**Extensions:**
+*   **5a. Conflict Detected:** (User changed the code significantly *after* applying the patch).
+    *   5a1. System reports "Failed to revert patch."
+    *   5a2. Developer must manually fix the code (standard git behavior).

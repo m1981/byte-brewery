@@ -49,7 +49,22 @@ class ConfigLoader:
             text = self._resolve_prompt_text(p)
 
             if "JSON" not in text:
-                text += "\n\nIMPORTANT: Return your response in raw JSON format: {\"status\": \"PASS\" | \"FAIL\", \"reason\": \"...\"}"
+                # Updated Default Prompt
+                text += """
+                
+                IMPORTANT: Return your response in this strict JSON format:
+                {
+                    "status": "PASS" | "FAIL" | "FIX",
+                    "feedback": "Markdown explanation...",
+                    "modified_files": [
+                        {
+                            "path": "path/to/file.py",
+                            "content": "FULL NEW CONTENT OF THE FILE"
+                        }
+                    ]
+                }
+                If status is FIX, you MUST provide the full content of the modified files in 'modified_files'.
+                """
 
             prompts[p_id] = PromptDefinition(id=p_id, text=text)
         return prompts
