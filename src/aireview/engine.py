@@ -3,7 +3,7 @@
 import json
 import re
 import logging
-from typing import Any
+from typing import Any, Dict
 from .domain import Config, CheckDefinition
 from .services.runner import CommandRunner
 from .services.providers import ProviderFactory
@@ -63,13 +63,41 @@ class ReviewEngine:
         return "\n".join(buffer)
 
     def _parse_json_response(self, response: str) -> dict[str, Any]:
-        """Parses AI response. Defaults to FAIL if parsing fails (Fail-Safe)."""
-        try:
-            data = json.loads(response) # Simplified for brevity, use your robust one
-        except:
-            # Fallback logic
-            return {"status": "MANUAL", "feedback": response, "modified_files": []}
+        """Parses AI response. Handles raw JSON, Markdown blocks, or messy text."""
 
+        # Strategy 1: Attempt to parse the whole string as JSON
+        try:
+            return self._normalize_result(json.loads(response))
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy 2: Look for Markdown code blocks (Strict)
+        # Matches ```json { ... } ```
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
+        if match:
+            try:
+                return self._normalize_result(json.loads(match.group(1)))
+            except json.JSONDecodeError:
+                pass
+
+        # Strategy 3: Brute Force (The "Commercial Grade" Safety Net)
+        # Find the first '{' and the last '}' and try to parse everything in between.
+        # This handles missing backticks, trailing text, or malformed markdown.
+        try:
+            start_index = response.find("{")
+            end_index = response.rfind("}")
+
+            if start_index != -1 and end_index != -1 and end_index > start_index:
+                potential_json = response[start_index : end_index + 1]
+                return self._normalize_result(json.loads(potential_json))
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy 4: Fallback to MANUAL
+        return {"status": "MANUAL", "feedback": response, "modified_files": []}
+
+    def _normalize_result(self, data: dict) -> dict:
+        """Helper to ensure all keys exist"""
         return {
             "status": data.get("status", "FAIL").upper(),
             "feedback": data.get("feedback", data.get("reason", "No feedback")),
@@ -96,7 +124,8 @@ class ReviewEngine:
 
         # 1. Handle Context (Req 2: Manual Override)
         if override_context:
-            # Safety check for manual overrides too!
+            print(f"  ⚠️  Using MANUAL context override ({len(override_context)} chars)")
+            # Safety check for manual overrides
             if len(override_context) > check.max_chars:
                  print(f"  ❌ SAFETY ERROR: Manual context file is too large ({len(override_context)} > {check.max_chars})")
                  return False
@@ -105,8 +134,7 @@ class ReviewEngine:
             try:
                 context = self.build_context(check)
             except CommandError as e:
-                # This will now catch our new Safety Exception
-                print(f"  ❌ {e}")
+                print(f"  ❌ Error gathering context: {e}")
                 return False
 
         if not context.strip():
@@ -115,15 +143,15 @@ class ReviewEngine:
 
         full_message = f"{prompt_def.text}\n\n{context}"
 
-        # --- NEW TOKEN CALCULATION ---
+        # 2. Token Estimation
         total_chars = len(full_message)
         est_tokens = total_chars // 4
         print(f"  📊 Request Size: {total_chars} chars (~{est_tokens} tokens)")
-        # -----------------------------
 
-        # 2. Handle Traceability
+        # 3. Traceability (Dump Request)
         self.debugger.dump_request(check_id, full_message)
 
+        # 4. AI Execution
         provider = self.provider_factory.get_provider(check.model)
 
         if logger.isEnabledFor(logging.DEBUG):
@@ -132,13 +160,18 @@ class ReviewEngine:
 
         print("  🤖 Analyzing...")
         raw_response = provider.analyze(check.model, full_message)
+
+        # 5. Parse & Dump Response
         result = self._parse_json_response(raw_response)
         self.debugger.dump_response(check_id, result)
         status = result["status"]
         feedback = result["feedback"]
         modified_files = result["modified_files"]
 
-        # --- DISPLAY LOGIC ---
+        if logger.isEnabledFor(logging.DEBUG):
+            print("-" * 80)
+
+        # 6. Display Logic
         if status == "PASS":
             print(f"\033[92m✔ PASS\033[0m | {feedback}")
             return True
@@ -160,9 +193,9 @@ class ReviewEngine:
                     # New Hint
                     print(f"  ↩️ Revert: aireview revert --patch-file {patch_file}")
                 else:
-                    print("  ⚠️  AI suggested a fix, but no valid diffs could be generated.")
+                    print("  ⚠️  AI suggested a fix, but no valid diffs could be generated (Files might match original).")
 
-            return False
+            return False # Block push on FIX
 
         # Handle MANUAL/Other
         print(f"📝 {status} | {feedback}")
