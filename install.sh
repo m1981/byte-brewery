@@ -45,7 +45,7 @@ fi
 # 3. Install Python Tools
 echo "📦 Installing Python package..."
 # Ensure we install dependencies defined in pyproject.toml
-pipx install "$SOURCE_DIR" --force
+pipx install "$SOURCE_DIR" --force --pip-args="--no-cache-dir"
 
 # 4. Install Shell Scripts (The Hybrid Part)
 echo "🐚 Installing shell scripts to $INSTALL_DIR..."

@@ -4,6 +4,7 @@ import os
 import json
 import logging
 from typing import Protocol, Any, Dict, Type
+from ..domain import ReviewResult
 
 logger = logging.getLogger("aireview")
 
@@ -66,19 +67,28 @@ class AnthropicProvider:
             "model": model,
             "temperature": 1.0,
             "max_tokens": 4096,
-            "response_format": "text"
+            "response_format": "structured_output"
         }
 
     def analyze(self, model: str, full_message: str) -> str:
         if not self.client:
-            return '{"status": "FAIL", "reason": "Anthropic client not ready (Check ANTHROPIC_API_KEY)"}'
+            return '{"status": "FAIL", "reason": "Anthropic client not ready"}'
+
         try:
-            message = self.client.messages.create(
+            # USE THE NEW BETA PARSE METHOD
+            response = self.client.beta.messages.parse(
                 model=model,
                 max_tokens=4096,
-                messages=[{"role": "user", "content": full_message}]
+                betas=["structured-outputs-2025-11-13"], # Enable Beta
+                messages=[{"role": "user", "content": full_message}],
+                output_format=ReviewResult # Pass the Pydantic Model
             )
-            return message.content[0].text
+
+            # The SDK returns a parsed object. We convert it back to JSON string
+            # so the Engine can handle it uniformly (or we could refactor Engine to take objects)
+            # For minimal refactoring, we return JSON string.
+            return response.parsed_output.model_dump_json()
+
         except Exception as e:
             return json.dumps({"status": "FAIL", "reason": f"Anthropic API Error: {str(e)}"})
 

@@ -80,7 +80,7 @@ class ReviewEngine:
             except json.JSONDecodeError:
                 pass
 
-        # Strategy 3: Brute Force (The "Commercial Grade" Safety Net)
+        # Strategy 3: Brute2 Force (The "Commercial Grade" Safety Net)
         # Find the first '{' and the last '}' and try to parse everything in between.
         # This handles missing backticks, trailing text, or malformed markdown.
         try:
@@ -89,8 +89,16 @@ class ReviewEngine:
 
             if start_index != -1 and end_index != -1 and end_index > start_index:
                 potential_json = response[start_index : end_index + 1]
+                # --- DEBUG PRINT START ---
+                print(f"DEBUG: Extracted JSON length: {len(potential_json)}")
+                print(f"DEBUG: Start: {potential_json[:50]}")
+                print(f"DEBUG: End: {potential_json[-50:]}")
+                # --- DEBUG PRINT END ---
                 return self._normalize_result(json.loads(potential_json))
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            # --- DEBUG PRINT START ---
+            print(f"DEBUG: JSON Decode Error: {e}")
+            # --- DEBUG PRINT END ---
             pass
 
         # Strategy 4: Fallback to MANUAL
