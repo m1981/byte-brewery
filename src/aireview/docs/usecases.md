@@ -1,5 +1,7 @@
 ### 1. System Overview
 
+https://aistudio.google.com/prompts/1FnY4_D5RywxWkrzANaG-Zb5gO1Alu4ye
+
 **System Under Discussion (SuD):** `aireview` (AI Code Review CLI Tool)
 **Scope:** Command-line interface, configuration management, git integration, and AI provider communication.
 **Primary Actors:**
