@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Literal
 from pydantic import BaseModel, Field
 
 @dataclass
@@ -38,5 +38,5 @@ class ReviewResult(BaseModel):
     feedback: str = Field(description="Markdown explanation of the findings")
     modified_files: List[ModifiedFile] = Field(
         default_factory=list,
-        description="List of files that need changes (only if status is FIX)"
+        description="List of files that need changes (only if status is FIX). Return one file in response at a time!"
     )

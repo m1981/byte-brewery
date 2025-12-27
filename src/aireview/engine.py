@@ -63,46 +63,13 @@ class ReviewEngine:
         return "\n".join(buffer)
 
     def _parse_json_response(self, response: str) -> dict[str, Any]:
-        """Parses AI response. Handles raw JSON, Markdown blocks, or messy text."""
-
-        # Strategy 1: Attempt to parse the whole string as JSON
+        """Parses AI response. Now expects clean JSON from Structured Output."""
         try:
-            return self._normalize_result(json.loads(response))
+            data = json.loads(response)
+            return self._normalize_result(data)
         except json.JSONDecodeError:
-            pass
-
-        # Strategy 2: Look for Markdown code blocks (Strict)
-        # Matches ```json { ... } ```
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
-        if match:
-            try:
-                return self._normalize_result(json.loads(match.group(1)))
-            except json.JSONDecodeError:
-                pass
-
-        # Strategy 3: Brute2 Force (The "Commercial Grade" Safety Net)
-        # Find the first '{' and the last '}' and try to parse everything in between.
-        # This handles missing backticks, trailing text, or malformed markdown.
-        try:
-            start_index = response.find("{")
-            end_index = response.rfind("}")
-
-            if start_index != -1 and end_index != -1 and end_index > start_index:
-                potential_json = response[start_index : end_index + 1]
-                # --- DEBUG PRINT START ---
-                print(f"DEBUG: Extracted JSON length: {len(potential_json)}")
-                print(f"DEBUG: Start: {potential_json[:50]}")
-                print(f"DEBUG: End: {potential_json[-50:]}")
-                # --- DEBUG PRINT END ---
-                return self._normalize_result(json.loads(potential_json))
-        except json.JSONDecodeError as e:
-            # --- DEBUG PRINT START ---
-            print(f"DEBUG: JSON Decode Error: {e}")
-            # --- DEBUG PRINT END ---
-            pass
-
-        # Strategy 4: Fallback to MANUAL
-        return {"status": "MANUAL", "feedback": response, "modified_files": []}
+            # This should rarely happen with Structured Outputs
+            return {"status": "FAIL", "feedback": f"Invalid JSON: {response[:100]}", "modified_files": []}
 
     def _normalize_result(self, data: dict) -> dict:
         """Helper to ensure all keys exist"""

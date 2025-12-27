@@ -65,8 +65,8 @@ class AnthropicProvider:
         return {
             "provider": "Anthropic",
             "model": model,
-            "temperature": 1.0,
-            "max_tokens": 4096,
+            "temperature": 0.0,
+            "max_tokens": 65000,
             "response_format": "structured_output"
         }
 
@@ -75,19 +75,30 @@ class AnthropicProvider:
             return '{"status": "FAIL", "reason": "Anthropic client not ready"}'
 
         try:
-            # USE THE NEW BETA PARSE METHOD
-            response = self.client.beta.messages.parse(
+            # Import helpers locally to avoid top-level dependency issues if pydantic/anthropic missing
+            from anthropic import transform_schema
+            from pydantic import TypeAdapter
+
+            # 1. Convert Pydantic Model -> Standard JSON Schema
+            json_schema = TypeAdapter(ReviewResult).json_schema()
+
+            # 2. Transform Schema for Anthropic (Removes unsupported fields, adds strictness)
+            anthropic_schema = transform_schema(json_schema)
+
+            # 3. Call .create() (NOT .parse) to get raw text for debugging
+            response = self.client.beta.messages.create(
                 model=model,
                 max_tokens=4096,
-                betas=["structured-outputs-2025-11-13"], # Enable Beta
+                betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": full_message}],
-                output_format=ReviewResult # Pass the Pydantic Model
+                output_format={
+                    "type": "json_schema",
+                    "schema": anthropic_schema
+                }
             )
 
-            # The SDK returns a parsed object. We convert it back to JSON string
-            # so the Engine can handle it uniformly (or we could refactor Engine to take objects)
-            # For minimal refactoring, we return JSON string.
-            return response.parsed_output.model_dump_json()
+            # 4. Return the raw JSON string
+            return response.content[0].text
 
         except Exception as e:
             return json.dumps({"status": "FAIL", "reason": f"Anthropic API Error: {str(e)}"})

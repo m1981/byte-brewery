@@ -25,16 +25,20 @@ class Debugger:
 
     # --- NEW METHOD ---
     def dump_response(self, check_id: str, response_data: Any):
-        """Saves the parsed JSON response to a file."""
+        """Saves the response to a file."""
         if not self.enabled: return
         try:
             self.debug_dir.mkdir(parents=True, exist_ok=True)
             timestamp = int(time.time())
-            # Save as .json for easy reading/reuse
             filename = self.debug_dir / f"{timestamp}_{check_id}_resp.json"
 
             with open(filename, "w", encoding="utf-8") as f:
-                json.dump(response_data, f, indent=2, ensure_ascii=False)
+                if isinstance(response_data, str):
+                    # Write raw string directly (good for truncated JSON)
+                    f.write(response_data)
+                else:
+                    # Write dict as formatted JSON
+                    json.dump(response_data, f, indent=2, ensure_ascii=False)
 
             print(f"  💾 [DEBUG] Response dumped to: {filename}")
         except Exception as e:
