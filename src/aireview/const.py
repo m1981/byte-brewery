@@ -16,5 +16,5 @@ checks:
     prompt_id: basic_reviewer
     model: gpt-3.5-turbo
     context: [push_diff]
-    max_chars: 16000
+    max_chars: 85000
 """

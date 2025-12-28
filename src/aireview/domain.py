@@ -19,7 +19,7 @@ class CheckDefinition:
     prompt_id: str
     model: str
     context_ids: List[str]
-    max_chars: int = 16000
+    max_chars: int = 80000
     include_patterns: List[str] = field(default_factory=list)
     exclude_patterns: List[str] = field(default_factory=list)
 

@@ -54,12 +54,17 @@ class OpenAIProvider:
 class AnthropicProvider:
     def __init__(self):
         self.client = None
-        if os.environ.get("ANTHROPIC_API_KEY"):
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+        if api_key:
             try:
                 import anthropic
-                self.client = anthropic.Anthropic()
+                self.client = anthropic.Anthropic(api_key=api_key)
             except ImportError:
-                logger.warning("Anthropic library not installed.")
+                logger.warning("Anthropic library not installed. Run: pipx inject byte-brewery anthropic")
+        else:
+            # Log this so it appears in verbose mode
+            logger.warning("Anthropic Provider skipped: ANTHROPIC_API_KEY not found in env.")
 
     def get_metadata(self, model: str) -> Dict[str, Any]:
         return {

@@ -91,7 +91,7 @@ class ConfigLoader:
                 prompt_id=prompt_id,
                 model=c.get('model', 'gpt-3.5-turbo'),
                 context_ids=context_ids,
-                max_chars=c.get('max_chars', 16000),
+                max_chars=c.get('max_chars', 85000),
                 include_patterns=c.get('include_patterns', []),
                 exclude_patterns=c.get('exclude_patterns', [])
             ))
