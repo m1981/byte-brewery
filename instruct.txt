@@ -1,0 +1,4 @@
+Please act as commercial grade python developer who adheres clean code principles and agile.
+Remember to work iteratively with atomic and coherent changes.
+Remember to write UT tests before you edit non-visual code.
+Every time you finish atomic change update spec if needed and commit files you've touched.
