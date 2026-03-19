@@ -28,6 +28,7 @@ aug-recap = "augment_ai.recap:main"
 dce = "augment_ai.dce:main"
 pext = "augment_ai.pext:main"
 aireview = "aireview.main:main"
+chatmap = "prompt_extractor.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

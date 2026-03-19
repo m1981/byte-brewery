@@ -2,45 +2,79 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from prompt_extractor.core import extract_user_prompts, format_to_markdown
+
+from prompt_extractor.core import build_threads, format_timeline, format_tree, parse_chunks
+
+
+def _process_file(filepath: Path, view: str) -> str:
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in '{filepath}'. {e}", file=sys.stderr)
+        return ""
+
+    nodes = parse_chunks(data)
+    if view == "tree":
+        return format_tree(build_threads(nodes))
+    return format_timeline(nodes)
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract user prompts from LLM conversation JSON files."
+        description="Map LLM conversation branches from Google AI Studio JSON exports."
     )
     parser.add_argument(
-        "filepath",
+        "input_path",
         type=Path,
-        help="Path to the JSON file containing the conversation."
+        help="Path to a JSON file or a directory of JSON files.",
     )
     parser.add_argument(
         "-o", "--output",
         type=Path,
-        help="Optional output Markdown file path. If not provided, prints to stdout."
+        help="Output path. For a directory input this must also be a directory.",
+    )
+    parser.add_argument(
+        "--view",
+        choices=["timeline", "tree"],
+        default="timeline",
+        help="Output format: timeline (default) or tree.",
     )
 
     args = parser.parse_args()
 
-    if not args.filepath.is_file():
-        print(f"Error: File '{args.filepath}' does not exist.", file=sys.stderr)
-        sys.exit(1)
+    if args.input_path.is_dir():
+        json_files = sorted(args.input_path.glob("*.json"))
+        if not json_files:
+            print(f"Error: No JSON files found in '{args.input_path}'.", file=sys.stderr)
+            sys.exit(1)
 
-    try:
-        with open(args.filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON file. {e}", file=sys.stderr)
-        sys.exit(1)
+        if args.output:
+            args.output.mkdir(parents=True, exist_ok=True)
 
-    prompts = extract_user_prompts(data)
-    markdown_output = format_to_markdown(args.filepath.name, prompts)
+        for json_file in json_files:
+            result = _process_file(json_file, args.view)
+            if not result:
+                continue
+            if args.output:
+                out_path = args.output / json_file.with_suffix(".md").name
+                out_path.write_text(result, encoding="utf-8")
+                print(f"Written: {out_path}")
+            else:
+                print(result)
 
-    if args.output:
-        with open(args.output, "w", encoding="utf-8") as f:
-            f.write(markdown_output)
-        print(f"Successfully wrote prompts to {args.output}")
+    elif args.input_path.is_file():
+        result = _process_file(args.input_path, args.view)
+        if args.output:
+            args.output.write_text(result, encoding="utf-8")
+            print(f"Written: {args.output}")
+        else:
+            print(result)
+
     else:
-        print(markdown_output)
+        print(f"Error: '{args.input_path}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
