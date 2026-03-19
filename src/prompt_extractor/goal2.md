@@ -29,37 +29,64 @@ chatmap <directory> [-o OUTPUT]
 
 ---
 
-## Phase 2: Preprocessing — Drop Thought Chunks
+## Phase 2: Preprocessing — Slim Loading
 
-- When loading a file, **skip entire chunks** where `isThought == true` — they are never
-  stored in memory at all
-- Original files are never modified or written
-- Rationale: thought chunks are internal model reasoning, irrelevant to conversation
-  structure, and can be enormous in 100 MB files; dropping them entirely (not just a field)
-  maximises memory savings
+Two things are dropped at load time. Original files are never modified or written.
+
+### 2a — Drop thought chunks
+
+Skip entire chunks where `isThought == true`. They are internal model reasoning, carry no
+conversation content, and can be enormous.
 
 ```python
 chunks = [c for c in raw_chunks if not c.get("isThought")]
 ```
 
-**Impact on model**: `ChatFile.total_chunks`, `model_turn_count`, and fingerprint sequences
-all naturally exclude thought chunks because they were never loaded. No special-casing
-needed anywhere downstream.
+### 2b — Drop `parts[]` from every remaining chunk
+
+After filtering, remove the `parts` list from every chunk:
+
+```python
+for chunk in chunks:
+    chunk.pop("parts", None)
+```
+
+**Why**: `parts` is the raw streaming delivery — the same text split into fragments, each
+with its own metadata. The top-level `text` field already holds the complete, concatenated
+content for both user and model chunks. Verified against real files:
+
+| Chunk type | `text` field | `parts` content |
+|---|---|---|
+| user | full prompt text | always empty — not present |
+| model (non-thought) | full response text | same text, fragmented + metadata overhead |
+
+Dropping `parts` also eliminates `thoughtSignature` for free — that field lives as a
+property on the last item in `parts[]`, never at the chunk level. No separate stripping
+step is needed.
+
+**Memory impact**: in sample files, `parts` is 4–5× larger than `text` for model chunks
+due to streaming metadata. For 100 MB conversations this is significant.
 
 ---
 
 ## Phase 3: Chunk Fingerprinting
 
-Each chunk in a conversation gets a **content fingerprint** (CRC32 of normalized content).
-Thought chunks do not reach this phase — they were dropped at load time.
+Each loaded chunk gets a **content fingerprint** (CRC32). By this point, thought chunks
+are gone and `parts[]` has been dropped — only the top-level `text` field is used.
+This is the authoritative, complete content for both user prompts and model responses.
 
-| Chunk type      | What to hash                            |
-|-----------------|-----------------------------------------|
-| user with text  | `"user:" + text.strip()`               |
-| model with text | `"model:" + text.strip()`              |
-| image-only user | `"user:__image__"` (stable placeholder) |
+| Chunk type | Input to CRC32 |
+|---|---|
+| user with text | `"user:" + chunk["text"].strip()` |
+| model with text | `"model:" + chunk["text"].strip()` |
+| user image-only (no `text`) | `"user:__image__"` (stable placeholder) |
 
-The result for each file is an ordered list of `(index, role, fingerprint)` tuples —
+**Why top-level `text` and not `parts`**: `parts` was dropped in Phase 2. Even before
+that, user chunks never had `parts` — their text existed only at the top level. Using
+`text` consistently across all chunk types means the fingerprint correctly represents
+whether two chunks have the same full content, regardless of how the model streamed it.
+
+The result for each file is an ordered list of `(index, role, crc)` tuples —
 the **fingerprint sequence**.
 
 ---
@@ -335,6 +362,9 @@ Tests are written before implementation, covering:
 1. **`test_loader.py`**
    - `test_thought_chunks_dropped` — chunks with `isThought=true` are never loaded
    - `test_non_thought_model_chunks_kept` — normal model chunks are kept
+   - `test_parts_dropped_from_model_chunk` — `parts` key absent after loading
+   - `test_parts_never_present_on_user_chunk` — user chunks have no `parts` in real data; loader handles gracefully
+   - `test_thoughtsignature_gone_via_parts_drop` — after loading, no `thoughtSignature` anywhere
    - `test_user_prompts_extracted` — user text chunks become `UserPrompt` objects
    - `test_image_chunk_loaded` — image-only chunk becomes `UserPrompt(is_image=True, text="")`
 
