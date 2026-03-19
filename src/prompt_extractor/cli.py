@@ -6,6 +6,11 @@ from pathlib import Path
 from prompt_extractor.core import build_threads, format_timeline, format_tree, parse_chunks
 
 
+def _find_files(directory: Path) -> list[Path]:
+    """Return all regular files directly inside directory, sorted by name."""
+    return sorted(f for f in directory.iterdir() if f.is_file())
+
+
 def _process_file(filepath: Path, view: str) -> str:
     try:
         with open(filepath, "r", encoding="utf-8") as f:
@@ -44,9 +49,9 @@ def main():
     args = parser.parse_args()
 
     if args.input_path.is_dir():
-        json_files = sorted(args.input_path.glob("*.json"))
+        json_files = _find_files(args.input_path)
         if not json_files:
-            print(f"Error: No JSON files found in '{args.input_path}'.", file=sys.stderr)
+            print(f"Error: No files found in '{args.input_path}'.", file=sys.stderr)
             sys.exit(1)
 
         if args.output:
