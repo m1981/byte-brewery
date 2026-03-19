@@ -1,56 +1,142 @@
-from typing import Dict, Any, List
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
-from prompt_extractor.models import BranchInfo, UserPrompt
+from prompt_extractor.models import MessageNode
 
 
-def extract_user_prompts(data: Dict[str, Any]) -> List[UserPrompt]:
-    """
-    Extracts text from chunks where the role is 'user'.
-    Ignores chunks without text (e.g., image-only uploads).
+def _parse_timestamp(create_time: str) -> datetime:
+    if not create_time:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        return datetime.fromisoformat(create_time.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def parse_chunks(data: Dict[str, Any]) -> List[MessageNode]:
+    """Parse conversation chunks into a sorted list of MessageNodes.
+
+    Filters out thought chunks (isThought=True) and empty chunks
+    (no text and no driveImage). Results are sorted chronologically.
     """
     try:
         chunks = data.get("chunkedPrompt", {}).get("chunks", [])
     except AttributeError:
         return []
 
-    prompts = []
+    if chunks is None:
+        return []
+
+    nodes = []
     for chunk in chunks:
         if not isinstance(chunk, dict):
             continue
-
-        if chunk.get("role") != "user":
+        if chunk.get("isThought"):
             continue
 
         text = chunk.get("text", "").strip()
-        if not text:
+        image_id: Optional[str] = None
+        drive_image = chunk.get("driveImage")
+        if drive_image:
+            image_id = drive_image.get("id")
+
+        if not text and not image_id:
             continue
 
-        branch_parent = chunk.get("branchParent")
-        branch_info = None
-        if branch_parent:
-            branch_info = BranchInfo(
-                prompt_id=branch_parent["promptId"],
-                display_name=branch_parent["displayName"],
+        nodes.append(
+            MessageNode(
+                timestamp=_parse_timestamp(chunk.get("createTime", "")),
+                role=chunk.get("role", ""),
+                text=text,
+                image_id=image_id,
+                branch_parent=chunk.get("branchParent"),
             )
+        )
 
-        prompts.append(UserPrompt(text=text, branch_info=branch_info))
+    nodes.sort(key=lambda n: n.timestamp)
+    return nodes
 
-    return prompts
 
+def build_threads(
+    nodes: List[MessageNode],
+) -> List[Tuple[Optional[str], List[MessageNode]]]:
+    """Split nodes into conversation threads based on branchParent markers.
 
-def format_to_markdown(filename: str, prompts: List[UserPrompt]) -> str:
+    Returns a list of (branch_display_name, nodes) tuples. The first entry
+    is always the main thread with None as the name.
     """
-    Formats a list of UserPrompt objects into a Markdown string.
-    """
-    if not prompts:
-        return f"# File: {filename}\n\n*No user prompts found.*\n"
+    if not nodes:
+        return [(None, [])]
 
-    lines = [f"# File: {filename}\n"]
-    for index, prompt in enumerate(prompts, start=1):
-        lines.append(f"## Prompt {index}")
-        if prompt.branch_info:
-            bi = prompt.branch_info
-            lines.append(f"> 🌿 **Branched from:** {bi.display_name} (`{bi.prompt_id}`)\n")
-        lines.append(f"{prompt.text}\n")
+    threads: List[Tuple[Optional[str], List[MessageNode]]] = []
+    current_name: Optional[str] = None
+    current_thread: List[MessageNode] = []
+
+    for node in nodes:
+        if node.branch_parent:
+            threads.append((current_name, current_thread))
+            current_name = node.branch_parent.get("displayName")
+            current_thread = [node]
+        else:
+            current_thread.append(node)
+
+    threads.append((current_name, current_thread))
+    return threads
+
+
+def _time_str(node: MessageNode) -> str:
+    sentinel = datetime.min.replace(tzinfo=timezone.utc)
+    if node.timestamp == sentinel:
+        return "??:??:??"
+    return node.timestamp.strftime("%H:%M:%S")
+
+
+def _render_node(node: MessageNode) -> List[str]:
+    role_label = "User" if node.role == "user" else "Model"
+    lines = [f"**[{_time_str(node)}] {role_label}:** "]
+    if node.image_id:
+        lines.append(f"`[Attached Image ID: {node.image_id}]`")
+    if node.text:
+        lines.append(node.text)
+    lines.append("")
+    return lines
+
+
+def format_timeline(nodes: List[MessageNode]) -> str:
+    """Format nodes as a chronological timeline with branch rewind markers."""
+    lines: List[str] = ["# Conversation Timeline\n"]
+    for node in nodes:
+        if node.branch_parent:
+            display_name = node.branch_parent.get("displayName", "")
+            lines += [
+                "---",
+                f"🔄 **[{_time_str(node)}] TIMELINE BRANCH (Rewind)**",
+                f'*Branched from: "{display_name}"*',
+                "---\n",
+            ]
+        lines += _render_node(node)
+    return "\n".join(lines)
+
+
+def format_tree(threads: List[Tuple[Optional[str], List[MessageNode]]]) -> str:
+    """Format conversation threads as a tree with main thread and branches."""
+    lines: List[str] = ["# Conversation Threads\n"]
+    branch_count = 0
+
+    for branch_name, nodes in threads:
+        if not nodes:
+            continue
+
+        if branch_name is None:
+            lines.append("## 🌿 Main Thread")
+        else:
+            branch_count += 1
+            lines.append(f"## 🌿 Branch {branch_count}")
+            lines.append(f'*Branched from: "{branch_name}"*\n')
+
+        for node in nodes:
+            lines += _render_node(node)
+
+        lines.append("---\n")
 
     return "\n".join(lines)
