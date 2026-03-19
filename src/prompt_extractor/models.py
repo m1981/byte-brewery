@@ -1,12 +1,13 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional, List
+
 
 @dataclass
-class BranchInfo:
-    prompt_id: str
-    display_name: str
-
-@dataclass
-class UserPrompt:
+class MessageNode:
+    timestamp: datetime
+    role: str
     text: str
-    branch_info: Optional[BranchInfo] = None
+    image_id: Optional[str] = None
+    branch_parent: Optional[dict] = None
+    children: List["MessageNode"] = field(default_factory=list)
