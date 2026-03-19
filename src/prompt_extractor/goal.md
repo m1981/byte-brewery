@@ -42,11 +42,12 @@ The CLI will be updated to handle batch processing and view switching.
 `python cli.py <input_path> [options]`
 
 **Arguments:**
-*   `input_path`: Path to a single `.json` file OR a directory containing multiple `.json` files.
-*   `-o, --output`: (Optional) Path to save the Markdown output. If processing a directory, this should be an output directory. If omitted, prints to `stdout`.
+*   `input_path`: Path to a single file OR a directory. Files of any extension are accepted; non-JSON content is skipped silently.
+*   `-o, --output`: (Optional) Output path. For `--view html` with a directory input, provide a single `.html` file to receive all lanes in one document. For `timeline`/`tree` views with a directory, provide an output directory. If omitted, prints to `stdout`.
 *   `--view`: (Optional) Determines the output format.
-    *   `timeline` (Default): Outputs chronologically.
+    *   `timeline` (Default): Outputs chronologically with branch rewind markers.
     *   `tree`: Outputs grouped by conversation threads.
+    *   `html`: Self-contained HTML swimlane document — each file becomes a vertical lane, branch markers shown inline, long model responses collapsible.
 
 ## 6. Output Formats (Markdown Rendering)
 

@@ -47,3 +47,25 @@ def test_process_file_skips_non_json(tmp_path):
     p.write_text("this is not json")
     result = _process_file(p, "timeline")
     assert result == ""
+
+
+def test_process_file_html_view(tmp_path):
+    p = _write_json(tmp_path / "conv.json", MINIMAL_DATA)
+    result = _process_file(p, "html")
+    assert "<!DOCTYPE html>" in result
+    assert "Hello" in result
+
+
+def test_load_conversation_returns_name_and_nodes(tmp_path):
+    from prompt_extractor.cli import _load_conversation
+    p = _write_json(tmp_path / "my_conv.txt", MINIMAL_DATA)
+    name, nodes = _load_conversation(p)
+    assert name == "my_conv"
+    assert len(nodes) == 1
+
+
+def test_load_conversation_returns_none_on_invalid(tmp_path):
+    from prompt_extractor.cli import _load_conversation
+    p = tmp_path / "bad.txt"
+    p.write_text("not json")
+    assert _load_conversation(p) is None
