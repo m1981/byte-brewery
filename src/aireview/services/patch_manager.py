@@ -40,8 +40,14 @@ class PatchManager:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     original_lines = f.readlines()
 
-                # Prepare new content (ensure it ends with newline for diff correctness)
+                # FIX 1: Ensure original content ends with newline
+                if original_lines and not original_lines[-1].endswith('\n'):
+                    original_lines[-1] += '\n'
+
+                # Prepare new content
                 new_lines = new_content.splitlines(keepends=True)
+
+                # FIX 2: Ensure new content ends with newline
                 if new_lines and not new_lines[-1].endswith('\n'):
                     new_lines[-1] += '\n'
 
@@ -51,7 +57,7 @@ class PatchManager:
                     new_lines,
                     fromfile=f"a/{file_path}",
                     tofile=f"b/{file_path}",
-                    lineterm=""
+                    lineterm="" # We manually added newlines, so lineterm="" is correct now
                 )
 
                 diff_text = "".join(diff)
