@@ -29,34 +29,35 @@ chatmap <directory> [-o OUTPUT]
 
 ---
 
-## Phase 2: Preprocessing — thoughtSignature Stripping
+## Phase 2: Preprocessing — Drop Thought Chunks
 
-- When loading a file into memory, strip `thoughtSignature` from every chunk and every part
-- This is done **in-memory only** — original files are never modified or written
-- Rationale: `thoughtSignature` fields are large opaque blobs; stripping them can reduce
-  in-memory size of 100 MB conversations significantly
+- When loading a file, **skip entire chunks** where `isThought == true` — they are never
+  stored in memory at all
+- Original files are never modified or written
+- Rationale: thought chunks are internal model reasoning, irrelevant to conversation
+  structure, and can be enormous in 100 MB files; dropping them entirely (not just a field)
+  maximises memory savings
 
 ```python
-# strip from chunk level and from each part inside the chunk
-chunk.pop("thoughtSignature", None)
-for part in chunk.get("parts", []):
-    part.pop("thoughtSignature", None)
+chunks = [c for c in raw_chunks if not c.get("isThought")]
 ```
+
+**Impact on model**: `ChatFile.total_chunks`, `model_turn_count`, and fingerprint sequences
+all naturally exclude thought chunks because they were never loaded. No special-casing
+needed anywhere downstream.
 
 ---
 
 ## Phase 3: Chunk Fingerprinting
 
-Each chunk in a conversation gets a **content fingerprint** (CRC32 of normalized content):
+Each chunk in a conversation gets a **content fingerprint** (CRC32 of normalized content).
+Thought chunks do not reach this phase — they were dropped at load time.
 
-| Chunk type      | What to hash                                |
-|-----------------|---------------------------------------------|
-| user with text  | `"user:" + text.strip()`                   |
-| model with text | `"model:" + text.strip()`                  |
-| image-only      | `"user:__image__"` (stable placeholder)     |
-| thought chunk   | Skipped — internal reasoning, not canonical |
-
-A **thought chunk** is identified by `isThought == true` at the chunk level.
+| Chunk type      | What to hash                            |
+|-----------------|-----------------------------------------|
+| user with text  | `"user:" + text.strip()`               |
+| model with text | `"model:" + text.strip()`              |
+| image-only user | `"user:__image__"` (stable placeholder) |
 
 The result for each file is an ordered list of `(index, role, fingerprint)` tuples —
 the **fingerprint sequence**.
@@ -113,121 +114,156 @@ Summary notation: `[=N ~M +K]`
 
 ## Phase 6: Markdown Report Output
 
-Output is a **Markdown file** (not console). The CLI prints only a single confirmation line
-to stdout: `Written: <output path>`.
-
-The Markdown file has three sections:
+The report is a **single prompt-centric document** — no metadata tables, no ASCII tree
+section. The goal is to let the user read all prompts in context, see where branches
+happened, and quickly navigate to the conversation they want to continue.
 
 ---
 
-### Section 1 — Overview table
+### Document structure
 
-A summary table of all discovered chat files, one row per file, sorted by `first_time`.
+```
+# Chat Map — <directory>
+Generated: <datetime> · <N> chats
+
+## Contents          ← clickable index, one line per chat
+---
+## 🌱 <root name>   ← one ## section per chat, roots before their branches
+...prompts...
+## 🌿 <branch name>
+...prompts...
+```
+
+---
+
+### Contents index
+
+A simple indented list, no table:
+
+```markdown
+## Contents
+
+- [🌱 Czym jest aforyzm_](#czym-jest-aforyzm_) · 2 prompts · 2026-03-19 13:30 → 13:32
+  - [🌿 Branch of Czym jest aforyzm_](#branch-of-czym-jest-aforyzm_) · 2 prompts · 2026-03-19 13:30 → 13:31
+```
+
+Nesting mirrors the branch hierarchy. Each line has a clickable anchor to the chat section.
+
+---
+
+### Root chat section
+
+```markdown
+## 🌱 Czym jest aforyzm_
+*2026-03-19 13:30 → 13:32*
+
+1. Napisz mi krótko czy jest aforyzm
+   > 🌿 branched here → [Branch of Czym jest aforyzm_](#branch-of-czym-jest-aforyzm_)
+2. Napisz trzy aforyzmy do poniższej instrukcji
+```
+
+- All user prompts listed in order, numbered
+- After any prompt that is a branch point, a blockquote line names the branch and links to it
+- A prompt can be a branch point for multiple branches — one `> 🌿` line per branch
+
+---
+
+### Branch chat section
+
+```markdown
+## 🌿 Branch of Czym jest aforyzm_
+*🌱 root: [Czym jest aforyzm_](#czym-jest-aforyzm_) · 2026-03-19 13:30 → 13:31*
+
+> 1. Napisz mi krótko czy jest aforyzm
+
+**2. Napisz trzy aforyzmy do poniższej instrukcji**
+```
+
+Prompt rendering rules:
+
+| Prompt status | Rendering |
+|---|---|
+| Shared, unchanged | Blockquote `> N. text` — visually muted, it's inherited context |
+| Shared, edited | Blockquote with marker: `> N. ~text~ → **new text**` |
+| New after branch | Bold: `**N. text**` — stands out as what's new in this branch |
+| Image upload | Blockquote `> N. *(image)*` or bold `**N. *(image)***` depending on status |
+
+- `[inferred]` appended to the header line when the relationship has no explicit `branchParent`
+
+---
+
+### Full rendered example — real sample files
 
 ```markdown
 # Chat Map — prompt_extractor/
-Generated: 2026-03-19 14:00
+Generated: 2026-03-19 14:00 · 2 chats
 
-## Overview
+## Contents
 
-| Chat | Prompts | Turns | From | To | Role |
-|------|---------|-------|------|----|------|
-| [Czym jest aforyzm_](#czym-jest-aforyzm_) | 2 | 2 | 2026-03-19 13:30 | 13:32 | 🌱 root |
-| [Branch of Czym jest aforyzm_](#branch-of-czym-jest-aforyzm_) | 2 | 1 | 2026-03-19 13:30 | 13:31 | 🌿 branch |
-```
-
-- `Role` column: `🌱 root` or `🌿 branch`
-- Chat name is an anchor link to its detail section below
+- [🌱 Czym jest aforyzm_](#czym-jest-aforyzm_) · 2 prompts · 2026-03-19 13:30 → 13:32
+  - [🌿 Branch of Czym jest aforyzm_](#branch-of-czym-jest-aforyzm_) · 2 prompts · 2026-03-19 13:30 → 13:31
 
 ---
 
-### Section 2 — Branch tree
+## 🌱 Czym jest aforyzm_
+*2026-03-19 13:30 → 13:32*
 
-A Markdown fenced code block containing the ASCII tree (for monospace rendering), followed
-immediately by a Markdown-native indented list version for readability in rendered views.
-
-**Code block (raw tree, always readable):**
-````markdown
-## Branch Tree
-
-```
-prompt_extractor/
-│
-└─ 🌱 Czym jest aforyzm_                              [root]
-     2 prompts · 2 turns · 2026-03-19 13:30 → 13:32
-   │
-   └─ 🌿 Branch of Czym jest aforyzm_                [=4 ~0 +1]
-        2 prompts · 1 turn · 2026-03-19 13:30 → 13:31
-        branched after: "Napisz mi krótko czy jest aforyzm"
-```
-````
-
-Tree node format (same as agreed in Phase 6 console design, now inside a code block):
-- Icon: `🌱` for root, `🌿` for branch
-- Filename
-- `[root]` or `[=N ~M +K]` — unchanged / modified in shared prefix / new after branch
-- Second line: `N prompts · N turns · YYYY-MM-DD HH:MM → HH:MM`
-- Branch nodes: `branched after: "<text of last shared user prompt, ≤60 chars>"`
-- When `~` > 0: `⚠ N shared chunk(s) were edited before branching`
-- When relationship is inferred from content only: `[inferred]` appended to change summary
-
----
-
-### Section 3 — Per-chat detail cards
-
-One `###` subsection per chat file, in tree order (root first, then children depth-first).
-Each card contains:
-
-```markdown
-### Czym jest aforyzm_
-
-| Field | Value |
-|-------|-------|
-| File | `Czym jest aforyzm_` |
-| Role | 🌱 root |
-| Prompts | 2 |
-| Turns | 2 |
-| Period | 2026-03-19 13:30 → 13:32 |
-
-**User prompts:**
 1. Napisz mi krótko czy jest aforyzm
+   > 🌿 branched here → [Branch of Czym jest aforyzm_](#branch-of-czym-jest-aforyzm_)
 2. Napisz trzy aforyzmy do poniższej instrukcji
 
 ---
 
-### Branch of Czym jest aforyzm_
+## 🌿 Branch of Czym jest aforyzm_
+*🌱 root: [Czym jest aforyzm_](#czym-jest-aforyzm_) · 2026-03-19 13:30 → 13:31*
 
-| Field | Value |
-|-------|-------|
-| File | `Branch of Czym jest aforyzm_` |
-| Role | 🌿 branch |
-| Parent | [Czym jest aforyzm_](#czym-jest-aforyzm_) |
-| Branched after | "Napisz mi krótko czy jest aforyzm" |
-| Shared chunks | 4 identical, 0 modified |
-| New after branch | 1 |
-| Period | 2026-03-19 13:30 → 13:31 |
+> 1. Napisz mi krótko czy jest aforyzm
 
-**User prompts:**
-1. Napisz mi krótko czy jest aforyzm *(shared)*
-2. Napisz trzy aforyzmy do poniższej instrukcji *(new after branch)*
+**2. Napisz trzy aforyzmy do poniższej instrukcji**
+
+---
 ```
-
-- Each user prompt is annotated: `*(shared)*`, `*(shared, edited)*`, or `*(new after branch)*`
-- Model content is **never included** — only user prompts are listed
-- `*(shared, edited)*` appears when a shared prompt's fingerprint differs from the parent
 
 ---
 
-### Field definitions
+### Full rendered example — hypothetical deeper tree
 
-| Field | Source |
-|---|---|
-| Prompts | User chunks with non-empty text |
-| Turns | Non-thought model reply chunks |
-| Period | `createTime` of first → last chunk, local time |
-| `[=N ~M +K]` | Fingerprint diff: identical / modified in shared prefix / added after branch |
-| `branched after` | Text of last shared user prompt before divergence (≤60 chars) |
-| `[inferred]` | No explicit `branchParent` in data; detected by content fingerprint matching only |
+```markdown
+## 🌱 Topic A — Getting started
+*2026-03-01 09:00 → 10:45*
+
+1. What is this about?
+2. Can you explain point 3?
+   > 🌿 branched here → [Topic A — deep dive on point 3](#topic-a--deep-dive-on-point-3)
+   > 🌿 branched here → [Topic A — alternative ending](#topic-a--alternative-ending)
+3. Summarise everything
+...
+
+---
+
+## 🌿 Topic A — deep dive on point 3
+*🌱 root: [Topic A — Getting started](#topic-a--getting-started) · 2026-03-01 09:00 → 11:30*
+
+> 1. What is this about?
+> 2. Can you explain point 3?
+
+**3. Go deeper on the mechanism**
+**4. How does this compare to X?**
+   > 🌿 branched here → [Topic A — point 3 revised tone](#topic-a--point-3-revised-tone)
+**5. Give me a summary**
+
+---
+
+## 🌿 Topic A — point 3 revised tone  *(inferred)*
+*🌱 root: [Topic A — deep dive on point 3](#topic-a--deep-dive-on-point-3) · 2026-03-02 14:00 → 14:22*
+
+> 1. What is this about?
+> 2. Can you explain point 3?
+> 3. Go deeper on the mechanism
+> 4. ~How does this compare to X?~ → **Compare this to X and Y**
+
+**5. Rewrite in simpler language**
+```
 
 ---
 
@@ -236,17 +272,24 @@ Each card contains:
 ```python
 @dataclass
 class ChunkFingerprint:
-    index: int         # position in original chunk list
-    role: str          # "user" | "model"
-    crc: int           # CRC32 of normalized content
+    index: int    # position in loaded (non-thought) chunk list
+    role: str     # "user" | "model"
+    crc: int      # CRC32 of normalized content
+
+@dataclass
+class UserPrompt:
+    # already exists in models.py — extended with position for report rendering
+    index: int              # position in loaded chunk list
+    text: str               # empty string for image-only
+    is_image: bool
+    branch_info: Optional[BranchInfo]  # from chunk's branchParent field
 
 @dataclass
 class ChatFile:
     path: Path
     filename: str
+    user_prompts: list[UserPrompt]   # ordered, thought chunks already excluded at load
     fingerprints: list[ChunkFingerprint]
-    total_chunks: int   # non-thought chunks only
-    user_prompt_count: int
     model_turn_count: int
     first_time: Optional[datetime]
     last_time: Optional[datetime]
@@ -255,13 +298,13 @@ class ChatFile:
 class BranchRelation:
     parent: ChatFile
     child: ChatFile
-    shared_count: int          # length of common prefix
-    unchanged: int             # = in shared prefix
-    modified: int              # ~ in shared prefix
-    new_count: int             # chunks added after branch point
-    branched_after_text: Optional[str]      # text of last shared user prompt (≤60 chars)
-    explicit_branch_parent: Optional[str]   # promptId if present in data
-    inferred: bool                          # True if no explicit branchParent confirmed it
+    shared_count: int                       # length of common fingerprint prefix
+    unchanged: int                          # shared prompts with matching fingerprint
+    modified: int                           # shared prompts with differing fingerprint
+    new_count: int                          # prompts added after branch point
+    branched_after_text: Optional[str]      # text of last shared user prompt
+    explicit_branch_parent: Optional[str]   # promptId from chunk data, if present
+    inferred: bool                          # True when no explicit branchParent confirmed it
 ```
 
 ---
@@ -289,33 +332,36 @@ chatmap = "prompt_extractor.chatmap_cli:main"
 
 Tests are written before implementation, covering:
 
-1. **`test_fingerprint.py`**
-   - `test_user_chunk_fingerprint` — text chunks hash consistently
-   - `test_model_thought_chunk_skipped` — `isThought=true` chunks excluded
-   - `test_image_chunk_placeholder` — image-only gets stable fingerprint
-   - `test_thoughtsignature_stripped` — stripping does not change fingerprint of text
+1. **`test_loader.py`**
+   - `test_thought_chunks_dropped` — chunks with `isThought=true` are never loaded
+   - `test_non_thought_model_chunks_kept` — normal model chunks are kept
+   - `test_user_prompts_extracted` — user text chunks become `UserPrompt` objects
+   - `test_image_chunk_loaded` — image-only chunk becomes `UserPrompt(is_image=True, text="")`
 
-2. **`test_branch.py`**
-   - `test_common_prefix_identical_files` — two copies → full shared prefix
+2. **`test_fingerprint.py`**
+   - `test_user_chunk_fingerprint` — same text always produces same CRC
+   - `test_image_chunk_placeholder` — image-only gets a stable, non-text fingerprint
+   - `test_different_texts_differ` — different text produces different CRC
+
+3. **`test_branch.py`**
+   - `test_common_prefix_identical_files` — two identical files → full shared prefix
    - `test_branch_detected_by_content` — prefix match finds parent without explicit label
-   - `test_branch_detected_by_explicit_label` — explicit branchParent with no file match
-   - `test_change_marking_unchanged` — all `=` when shared chunks match
-   - `test_change_marking_modified` — `~` when shared chunk text differs
+   - `test_branch_detected_by_explicit_label` — explicit branchParent with no matching file
+   - `test_change_marking_unchanged` — all unchanged when shared fingerprints match
+   - `test_change_marking_modified` — modified count when shared fingerprint differs
 
-3. **`test_markdown.py`**
-   - `test_overview_table_root` — root file gets `🌱 root` role
-   - `test_overview_table_branch` — branch file gets `🌿 branch` role and anchor link
-   - `test_tree_block_single_root` — single file renders `[root]` inside fenced code block
-   - `test_tree_block_one_branch` — parent + child renders correct `[=N ~M +K]` line
-   - `test_tree_block_nested` — grandchild indentation correct
-   - `test_tree_block_inferred` — `[inferred]` appended when no explicit signal
-   - `test_detail_card_root` — root card has no Parent/Branched after rows
-   - `test_detail_card_branch` — branch card has Parent anchor, Branched after, shared/new counts
-   - `test_prompt_annotations` — shared prompts marked `*(shared)*`, new marked `*(new after branch)*`
-   - `test_edited_prompt_annotation` — modified shared prompt marked `*(shared, edited)*`
+4. **`test_markdown.py`**
+   - `test_contents_index_nesting` — branch indented under root in contents list
+   - `test_root_section_header` — root section has `🌱` and date range
+   - `test_branch_point_inline` — root prompt followed by `> 🌿 branched here →` line
+   - `test_branch_section_header` — branch section has `🌿` and root back-link
+   - `test_shared_prompt_blockquote` — shared unchanged prompt rendered as `> N. text`
+   - `test_new_prompt_bold` — new prompt rendered as `**N. text**`
+   - `test_edited_prompt_strikethrough` — edited prompt rendered as `> N. ~old~ → **new**`
+   - `test_inferred_label_in_header` — `*(inferred)*` in branch section header
 
-4. **Integration** — run `chatmap prompt_extractor/` against the two real sample files,
+5. **Integration** — run `chatmap prompt_extractor/` against the two real sample files,
    read the output `.md` file, and assert:
-   - overview table has 2 rows with correct prompt/turn counts
-   - tree block contains `🌿 Branch of Czym jest aforyzm_` with `[=4 ~0 +1]`
-   - branch detail card shows `branched after: "Napisz mi krótko czy jest aforyzm"`
+   - contents index has root + indented branch with correct anchor links
+   - root section has inline `> 🌿 branched here →` after prompt 1
+   - branch section shows prompt 1 as blockquote, prompt 2 as bold
