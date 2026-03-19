@@ -1,132 +1,104 @@
-Act as commercial grade python developer who adhere principles of clean code and TDD expert
-How would you do that?
-Help me develop module to extract user prompt from whole conversations ("role": "user","
-I need to have cli with path to file and module should export prompts in markdown format.
+# Specification: Conversation Branch Mapper (v2.0)
 
-Please find example and expeted output and run tests and real command untill you finish implementation
+## 1. Overview
+The **Conversation Branch Mapper** is a Python-based CLI application designed to parse exported LLM conversation files (specifically Google AI Studio / Gemini JSON formats). It extracts user prompts, model responses, and image uploads, and reconstructs the conversation history into a human-readable Markdown document. 
 
+Crucially, it handles non-linear conversations (where a user edits a previous prompt to create a "branch") and offers two distinct ways to visualize this history: a chronological **Timeline View** and a grouped **Tree View**.
 
-Expected output
-```
-# File: conversation.json
+## 2. Input Data Schema
+The application expects a JSON file containing a `chunkedPrompt` object with a `chunks` array.
+*   **Fields to Extract:**
+    *   `role`: `"user"` or `"model"`.
+    *   `text`: The text content of the message.
+    *   `createTime`: Timestamp of the message (used for sorting).
+    *   `branchParent`: Metadata (`promptId`, `displayName`) indicating the user edited a previous prompt.
+    *   `driveImage`: Dictionary containing an `id` for uploaded images.
+*   **Fields to Ignore:**
+    *   `isThought`: Boolean. **Any chunk where `isThought` is `true` must be completely ignored** (we do not want to clutter the output with the model's internal reasoning).
+    *   `runSettings`, `tokenCount`, `parts`, etc.
 
-## Prompt 1
+## 3. Internal Data Models
+The application will use Python `dataclasses` to represent the parsed data.
+
+*   **`MessageNode`**
+    *   `timestamp` (datetime): Parsed from `createTime`.
+    *   `role` (str): "user" or "model".
+    *   `text` (str): The message content.
+    *   `image_id` (Optional[str]): Extracted from `driveImage`.
+    *   `branch_parent` (Optional[dict]): Contains `promptId` and `displayName`.
+    *   `children` (List['MessageNode']): Used for building the Tree View.
+
+## 4. Core Processing Logic
+1.  **Ingestion:** Read the JSON file and extract the `chunks` array.
+2.  **Filtering:** Discard any chunk where `isThought == True`. Discard chunks that have no `text` AND no `driveImage`.
+3.  **Node Creation:** Convert valid chunks into `MessageNode` objects.
+4.  **Sorting:** Sort all `MessageNode` objects chronologically using `timestamp`.
+5.  **Tree Building (For Tree View):** Link nodes together based on chronological order, using `branchParent` to create forks/new threads when a branch is detected.
+
+## 5. Command Line Interface (CLI)
+The CLI will be updated to handle batch processing and view switching.
+
+**Usage:**
+`python cli.py <input_path> [options]`
+
+**Arguments:**
+*   `input_path`: Path to a single `.json` file OR a directory containing multiple `.json` files.
+*   `-o, --output`: (Optional) Path to save the Markdown output. If processing a directory, this should be an output directory. If omitted, prints to `stdout`.
+*   `--view`: (Optional) Determines the output format.
+    *   `timeline` (Default): Outputs chronologically.
+    *   `tree`: Outputs grouped by conversation threads.
+
+## 6. Output Formats (Markdown Rendering)
+
+### Option A: Timeline View (`--view timeline`) - *Default*
+This view presents the conversation exactly as it was experienced in real-time. When a branch occurs, a visual "Rewind" marker is inserted to explain the context shift.
+
+**Example Output:**
+```markdown
+# Conversation Timeline
+
+**[13:30:56] User:** 
 Napisz mi krótko czy jest aforyzm
 
-## Prompt 2
-> 🌿 **Branched from:** Czym jest aforyzm? (`prompts/1CeVK1pW2xE1BMRkTQFzo3vMLre-P_acO`)
+**[13:31:05] Model:** 
+**Aforyzm** to krótkie, zwięzłe i błyskotliwe zdanie...
 
+---
+🔄 **[13:31:54] TIMELINE BRANCH (Rewind)**
+*Branched from: "Czym jest aforyzm?"*
+---
+
+**[13:31:54] User:** 
+`[Attached Image ID: 1M1J2xkyNfQbBIjqXCERObECjmzZatjhz]`
 Napisz trzy aforyzmy do poniższej instrukcji
+
+**[13:32:07] Model:** 
+Oto trzy aforyzmy inspirowane tą instrukcją...
 ```
 
+### Option B: Tree View (`--view tree`)
+This view groups the conversation into distinct, uninterrupted threads. It is best for reading one complete version of the conversation from start to finish, followed by alternate versions.
 
+**Example Output:**
+```markdown
+# Conversation Threads
 
+## 🌿 Main Thread
+**[13:30:56] User:** 
+Napisz mi krótko czy jest aforyzm
 
-Example of branched of chat
+**[13:31:05] Model:** 
+**Aforyzm** to krótkie, zwięzłe i błyskotliwe zdanie...
+
+---
+
+## 🌿 Branch 1
+*Branched from: "Czym jest aforyzm?"*
+
+**[13:31:54] User:** 
+`[Attached Image ID: 1M1J2xkyNfQbBIjqXCERObECjmzZatjhz]`
+Napisz trzy aforyzmy do poniższej instrukcji
+
+**[13:32:07] Model:** 
+Oto trzy aforyzmy inspirowane tą instrukcją...
 ```
-{
-  "runSettings": {
-    "temperature": 0.0,
-    "model": "models/gemini-3.1-pro-preview",
-    "topP": 0.95,
-    "topK": 64,
-    "maxOutputTokens": 65536,
-    "safetySettings": [{
-      "category": "HARM_CATEGORY_HARASSMENT",
-      "threshold": "OFF"
-    }, {
-      "category": "HARM_CATEGORY_HATE_SPEECH",
-      "threshold": "OFF"
-    }, {
-      "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      "threshold": "OFF"
-    }, {
-      "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-      "threshold": "OFF"
-    }],
-    "enableCodeExecution": false,
-    "enableSearchAsATool": false,
-    "enableBrowseAsATool": false,
-    "enableAutoFunctionResponse": false,
-    "outputResolution": "1K",
-    "thinkingLevel": "THINKING_LOW",
-    "enableImageSearch": false
-  },
-  "systemInstruction": {
-  },
-  "chunkedPrompt": {
-    "chunks": [{
-      "text": "Napisz mi krótko czy jest aforyzm",
-      "role": "user",
-      "tokenCount": 13,
-      "createTime": "2026-03-19T13:30:56.796Z"
-    }, {
-      "text": "**Defining Aphorism in Polish**\n\nI\u0027m now focusing on defining \"aphorism\" in Polish, aiming for conciseness. My goal is a brief, accurate explanation. I\u0027m exploring various Polish synonyms and related terms to ensure clarity and precision in the description, keeping the target format in mind. I want to convey the essence of an aphorism effectively.\n\n\n**Refining Polish Definitions**\n\nI\u0027m now refining the Polish definition, focusing on key characteristics like wit and memorability. I\u0027m incorporating synonyms like \"złota myśl\" to enrich the explanation. Also, I have drafted the definition, and included synonyms.\n\n\n**Selecting Polish Examples**\n\nI\u0027ve selected Polish aphorism examples to enrich the definition, opting for clarity over overly philosophical ones. I\u0027m prioritizing relatable and thought-provoking examples, such as \"Czas robi swoje. A ty człowieku?\" and \"Wyobraźnia jest ważniejsza od wiedzy.\" This stage focuses on showcasing the aphorism\u0027s essence concretely.\n\nI\u0027m now revising the structure to include an example.\n\n\n",
-      "role": "model",
-      "tokenCount": 720,
-      "isThought": true,
-      "thinkingBudget": -1,
-      "parts": [{
-        "text": "**Defining Aphorism in Polish**\n\nI\u0027m now focusing on defining \"aphorism\" in Polish, aiming for conciseness. My goal is a brief, accurate explanation. I\u0027m exploring various Polish synonyms and related terms to ensure clarity and precision in the description, keeping the target format in mind. I want to convey the essence of an aphorism effectively.\n\n\n",
-        "thought": true
-      }, {
-        "text": "**Refining Polish Definitions**\n\nI\u0027m now refining the Polish definition, focusing on key characteristics like wit and memorability. I\u0027m incorporating synonyms like \"złota myśl\" to enrich the explanation. Also, I have drafted the definition, and included synonyms.\n\n\n",
-        "thought": true
-      }, {
-        "text": "**Selecting Polish Examples**\n\nI\u0027ve selected Polish aphorism examples to enrich the definition, opting for clarity over overly philosophical ones. I\u0027m prioritizing relatable and thought-provoking examples, such as \"Czas robi swoje. A ty człowieku?\" and \"Wyobraźnia jest ważniejsza od wiedzy.\" This stage focuses on showcasing the aphorism\u0027s essence concretely.\n\nI\u0027m now revising the structure to include an example.\n\n\n",
-        "thought": true
-      }],
-      "createTime": "2026-03-19T13:30:56.796Z"
-    }, {
-      "text": "**Aforyzm** to krótkie, zwięzłe i błyskotliwe zdanie, które wyraża głęboką prawdę życiową, filozoficzną lub moralną. Ma za zadanie skłonić do refleksji i jest zazwyczaj łatwe do zapamiętania. \n\nInaczej aforyzm nazywa się **sentencją**, **maksymą** lub potocznie **„złotą myślą”**.\n\n**Przykłady aforyzmów:**\n* „Czas robi swoje. A ty człowieku?” – *Stanisław Jerzy Lec*\n* „Wiedzieć, co się wie, i wiedzieć, czego się nie wie – oto prawdziwa wiedza.” – *Konfucjusz*\n* „Lepiej zaliczać się do niektórych, niż do wszystkich.” – *Andrzej Sapkowski*",
-      "role": "model",
-      "finishReason": "STOP",
-      "tokenCount": 187,
-      "parts": [{
-        "text": "**Af"
-      }, {
-        "text": "oryzm** to krótkie, zwięzłe i błyskotliwe zdanie, które wyraża gł"
-      }, {
-        "text": "ęboką prawdę życiową, filozoficzną lub moralną. Ma za zadanie skłonić do"
-      }, {
-        "text": " refleksji i jest zazwyczaj łatwe do zapamiętania. \n\nInaczej aforyzm nazywa"
-      }, {
-        "text": " się **sentencją**, **maksymą** lub potocznie **„złotą myślą”**.\n\n"
-      }, {
-        "text": "**Przykłady aforyzmów:**\n* „Czas robi swoje. A ty człowieku?” – *"
-      }, {
-        "text": "Stanisław Jerzy Lec*\n* „Wiedzieć, co się wie, i wiedzieć, czego się nie"
-      }, {
-        "text": " wie – oto prawdziwa wiedza.” – *Konfucjusz*\n* „Lepiej zaliczać"
-      }, {
-        "text": " się do niektórych, niż do wszystkich.” – *Andrzej Sapkowski*"
-      }, {
-        "text": "",
-        "thoughtSignature": "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"
-      }],
-      "createTime": "2026-03-19T13:31:05.664Z"
-    }, {
-      "driveImage": {
-        "id": "1M1J2xkyNfQbBIjqXCERObECjmzZatjhz"
-      },
-      "role": "user",
-      "tokenCount": 1081,
-      "createTime": "2026-03-19T13:31:54.943Z"
-    }, {
-      "text": "Napisz trzy aforyzmy do poniższej instrukcji",
-      "role": "user",
-      "tokenCount": 15,
-      "branchParent": {
-        "promptId": "prompts/1CeVK1pW2xE1BMRkTQFzo3vMLre-P_acO",
-        "displayName": "Czym jest aforyzm?"
-      },
-      "createTime": "2026-03-19T13:31:54.943Z"
-    }],
-    "pendingInputs": [{
-      "text": "",
-      "role": "user"
-    }]
-  }
-}
-```
-
