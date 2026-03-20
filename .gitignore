@@ -24,3 +24,8 @@ frontend/.streamlit/secrets.toml
 
 # Docker ignore
 .dockerignore
+
+# chatmap generated output (root-level only)
+/*.html
+/view*.md
+/view*/
