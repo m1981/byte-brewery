@@ -9,6 +9,7 @@
     "pysum": "Python project structure generator - Creates Markdown documentation from Python files",
     "lsproj": "Project file lister - Uses .projlist config for pattern-based file discovery",
     "git-recent": "Extract recent commits with diffs for AI analysis, excluding build artifacts",
-    "aireview": "AI-powered code review and pre-push validation tool"
+    "aireview": "AI-powered code review and pre-push validation tool",
+    "summarize.ts": "TypeScript code summarizer - Removes function bodies while preserving signatures"
   }
 }

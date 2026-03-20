@@ -1,0 +1,8 @@
+{
+  "name": "byte-brewery-bin",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "typescript": "^5.7.3"
+  }
+}

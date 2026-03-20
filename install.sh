@@ -52,7 +52,7 @@ echo "🐚 Installing shell scripts to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 
 # ADD "lsproj" HERE 👇
-FILES_TO_COPY=("rsum" "byte-help" "tools.json" "lsproj")
+FILES_TO_COPY=("rsum" "byte-help" "tools.json" "lsproj" "summarize.ts")
 
 for file in "${FILES_TO_COPY[@]}"; do
     if [ -f "$SOURCE_DIR/bin/$file" ]; then
@@ -68,24 +68,23 @@ for file in "${FILES_TO_COPY[@]}"; do
     fi
 done
 
-echo "🐚 Installing shell scripts and help tools..."
-mkdir -p "$INSTALL_DIR"
-
-# List of binary files to copy
-FILES_TO_COPY=("rsum" "byte-help" "tools.json")
-
-for file in "${FILES_TO_COPY[@]}"; do
-    if [ -f "$SOURCE_DIR/bin/$file" ]; then
-        cp "$SOURCE_DIR/bin/$file" "$INSTALL_DIR/"
-        # Only make scripts executable, not the json
-        if [[ "$file" != *.json ]]; then
-            chmod +x "$INSTALL_DIR/$file"
-        fi
-        echo "   - Installed: $file"
+# Install Node.js dependencies for TypeScript scripts
+if [ -f "$SOURCE_DIR/bin/package.json" ]; then
+    echo "📦 Installing Node.js dependencies for TypeScript tools..."
+    cp "$SOURCE_DIR/bin/package.json" "$INSTALL_DIR/"
+    if [ -d "$SOURCE_DIR/bin/node_modules" ]; then
+        cp -r "$SOURCE_DIR/bin/node_modules" "$INSTALL_DIR/"
+        echo "   - Installed: node_modules"
     else
-        echo "⚠️  Warning: bin/$file not found in source."
+        # Install dependencies if node_modules doesn't exist
+        if command -v npm &> /dev/null; then
+            npm install --prefix "$INSTALL_DIR" --silent
+            echo "   - Installed: node_modules (via npm)"
+        fi
     fi
-done
+fi
+
+
 
 # 5. Cleanup (Only if we cloned)
 if [ "$CLEANUP" = true ]; then
