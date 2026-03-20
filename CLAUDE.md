@@ -1,3 +1,5 @@
+claude --resume 7b696263-30cb-4f27-ba39-5dfa10dfe7d8
+
 # CLAUDE.md — byte-brewery
 
 ## Project overview
