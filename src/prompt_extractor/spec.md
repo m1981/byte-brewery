@@ -38,9 +38,7 @@ human-readable document so you can:
 **Status:** Accepted
 
 **Context:**
-Google AI Studio exports conversation files with a `.txt` extension even
-though the content is valid JSON. Restricting the directory scanner to
-`*.json` silently skipped all real data files.
+Google AI Studio exports conversation JSON files without.
 
 **Decision:**
 `_find_files()` returns every regular file directly inside the target
@@ -48,7 +46,7 @@ directory. Non-JSON content is silently skipped by the JSON parser, so no
 valid file is ever refused based on extension alone.
 
 **Consequences:**
-- Works with `.txt`, `.json`, or any future extension out of the box.
+x
 - Unrelated files in the directory (e.g. a README) are attempted and quietly
   dropped on parse failure.
 

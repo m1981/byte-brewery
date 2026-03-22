@@ -19,8 +19,8 @@ def _load_conversation(filepath: Path) -> Optional[Tuple[str, List[MessageNode]]
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in '{filepath}'. {e}", file=sys.stderr)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        print(f"Skipping '{filepath.name}': {type(e).__name__}", file=sys.stderr)
         return None
     return filepath.stem, parse_chunks(data)
 
