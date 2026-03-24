@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from prompt_extractor.core import build_threads, format_timeline, format_tree, parse_chunks
-from prompt_extractor.html_formatter import format_html
+from prompt_extractor.html_formatter import format_html, format_prompts_list
 from prompt_extractor.models import MessageNode
 
 
@@ -35,6 +35,8 @@ def _process_file(filepath: Path, view: str) -> str:
         return format_tree(build_threads(nodes))
     if view == "html":
         return format_html([(name, nodes)])
+    if view == "prompts":
+        return format_prompts_list([(name, nodes)])
     return format_timeline(nodes)
 
 
@@ -56,16 +58,16 @@ def main():
         "-o", "--output",
         type=Path,
         help=(
-            "Output path. For --view html with a directory input, provide a "
-            "single .html file to get all lanes in one document. For timeline/"
+            "Output path. For --view html or prompts with a directory input, provide a "
+            "single .html file to get all content in one document. For timeline/"
             "tree views with a directory, provide a directory."
         ),
     )
     parser.add_argument(
         "--view",
-        choices=["timeline", "tree", "html"],
+        choices=["timeline", "tree", "html", "prompts"],
         default="timeline",
-        help="Output format: timeline (default), tree, or html swimlane.",
+        help="Output format: timeline (default), tree, html swimlane, or prompts list.",
     )
 
     args = parser.parse_args()
@@ -79,6 +81,14 @@ def main():
         if args.view == "html":
             conversations = [r for f in files if (r := _load_conversation(f)) is not None]
             result = format_html(conversations)
+            if args.output:
+                _write_output(result, args.output)
+            else:
+                print(result)
+
+        elif args.view == "prompts":
+            conversations = [r for f in files if (r := _load_conversation(f)) is not None]
+            result = format_prompts_list(conversations)
             if args.output:
                 _write_output(result, args.output)
             else:

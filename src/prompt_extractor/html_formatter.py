@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from html import escape
 from typing import List, Tuple
 
@@ -238,5 +238,333 @@ def format_html(conversations: List[Tuple[str, List[MessageNode]]]) -> str:
 {lanes_html}
 </div>
 <script>{_JS}</script>
+</body>
+</html>"""
+
+
+# ---------------------------------------------------------------------------
+# Prompts List View CSS
+# ---------------------------------------------------------------------------
+
+_PROMPTS_CSS = """
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f7fafc;
+    color: #1a202c;
+    padding: 30px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+h1 {
+    margin-bottom: 30px;
+    font-size: 1.8rem;
+    color: #2d3748;
+    letter-spacing: -0.02em;
+}
+
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ── Chat Card ── */
+.chat-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 16px 20px;
+}
+
+.chat-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    word-break: break-word;
+}
+
+.chat-datetime {
+    font-size: 0.85rem;
+    opacity: 0.95;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.datetime-main {
+    font-weight: 500;
+}
+
+.datetime-relative {
+    opacity: 0.85;
+    font-style: italic;
+}
+
+.chat-body {
+    padding: 16px 20px;
+}
+
+.prompts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Prompt Item ── */
+.prompt-item {
+    background: #f7fafc;
+    border-left: 4px solid #4299e1;
+    border-radius: 6px;
+    padding: 12px 14px;
+    transition: all 0.2s ease;
+}
+
+.prompt-item:hover {
+    background: #edf2f7;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.prompt-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #2d3748;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.prompt-text.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.prompt-text.expanded {
+    display: block;
+}
+
+.expand-toggle {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #4299e1;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.expand-toggle:hover {
+    background: #bee3f8;
+    color: #2c5282;
+}
+
+.image-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 6px;
+    padding: 4px 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+}
+
+.no-prompts {
+    color: #718096;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+"""
+
+_PROMPTS_JS = """
+document.querySelectorAll('.prompt-item').forEach(item => {
+    const textEl = item.querySelector('.prompt-text');
+    const fullText = textEl.textContent;
+
+    // Only add toggle if text is longer than 200 chars
+    if (fullText.length > 200) {
+        textEl.classList.add('collapsed');
+
+        const btn = document.createElement('button');
+        btn.className = 'expand-toggle';
+        btn.textContent = '▼ Show full prompt';
+
+        btn.onclick = () => {
+            const isExpanded = textEl.classList.contains('expanded');
+            if (isExpanded) {
+                textEl.classList.remove('expanded');
+                textEl.classList.add('collapsed');
+                btn.textContent = '▼ Show full prompt';
+            } else {
+                textEl.classList.remove('collapsed');
+                textEl.classList.add('expanded');
+                btn.textContent = '▲ Show less';
+            }
+        };
+
+        item.appendChild(btn);
+    }
+});
+"""
+
+
+# ---------------------------------------------------------------------------
+# Helper functions for prompts list view
+# ---------------------------------------------------------------------------
+
+def _format_datetime_full(dt: datetime) -> str:
+    """Format datetime as 'Monday 2nd March 12:34'."""
+    sentinel = datetime.min.replace(tzinfo=timezone.utc)
+    if dt == sentinel:
+        return "Unknown date"
+
+    # Get day with ordinal suffix
+    day = dt.day
+    if 10 <= day % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+
+    return dt.strftime(f"%A {day}{suffix} %B %H:%M")
+
+
+def _format_relative_time(dt: datetime) -> str:
+    """Format relative time like 'x days ago', '2 weeks ago', etc."""
+    sentinel = datetime.min.replace(tzinfo=timezone.utc)
+    if dt == sentinel:
+        return ""
+
+    now = datetime.now(timezone.utc)
+    delta = now - dt
+
+    if delta < timedelta(minutes=1):
+        return "just now"
+    elif delta < timedelta(hours=1):
+        minutes = int(delta.total_seconds() / 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    elif delta < timedelta(days=1):
+        hours = int(delta.total_seconds() / 3600)
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    elif delta < timedelta(days=7):
+        days = delta.days
+        return f"{days} day{'s' if days != 1 else ''} ago"
+    elif delta < timedelta(days=30):
+        weeks = delta.days // 7
+        return f"{weeks} week{'s' if weeks != 1 else ''} ago"
+    elif delta < timedelta(days=365):
+        months = delta.days // 30
+        return f"{months} month{'s' if months != 1 else ''} ago"
+    else:
+        years = delta.days // 365
+        return f"{years} year{'s' if years != 1 else ''} ago"
+
+
+def _render_prompt_item(node: MessageNode) -> str:
+    """Render a single user prompt item."""
+    parts = []
+
+    if node.text:
+        parts.append(f'<div class="prompt-text">{escape(node.text)}</div>')
+
+    if node.image_id:
+        parts.append(
+            f'<div class="image-indicator">📎 Image attached: <code>{escape(node.image_id)}</code></div>'
+        )
+
+    content = "\n".join(parts) if parts else '<div class="prompt-text">(empty prompt)</div>'
+
+    return f'<div class="prompt-item">{content}</div>'
+
+
+def _render_chat_card(chat_name: str, nodes: List[MessageNode]) -> str:
+    """Render a single chat card with all user prompts."""
+    # Filter only user messages
+    user_prompts = [n for n in nodes if n.role == "user"]
+
+    if not user_prompts:
+        return ""
+
+    # Get the earliest timestamp for the chat
+    first_timestamp = min(n.timestamp for n in user_prompts)
+
+    datetime_full = _format_datetime_full(first_timestamp)
+    datetime_relative = _format_relative_time(first_timestamp)
+
+    prompts_html = "\n".join(_render_prompt_item(node) for node in user_prompts)
+
+    return f"""<div class="chat-card">
+    <div class="chat-header">
+        <div class="chat-title">{escape(chat_name)}</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">{datetime_full}</span>
+            <span class="datetime-relative">({datetime_relative})</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+{prompts_html}
+        </div>
+    </div>
+</div>"""
+
+
+def format_prompts_list(conversations: List[Tuple[str, List[MessageNode]]]) -> str:
+    """Render all user prompts from all conversations as a list view.
+
+    Conversations are sorted by their earliest user prompt timestamp.
+    Each chat shows its title, datetime, and all user prompts with
+    expandable content (max 200 chars visible initially).
+    """
+    # Filter out conversations with no user prompts and sort by earliest timestamp
+    chat_cards = []
+    for name, nodes in conversations:
+        user_prompts = [n for n in nodes if n.role == "user"]
+        if user_prompts:
+            earliest = min(n.timestamp for n in user_prompts)
+            chat_cards.append((earliest, name, nodes))
+
+    # Sort by timestamp (earliest first)
+    chat_cards.sort(key=lambda x: x[0])
+
+    # Render cards
+    cards_html = "\n".join(
+        _render_chat_card(name, nodes)
+        for _, name, nodes in chat_cards
+    )
+
+    if not cards_html:
+        cards_html = '<div class="no-prompts">No user prompts found.</div>'
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User Prompts List</title>
+<style>{_PROMPTS_CSS}</style>
+</head>
+<body>
+<h1>📝 User Prompts from All Chats</h1>
+<div class="chat-list">
+{cards_html}
+</div>
+<script>{_PROMPTS_JS}</script>
 </body>
 </html>"""
