@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from html import escape
-from typing import List, Tuple
+from pathlib import Path
+from typing import List, Tuple, Optional
 
 from prompt_extractor.models import MessageNode
 
@@ -479,8 +480,14 @@ def _render_prompt_item(node: MessageNode, prompt_number: int, has_attachment: b
     return f'<div class="prompt-item">{content}</div>'
 
 
-def _render_chat_card(chat_name: str, nodes: List[MessageNode]) -> str:
-    """Render a single chat card with all user prompts."""
+def _render_chat_card(chat_name: str, nodes: List[MessageNode], file_path: Optional[str] = None) -> str:
+    """Render a single chat card with all user prompts.
+
+    Args:
+        chat_name: Name of the chat
+        nodes: List of message nodes
+        file_path: Optional path to source file for fallback timestamp
+    """
     # Filter only user messages
     user_prompts = [n for n in nodes if n.role == "user"]
 
@@ -491,8 +498,17 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode]) -> str:
     prompt_count = len(user_prompts)
 
     # Get the earliest timestamp for the chat
-    # DO NOT use current time as fallback - keep sentinel to show "Date unavailable"
+    sentinel = datetime.min.replace(tzinfo=timezone.utc)
     first_timestamp = min(n.timestamp for n in user_prompts)
+
+    # If timestamp is missing, use file modification time as fallback
+    if first_timestamp == sentinel and file_path:
+        try:
+            file_mtime = Path(file_path).stat().st_mtime
+            first_timestamp = datetime.fromtimestamp(file_mtime, tz=timezone.utc)
+        except (OSError, ValueError):
+            # If file access fails, keep sentinel
+            pass
 
     datetime_full = _format_datetime_full(first_timestamp)
     datetime_relative = _format_relative_time(first_timestamp)
@@ -524,28 +540,37 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode]) -> str:
 </div>"""
 
 
-def format_prompts_list(conversations: List[Tuple[str, List[MessageNode]]]) -> str:
+def format_prompts_list(
+    conversations: List[Tuple[str, List[MessageNode]]],
+    file_paths: Optional[List[str]] = None
+) -> str:
     """Render all user prompts from all conversations as a list view.
 
     Conversations are sorted by their earliest user prompt timestamp.
     Each chat shows its title, datetime, and all user prompts with
     expandable content (max 200 chars visible initially).
+
+    Args:
+        conversations: List of (name, nodes) tuples
+        file_paths: Optional list of file paths for fallback timestamps
     """
     # Filter out conversations with no user prompts and sort by earliest timestamp
     chat_cards = []
-    for name, nodes in conversations:
+    for idx, (name, nodes) in enumerate(conversations):
         user_prompts = [n for n in nodes if n.role == "user"]
         if user_prompts:
             earliest = min(n.timestamp for n in user_prompts)
-            chat_cards.append((earliest, name, nodes))
+            # Get file path for this conversation if available
+            file_path = file_paths[idx] if file_paths and idx < len(file_paths) else None
+            chat_cards.append((earliest, name, nodes, file_path))
 
     # Sort by timestamp (earliest first)
     chat_cards.sort(key=lambda x: x[0])
 
     # Render cards
     cards_html = "\n".join(
-        _render_chat_card(name, nodes)
-        for _, name, nodes in chat_cards
+        _render_chat_card(name, nodes, file_path)
+        for _, name, nodes, file_path in chat_cards
     )
 
     if not cards_html:

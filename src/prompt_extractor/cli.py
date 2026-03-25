@@ -14,15 +14,15 @@ def _find_files(directory: Path) -> list[Path]:
     return sorted(f for f in directory.iterdir() if f.is_file())
 
 
-def _load_conversation(filepath: Path) -> Optional[Tuple[str, List[MessageNode]]]:
-    """Parse a file into (stem_name, nodes). Returns None on JSON errors."""
+def _load_conversation(filepath: Path) -> Optional[Tuple[str, List[MessageNode], str]]:
+    """Parse a file into (stem_name, nodes, filepath_str). Returns None on JSON errors."""
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         print(f"Skipping '{filepath.name}': {type(e).__name__}", file=sys.stderr)
         return None
-    return filepath.stem, parse_chunks(data)
+    return filepath.stem, parse_chunks(data), str(filepath)
 
 
 def _process_file(filepath: Path, view: str) -> str:
@@ -30,13 +30,13 @@ def _process_file(filepath: Path, view: str) -> str:
     result = _load_conversation(filepath)
     if result is None:
         return ""
-    name, nodes = result
+    name, nodes, filepath_str = result
     if view == "tree":
         return format_tree(build_threads(nodes))
     if view == "html":
         return format_html([(name, nodes)])
     if view == "prompts":
-        return format_prompts_list([(name, nodes)])
+        return format_prompts_list([(name, nodes)], [filepath_str])
     return format_timeline(nodes)
 
 
@@ -80,7 +80,8 @@ def main():
 
         if args.view == "html":
             conversations = [r for f in files if (r := _load_conversation(f)) is not None]
-            result = format_html(conversations)
+            # Extract just name and nodes for html view
+            result = format_html([(name, nodes) for name, nodes, _ in conversations])
             if args.output:
                 _write_output(result, args.output)
             else:
@@ -88,7 +89,10 @@ def main():
 
         elif args.view == "prompts":
             conversations = [r for f in files if (r := _load_conversation(f)) is not None]
-            result = format_prompts_list(conversations)
+            # Extract name, nodes, and file paths for prompts view
+            conv_data = [(name, nodes) for name, nodes, _ in conversations]
+            file_paths = [filepath for _, _, filepath in conversations]
+            result = format_prompts_list(conv_data, file_paths)
             if args.output:
                 _write_output(result, args.output)
             else:
