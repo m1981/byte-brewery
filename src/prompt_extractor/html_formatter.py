@@ -328,11 +328,24 @@ h1 {
     border-radius: 6px;
     padding: 12px 14px;
     transition: all 0.2s ease;
+    position: relative;
 }
 
 .prompt-item:hover {
     background: #edf2f7;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.prompt-number {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4299e1;
+    background: #e6f2ff;
+    padding: 2px 8px;
+    border-radius: 12px;
 }
 
 .prompt-text {
@@ -341,48 +354,20 @@ h1 {
     color: #2d3748;
     white-space: pre-wrap;
     word-break: break-word;
+    padding-right: 50px;
 }
 
-.prompt-text.collapsed {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.prompt-text.expanded {
-    display: block;
-}
-
-.expand-toggle {
-    display: inline-block;
-    margin-top: 8px;
-    font-size: 0.8rem;
-    color: #4299e1;
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.expand-toggle:hover {
-    background: #bee3f8;
-    color: #2c5282;
-}
-
-.image-indicator {
+.attachment-count {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #718096;
-    margin-top: 6px;
-    padding: 4px 8px;
+    margin-top: 8px;
+    padding: 4px 10px;
     background: #e2e8f0;
-    border-radius: 4px;
+    border-radius: 12px;
+    font-weight: 500;
 }
 
 .no-prompts {
@@ -396,10 +381,12 @@ h1 {
 _PROMPTS_JS = """
 document.querySelectorAll('.prompt-item').forEach(item => {
     const textEl = item.querySelector('.prompt-text');
+    if (!textEl) return;
+
     const fullText = textEl.textContent;
 
-    // Only add toggle if text is longer than 200 chars
-    if (fullText.length > 200) {
+    // Only add toggle if text is longer than 300 chars
+    if (fullText.length > 300) {
         textEl.classList.add('collapsed');
 
         const btn = document.createElement('button');
@@ -476,19 +463,43 @@ def _format_relative_time(dt: datetime) -> str:
         return f"{years} year{'s' if years != 1 else ''} ago"
 
 
-def _render_prompt_item(node: MessageNode) -> str:
-    """Render a single user prompt item."""
+def _sanitize_and_clip_text(text: str, max_length: int = 300) -> str:
+    """Safely clip text to max_length and sanitize to prevent HTML breaking.
+
+    Ensures we don't break in the middle of HTML entities or special characters.
+    """
+    if len(text) <= max_length:
+        return escape(text)
+
+    # Clip to max_length
+    clipped = text[:max_length]
+
+    # Escape HTML to prevent breaking
+    safe_text = escape(clipped)
+
+    # Add ellipsis to indicate truncation
+    return safe_text + "..."
+
+
+def _render_prompt_item(node: MessageNode, prompt_number: int, has_attachment: bool) -> str:
+    """Render a single user prompt item with number and attachment indicator."""
     parts = []
 
+    # Add prompt number
+    parts.append(f'<div class="prompt-number">#{prompt_number}</div>')
+
     if node.text:
-        parts.append(f'<div class="prompt-text">{escape(node.text)}</div>')
+        # Hard clip to 300 characters and sanitize
+        safe_text = _sanitize_and_clip_text(node.text, 300)
+        parts.append(f'<div class="prompt-text">{safe_text}</div>')
+    else:
+        parts.append('<div class="prompt-text">(empty prompt)</div>')
 
-    if node.image_id:
-        parts.append(
-            f'<div class="image-indicator">📎 Image attached: <code>{escape(node.image_id)}</code></div>'
-        )
+    # Show attachment count instead of details
+    if has_attachment:
+        parts.append('<div class="attachment-count">📎 1 attachment</div>')
 
-    content = "\n".join(parts) if parts else '<div class="prompt-text">(empty prompt)</div>'
+    content = "\n".join(parts)
 
     return f'<div class="prompt-item">{content}</div>'
 
@@ -501,17 +512,34 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode]) -> str:
     if not user_prompts:
         return ""
 
+    # Count total prompts
+    prompt_count = len(user_prompts)
+
     # Get the earliest timestamp for the chat
+    sentinel = datetime.min.replace(tzinfo=timezone.utc)
     first_timestamp = min(n.timestamp for n in user_prompts)
+
+    # If all timestamps are sentinel (unknown), use current time as fallback
+    if first_timestamp == sentinel:
+        first_timestamp = datetime.now(timezone.utc)
 
     datetime_full = _format_datetime_full(first_timestamp)
     datetime_relative = _format_relative_time(first_timestamp)
 
-    prompts_html = "\n".join(_render_prompt_item(node) for node in user_prompts)
+    # Render prompts with numbering
+    prompts_html_parts = []
+    for idx, node in enumerate(user_prompts, start=1):
+        has_attachment = node.image_id is not None
+        prompts_html_parts.append(_render_prompt_item(node, idx, has_attachment))
+
+    prompts_html = "\n".join(prompts_html_parts)
+
+    # Add prompt count to title
+    title_with_count = f"{escape(chat_name)} ({prompt_count} prompt{'s' if prompt_count != 1 else ''})"
 
     return f"""<div class="chat-card">
     <div class="chat-header">
-        <div class="chat-title">{escape(chat_name)}</div>
+        <div class="chat-title">{title_with_count}</div>
         <div class="chat-datetime">
             <span class="datetime-main">{datetime_full}</span>
             <span class="datetime-relative">({datetime_relative})</span>
