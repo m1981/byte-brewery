@@ -379,36 +379,7 @@ h1 {
 """
 
 _PROMPTS_JS = """
-document.querySelectorAll('.prompt-item').forEach(item => {
-    const textEl = item.querySelector('.prompt-text');
-    if (!textEl) return;
-
-    const fullText = textEl.textContent;
-
-    // Only add toggle if text is longer than 300 chars
-    if (fullText.length > 300) {
-        textEl.classList.add('collapsed');
-
-        const btn = document.createElement('button');
-        btn.className = 'expand-toggle';
-        btn.textContent = '▼ Show full prompt';
-
-        btn.onclick = () => {
-            const isExpanded = textEl.classList.contains('expanded');
-            if (isExpanded) {
-                textEl.classList.remove('expanded');
-                textEl.classList.add('collapsed');
-                btn.textContent = '▼ Show full prompt';
-            } else {
-                textEl.classList.remove('collapsed');
-                textEl.classList.add('expanded');
-                btn.textContent = '▲ Show less';
-            }
-        };
-
-        item.appendChild(btn);
-    }
-});
+// No JavaScript needed - prompts are hard-clipped to 300 characters
 """
 
 
@@ -420,7 +391,7 @@ def _format_datetime_full(dt: datetime) -> str:
     """Format datetime as 'Monday 2nd March 12:34'."""
     sentinel = datetime.min.replace(tzinfo=timezone.utc)
     if dt == sentinel:
-        return "Unknown date"
+        return "Date unavailable"
 
     # Get day with ordinal suffix
     day = dt.day
@@ -436,10 +407,14 @@ def _format_relative_time(dt: datetime) -> str:
     """Format relative time like 'x days ago', '2 weeks ago', etc."""
     sentinel = datetime.min.replace(tzinfo=timezone.utc)
     if dt == sentinel:
-        return ""
+        return "time unknown"
 
     now = datetime.now(timezone.utc)
     delta = now - dt
+
+    # Handle future dates (shouldn't happen, but be defensive)
+    if delta < timedelta(0):
+        return "in the future"
 
     if delta < timedelta(minutes=1):
         return "just now"
@@ -516,12 +491,8 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode]) -> str:
     prompt_count = len(user_prompts)
 
     # Get the earliest timestamp for the chat
-    sentinel = datetime.min.replace(tzinfo=timezone.utc)
+    # DO NOT use current time as fallback - keep sentinel to show "Date unavailable"
     first_timestamp = min(n.timestamp for n in user_prompts)
-
-    # If all timestamps are sentinel (unknown), use current time as fallback
-    if first_timestamp == sentinel:
-        first_timestamp = datetime.now(timezone.utc)
 
     datetime_full = _format_datetime_full(first_timestamp)
     datetime_relative = _format_relative_time(first_timestamp)
