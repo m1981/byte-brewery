@@ -10,6 +10,7 @@
     "lsproj": "Project file lister - Uses .projlist config for pattern-based file discovery",
     "git-recent": "Extract recent commits with diffs for AI analysis, excluding build artifacts",
     "aireview": "AI-powered code review and pre-push validation tool",
+    "chatmap": "Map LLM conversation branches from Google AI Studio JSON exports (timeline/tree/html views)",
     "summarize.ts": "TypeScript code summarizer - Removes function bodies while preserving signatures"
   }
 }
