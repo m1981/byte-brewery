@@ -92,12 +92,30 @@ def _time_str(node: MessageNode) -> str:
 
 
 def _render_node(node: MessageNode) -> List[str]:
-    role_label = "User" if node.role == "user" else "Model"
-    lines = [f"**[{_time_str(node)}] {role_label}:** "]
-    if node.image_id:
-        lines.append(f"`[Attached Image ID: {node.image_id}]`")
-    if node.text:
-        lines.append(node.text)
+    """Render a single message node with callout-style formatting."""
+    lines = []
+
+    if node.role == "user":
+        # User prompt as callout box
+        lines.append(f"> **💭 User Prompt** · `{_time_str(node)}`")
+        if node.image_id:
+            lines.append(f"> 📎 *Attached Image:* `{node.image_id}`")
+            if node.text:
+                lines.append(">")
+        if node.text:
+            # Split text into lines and prefix each with blockquote marker
+            for text_line in node.text.split('\n'):
+                lines.append(f"> {text_line}")
+    else:
+        # Model response - regular formatting with header
+        lines.append(f"**🤖 Model Response** · `{_time_str(node)}`")
+        lines.append("")
+        if node.image_id:
+            lines.append(f"📎 *Attached Image:* `{node.image_id}`")
+            lines.append("")
+        if node.text:
+            lines.append(node.text)
+
     lines.append("")
     return lines
 
@@ -109,10 +127,10 @@ def format_timeline(nodes: List[MessageNode]) -> str:
         if node.branch_parent:
             display_name = node.branch_parent.get("displayName", "")
             lines += [
-                "---",
-                f"🔄 **[{_time_str(node)}] TIMELINE BRANCH (Rewind)**",
-                f'*Branched from: "{display_name}"*',
-                "---\n",
+                "",
+                f"> **🔄 TIMELINE BRANCH** · `{_time_str(node)}`",
+                f"> *Branched from: \"{display_name}\"*",
+                "",
             ]
         lines += _render_node(node)
     return "\n".join(lines)
@@ -132,7 +150,9 @@ def format_tree(threads: List[Tuple[Optional[str], List[MessageNode]]]) -> str:
         else:
             branch_count += 1
             lines.append(f"## 🌿 Branch {branch_count}")
-            lines.append(f'*Branched from: "{branch_name}"*\n')
+            lines.append(f"> *Branched from: \"{branch_name}\"*")
+
+        lines.append("")
 
         for node in nodes:
             lines += _render_node(node)
