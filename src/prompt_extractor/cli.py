@@ -82,7 +82,22 @@ def _select_conversation(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Map LLM conversation branches from Google AI Studio JSON exports."
+        description="Map LLM conversation branches from Google AI Studio JSON exports.",
+        epilog="""
+examples:
+  # Select by index
+  chatmap prompt_extractor/ --select 1
+
+  # Select by partial name match
+  chatmap prompt_extractor/ --select "aforyzm"
+
+  # With output file and view options
+  chatmap prompt_extractor/ --select "Branch" --view tree -o output.md
+
+  # Error handling shows available conversations
+  chatmap prompt_extractor/ --select "nonexistent"
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
         "input_path",
