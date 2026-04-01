@@ -59,9 +59,10 @@ def test_process_file_html_view(tmp_path):
 def test_load_conversation_returns_name_and_nodes(tmp_path):
     from prompt_extractor.cli import _load_conversation
     p = _write_json(tmp_path / "my_conv.txt", MINIMAL_DATA)
-    name, nodes = _load_conversation(p)
+    name, nodes, filepath = _load_conversation(p)
     assert name == "my_conv"
     assert len(nodes) == 1
+    assert filepath == str(p)
 
 
 def test_load_conversation_returns_none_on_invalid(tmp_path):

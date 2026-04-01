@@ -45,6 +45,41 @@ def _write_output(content: str, output: Path) -> None:
     print(f"Written: {output}")
 
 
+def _list_conversations(conversations: List[Tuple[str, List[MessageNode], str]]) -> None:
+    """Print numbered list of conversations to stdout."""
+    print("\nAvailable conversations:")
+    for idx, (name, _, _) in enumerate(conversations, start=1):
+        print(f"  [{idx}] {name}")
+    print()
+
+
+def _select_conversation(
+    conversations: List[Tuple[str, List[MessageNode], str]],
+    selector: str
+) -> Optional[Tuple[str, List[MessageNode], str]]:
+    """Select conversation by index (1-based) or partial name match.
+
+    Returns the matching (name, nodes, filepath) tuple or None if not found.
+    """
+    # Try numeric index first
+    try:
+        idx = int(selector)
+        if 1 <= idx <= len(conversations):
+            return conversations[idx - 1]
+        return None
+    except ValueError:
+        pass
+
+    # Try partial name match
+    selector_lower = selector.lower()
+    for conv in conversations:
+        name, _, _ = conv
+        if selector_lower in name.lower():
+            return conv
+
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Map LLM conversation branches from Google AI Studio JSON exports."
@@ -69,6 +104,15 @@ def main():
         default="timeline",
         help="Output format: timeline (default), tree, html swimlane, or prompts list.",
     )
+    parser.add_argument(
+        "--select",
+        type=str,
+        metavar="SELECTOR",
+        help=(
+            "Select a specific conversation from a directory by index (1, 2, ...) "
+            "or partial name match. Use without value to list all conversations."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -77,6 +121,37 @@ def main():
         if not files:
             print(f"Error: No files found in '{args.input_path}'.", file=sys.stderr)
             sys.exit(1)
+
+        # Handle --select flag for directory input
+        if args.select:
+            conversations = [r for f in files if (r := _load_conversation(f)) is not None]
+            if not conversations:
+                print(f"Error: No valid conversations found in '{args.input_path}'.", file=sys.stderr)
+                sys.exit(1)
+
+            selected = _select_conversation(conversations, args.select)
+            if selected is None:
+                print(f"Error: No conversation matches '{args.select}'.", file=sys.stderr)
+                print("Available conversations:", file=sys.stderr)
+                _list_conversations(conversations)
+                sys.exit(1)
+
+            # Process selected conversation as single file
+            name, nodes, _ = selected
+            if args.view == "tree":
+                result = format_tree(build_threads(nodes))
+            elif args.view == "html":
+                result = format_html([(name, nodes)])
+            elif args.view == "prompts":
+                result = format_prompts_list([(name, nodes)], [])
+            else:
+                result = format_timeline(nodes)
+
+            if args.output:
+                _write_output(result, args.output)
+            else:
+                print(result)
+            return
 
         if args.view == "html":
             conversations = [r for f in files if (r := _load_conversation(f)) is not None]
