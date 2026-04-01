@@ -10,7 +10,7 @@
     "lsproj": "Project file lister - Uses .projlist config for pattern-based file discovery",
     "git-recent": "Extract recent commits with diffs for AI analysis, excluding build artifacts",
     "aireview": "AI-powered code review and pre-push validation tool",
-    "chatmap": "Map LLM conversation branches from Google AI Studio JSON exports (timeline/tree/html views)",
+    "chatmap": "Map LLM conversation branches from Google AI Studio JSON exports (timeline/tree/html views)\n\n# Select by index\nchatmap prompt_extractor/ --select 1\n\n# Select by partial name match\nchatmap prompt_extractor/ --select \"aforyzm\"\n\n# With output file and view options\nchatmap prompt_extractor/ --select \"Branch\" --view tree -o output.md\n\n# Error handling shows available conversations\nchatmap prompt_extractor/ --select \"nonexistent\"",
     "summarize.ts": "TypeScript code summarizer - Removes function bodies while preserving signatures"
   }
 }
