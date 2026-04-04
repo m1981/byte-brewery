@@ -466,7 +466,7 @@ def _render_prompt_item(node: MessageNode, prompt_number: int, has_attachment: b
 
     if node.text:
         # Hard clip to 300 characters and sanitize
-        safe_text = _sanitize_and_clip_text(node.text, 300)
+        safe_text = _sanitize_and_clip_text(node.text, 1000)
         parts.append(f'<div class="prompt-text">{safe_text}</div>')
     else:
         parts.append('<div class="prompt-text">(empty prompt)</div>')
