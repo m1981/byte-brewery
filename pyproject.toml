@@ -12,6 +12,12 @@ dependencies = [
     "utils",
 ]
 
+[tool.uv.sources]
+aireview = { workspace = true }
+augment-ai = { workspace = true }
+prompt-extractor = { workspace = true }
+utils = { workspace = true }
+
 [tool.uv.workspace]
 members = ["packages/*"]
 
