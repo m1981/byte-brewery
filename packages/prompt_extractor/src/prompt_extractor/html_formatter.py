@@ -457,11 +457,7 @@ h1 {
 .pill-deliverable.active { background: #805ad5; color: #fff; border-color: #553c9a; }
 
 .global-tag-pill.disabled {
-    opacity: 0.3;
-    pointer-events: none;
-    filter: grayscale(100%);
-    border-color: #e2e8f0;
-    background: #f7fafc;
+    display: none !important;
 }
 """
 
@@ -470,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('tag-search');
     const cards = document.querySelectorAll('.chat-card');
     const globalTags = document.querySelectorAll('.global-tag-pill');
+    const tagGroups = document.querySelectorAll('.tag-group');
 
     // Keep track of which tags are currently clicked/active
     let activeTags = new Set();
@@ -477,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function filterCards() {
         const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
         
-        // NEW: Track which tags are actually present in the currently visible cards
+        // Track which tags are actually present in the currently visible cards
         let availableTags = new Set();
 
         // 1. Filter Cards and Harvest Available Tags
@@ -509,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 2. Update Tag Pills UI (Cascading Filter)
+        // 2. Update Tag Pills UI (Hide unavailable tags)
         globalTags.forEach(pill => {
             const tag = pill.getAttribute('data-tag');
             
@@ -518,6 +515,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 pill.classList.remove('disabled');
             } else {
                 pill.classList.add('disabled');
+            }
+        });
+
+        // 3. Hide empty Tag Groups (so you don't see orphaned headers)
+        tagGroups.forEach(group => {
+            const pillsInGroup = group.querySelectorAll('.global-tag-pill');
+            // Check if at least one pill in this group is visible
+            const hasVisiblePills = Array.from(pillsInGroup).some(p => !p.classList.contains('disabled'));
+            
+            if (hasVisiblePills) {
+                group.style.display = 'block';
+            } else {
+                group.style.display = 'none';
             }
         });
     }
