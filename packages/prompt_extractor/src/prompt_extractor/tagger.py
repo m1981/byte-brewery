@@ -55,76 +55,68 @@ class TagManager:
             known_tags.update(tags)
         return known_tags
 
-    def _call_llm(self, prompt: str, chat_titles: List[str], known_tags: List[str]) -> List[str]:
+    def _call_llm_batch(self, batch_payload: List[dict], known_tags: List[str]) -> Dict[str, List[str]]:
         """
-        Calls the Gemini API to generate tags for a given prompt and its associated titles.
-        Passes known_tags to prevent tag bloat and enforce reuse, but allows dynamic creation.
+        Calls the Gemini API to generate exactly 4 tags for a BATCH of prompts.
         """
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             print("Warning: GEMINI_API_KEY not found. Skipping auto-tagging.")
-            return []
+            return {}
 
         try:
-            # Initialize the new Gemini Client
             client = genai.Client(api_key=api_key)
 
-            # Format known tags for the prompt
-            known_tags_str = ", ".join(sorted(known_tags)) if known_tags else "None yet. You are creating the first tags."
+            known_tags_str = ", ".join(
+                sorted(known_tags)) if known_tags else "None yet. You are creating the first tags."
 
-            # Updated System Instruction: Explains the FORMAT, but leaves the actual tags 100% dynamic
             sys_instruct = f"""You are an expert librarian organizing a developer's knowledge base.
-We use a dynamic Prefix Tagging System. You must generate tags using these formats:
-1. Domain Tags: Enclosed in brackets representing the broad industry or field (e.g., [DOMAIN_NAME]).
-2. Tech/Tool Tags: Prefixed with # representing specific technologies, frameworks, or tools (e.g., #TechnologyName).
-3. Intent/Concept Tags: Prefixed with # representing the architectural pattern or goal (e.g., #ConceptName).
+            You will receive a JSON array of items. Each item has an 'id', 'titles', and 'prompt'.
 
-EXISTING TAG VOCABULARY:
-{known_tags_str}
+            For EACH item, you MUST generate an array of EXACTLY 4 tags. 
+            The 4 tags MUST follow this exact positional structure:
 
-Read the provided Chat Titles and the Initial Prompt, then generate 2 to 4 tags.
+            1. Domain Tag: The broad industry/field. UPPERCASE in brackets. (e.g., [SOFTWARE_ENGINEERING], [MANUFACTURING], [AI], [HARDWARE], [DESIGN])
+            2. Tool/Medium Tag: The primary language, framework, software, or physical medium. PascalCase with #. (e.g., #Python, #React, #Corpus). IF NO SPECIFIC TECH EXISTS, use the medium/toolset (e.g., #CadSoftware, #HandTools, #AgileFramework). NEVER use generic words like #GeneralTech or #Various.
+            3. Concept Tag: The architectural pattern, methodology, or core subject. PascalCase with #. (e.g., #Solid, #DataModeling, #MaterialScience, #InteriorDesign).
+            4. Deliverable Tag: The actual output or goal of the chat. PascalCase with #. (e.g., #CodeReview, #Blueprint, #DiagramGeneration, #Specification, #Troubleshooting, #LearningRoadmap).
 
-RULES:
-1. REUSE tags from the "EXISTING TAG VOCABULARY" whenever possible to prevent tag bloat!
-2. If no existing tag fits, dynamically GENERATE a new one strictly following the Prefix Tagging System formats above.
-3. Always try to include at least one Domain tag (in brackets).
-4. IGNORE persona instructions (do NOT output tags like '#Roleplay', '#Expert').
-5. IGNORE generic action words (do NOT output tags like '#Analysis', '#Summary').
+            EXISTING TAG VOCABULARY:
+            {known_tags_str}
 
-Output ONLY valid JSON in this exact format: {{"tags": ["tag1", "tag2"]}}"""
+            CRITICAL RULES:
+            1. REUSE tags from the "EXISTING TAG VOCABULARY" whenever possible to prevent bloat!
+            2. EXACTLY 4 TAGS PER ITEM.
+            3. NO GENERIC WORDS. Banned tags: #GeneralTech, #Analysis, #InsightExtraction, #KnowledgeRetrieval, #ConceptExplanation.
+            4. Use ONLY alphanumeric characters for hashtags (No slashes, dashes, or spaces).
 
-            titles_str = " | ".join(chat_titles)
-            truncated_prompt = prompt[:1000]
-            payload = f"Chat Titles: {titles_str}\n\nInitial Prompt: {truncated_prompt}"
+            Output ONLY a valid JSON object where keys are the 'id' from the input, and values are arrays of exactly 4 tags."""
 
-            self._debug(f"Sending API Request...")
+            payload_str = json.dumps(batch_payload, indent=2)
+
+            self._debug(f"Sending API Batch Request ({len(batch_payload)} items)...")
             self._debug(f"  Model: gemini-2.5-flash")
             self._debug(f"  Known Tags Count: {len(known_tags)}")
 
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
-                contents=payload,
+                contents=payload_str,
                 config=types.GenerateContentConfig(
                     system_instruction=sys_instruct,
                     response_mime_type="application/json",
-                    temperature=0.1, # Keep low so it prefers reusing existing tags over hallucinating synonyms
+                    temperature=0.1,  # Low temperature ensures strict adherence to the 4-tag rule
                 )
             )
 
             data = json.loads(response.text)
-            tags = data.get("tags", [])
-            self._debug(f"  Parsed Tags: {tags}")
-            return tags
+            self._debug(f"  Successfully parsed batch response.")
+            return data
 
         except Exception as e:
-            print(f"Warning: LLM API call failed ({type(e).__name__}: {str(e)}). Skipping tags.")
-            return []
+            print(f"Warning: LLM Batch API call failed ({type(e).__name__}: {str(e)}).")
+            return {}
 
-    def get_tags(self, conversations: List[Tuple[str, List[MessageNode]]], fetch_missing: bool = True) -> Dict[
-        str, List[str]]:
-        """
-        Process conversations, fetch missing tags via LLM, and return a mapping.
-        """
+    def get_tags(self, conversations: List[Tuple[str, List[MessageNode]]], fetch_missing: bool = True) -> Dict[str, List[str]]:
         result: Dict[str, List[str]] = {}
         pending_prompts: Dict[str, List[str]] = {}
 
@@ -155,28 +147,49 @@ Output ONLY valid JSON in this exact format: {{"tags": ["tag1", "tag2"]}}"""
         # 2. Fetch missing tags from LLM (Deduplicated by unique prompt text)
         cache_updated = False
 
+        # 2. Process Misses in Batches
         if pending_prompts:
-            self._debug(f"Found {len(pending_prompts)} unique prompts requiring API calls.")
+            unique_prompts = list(pending_prompts.items())
+            self._debug(f"Found {len(unique_prompts)} unique prompts requiring API calls.")
 
-            # 1. Load all currently known tags from the cache
             known_tags_set = self._get_all_known_tags()
+            batch_size = 20
 
-        for prompt_text, chat_names in pending_prompts.items():
-            self._debug(f"Fetching tags for branches: {chat_names}")
+            # Chunk the unique prompts into batches of 20
+            for i in range(0, len(unique_prompts), batch_size):
+                batch = unique_prompts[i:i + batch_size]
 
-            # 2. Pass the current known_tags_set to the LLM
-            tags = self._call_llm(prompt_text, chat_names, list(known_tags_set))
+                # Prepare the payload and a mapping to link IDs back to the original prompt text
+                batch_payload = []
+                id_to_prompt_text = {}
 
-            # 3. Immediately add the newly generated tags to our running set!
-            # This ensures the NEXT prompt in this loop knows about the tags we JUST created.
-            known_tags_set.update(tags)
+                for idx, (prompt_text, chat_names) in enumerate(batch):
+                    item_id = f"item_{idx}"
+                    id_to_prompt_text[item_id] = prompt_text
 
-            self.cache_data[prompt_text] = tags
-            cache_updated = True
+                    batch_payload.append({
+                        "id": item_id,
+                        "titles": chat_names,
+                        "prompt": prompt_text[:800] # Truncated slightly more to save batch tokens
+                    })
 
-            # Apply the fetched tags to ALL branches that shared this prompt
-            for chat_name in chat_names:
-                result[chat_name] = tags
+                # Call the LLM with the batch
+                batch_results = self._call_llm_batch(batch_payload, list(known_tags_set))
+
+                # Process the results
+                for item_id, tags in batch_results.items():
+                    if item_id in id_to_prompt_text:
+                        original_prompt_text = id_to_prompt_text[item_id]
+                        chat_names = pending_prompts[original_prompt_text]
+
+                        # Update running state
+                        known_tags_set.update(tags)
+                        self.cache_data[original_prompt_text] = tags
+                        cache_updated = True
+
+                        # Apply to all branches
+                        for chat_name in chat_names:
+                            result[chat_name] = tags
 
         # 3. Save cache to disk if we fetched new data
         if cache_updated:

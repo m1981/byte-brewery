@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from html import escape
 from pathlib import Path
-from typing import List, Tuple, Optional,  Dict
+from typing import List, Tuple, Optional, Dict
 from prompt_extractor.models import MessageNode
 
 # ---------------------------------------------------------------------------
@@ -302,18 +302,10 @@ h1 {
     flex-wrap: wrap;
 }
 
-.datetime-main {
-    font-weight: 500;
-}
+.datetime-main { font-weight: 500; }
+.datetime-relative { opacity: 0.85; font-style: italic; }
 
-.datetime-relative {
-    opacity: 0.85;
-    font-style: italic;
-}
-
-.chat-body {
-    padding: 16px 20px;
-}
+.chat-body { padding: 16px 20px; }
 
 .prompts-list {
     display: flex;
@@ -378,9 +370,7 @@ h1 {
 }
 
 /* ── Search & Tags ── */
-.search-container {
-    margin-bottom: 24px;
-}
+.search-container { margin-bottom: 24px; }
 .search-input {
     width: 100%;
     padding: 14px 18px;
@@ -390,9 +380,8 @@ h1 {
     outline: none;
     transition: border-color 0.2s;
 }
-.search-input:focus {
-    border-color: #667eea;
-}
+.search-input:focus { border-color: #667eea; }
+
 .tags-container {
     display: flex;
     gap: 8px;
@@ -411,38 +400,63 @@ h1 {
     letter-spacing: 0.02em;
 }
 
-/* ── Global Tag Cloud ── */
+/* ── Global Tag Cloud Groups ── */
+.tag-groups-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 30px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.tag-group h3 {
+    font-size: 0.85rem;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #edf2f7;
+    padding-bottom: 6px;
+}
+
 .global-tags-cloud {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 24px;
+    gap: 8px;
 }
+
 .global-tag-pill {
     background: #fff;
     border: 1px solid #cbd5e0;
-    color: #4a5568;
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: 999px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
     user-select: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-.global-tag-pill:hover {
-    background: #edf2f7;
-    border-color: #a0aec0;
-    transform: translateY(-1px);
-}
-.global-tag-pill.active {
-    background: #4299e1;
-    color: #fff;
-    border-color: #3182ce;
-    box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
-}
+
+.global-tag-pill:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+/* Color Coding by Slot */
+.pill-domain { color: #2d3748; border-color: #a0aec0; background: #f7fafc; }
+.pill-domain.active { background: #4a5568; color: #fff; border-color: #2d3748; }
+
+.pill-tool { color: #c53030; border-color: #feb2b2; background: #fff5f5; }
+.pill-tool.active { background: #e53e3e; color: #fff; border-color: #c53030; }
+
+.pill-concept { color: #276749; border-color: #9ae6b4; background: #f0fff4; }
+.pill-concept.active { background: #38a169; color: #fff; border-color: #276749; }
+
+.pill-deliverable { color: #553c9a; border-color: #d6bcfa; background: #faf5ff; }
+.pill-deliverable.active { background: #805ad5; color: #fff; border-color: #553c9a; }
 """
+
 
 _PROMPTS_JS = """
 document.addEventListener('DOMContentLoaded', () => {
@@ -671,7 +685,7 @@ def _render_chat_card(
 
     tags_html = ""
     if tags:
-        pills = "\n".join(f'<span class="tag-pill">#{escape(t)}</span>' for t in tags)
+        pills = "\n".join(f'<span class="tag-pill">{escape(t)}</span>' for t in tags)
         tags_html = f'<div class="tags-container">{pills}</div>'
 
     return f"""<div class="chat-card" data-tags="{data_tags_attr}">
@@ -751,20 +765,43 @@ def format_prompts_list(
     if not cards_html:
         cards_html = '<div class="no-prompts">No user prompts found.</div>'
 
-    # 3. Generate Global Tag Cloud
-    all_unique_tags = set()
+    # ---------------------------------------------------------
+    # Group Tags by Slot (Index)
+    # ---------------------------------------------------------
+    domains, tools, concepts, deliverables = {}, {}, {}, {}
+
     for tags in tags_map.values():
-        all_unique_tags.update(t.lower() for t in tags)
+        for i, t in enumerate(tags):
+            lower_t = t.lower()
+            # Fallback: If it starts with [, it's always a domain
+            if t.startswith('['):
+                domains[lower_t] = t
+            elif i == 1:
+                tools[lower_t] = t
+            elif i == 2:
+                concepts[lower_t] = t
+            elif i == 3:
+                deliverables[lower_t] = t
+            else:
+                # Fallback for extra tags (if LLM hallucinates > 4 tags)
+                concepts[lower_t] = t
 
-    global_tags_html = ""
-    if all_unique_tags:
-        pills = "\n".join(
-            f'<div class="global-tag-pill" data-tag="{escape(t)}">#{escape(t)}</div>'
-            for t in sorted(all_unique_tags)
-        )
-        global_tags_html = f'<div class="global-tags-cloud">\n{pills}\n</div>'
+    def _render_tag_group(title: str, tag_dict: dict, color_class: str) -> str:
+        if not tag_dict: return ""
+        pills = []
+        for lower_tag in sorted(tag_dict.keys()):
+            display_tag = tag_dict[lower_tag]
+            pills.append(f'<div class="global-tag-pill {color_class}" data-tag="{escape(lower_tag)}">{escape(display_tag)}</div>')
+        return f'<div class="tag-group"><h3>{title}</h3><div class="global-tags-cloud">{"".join(pills)}</div></div>'
 
-    # 4. Return Final HTML
+    groups_html = []
+    groups_html.append(_render_tag_group("🌐 Domains", domains, "pill-domain"))
+    groups_html.append(_render_tag_group("🛠️ Tools & Mediums", tools, "pill-tool"))
+    groups_html.append(_render_tag_group("💡 Concepts", concepts, "pill-concept"))
+    groups_html.append(_render_tag_group("🎯 Deliverables", deliverables, "pill-deliverable"))
+
+    tag_groups_container = f'<div class="tag-groups-container">{"".join(groups_html)}</div>' if any(domains or tools or concepts or deliverables) else ""
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -779,7 +816,7 @@ def format_prompts_list(
     <input type="text" id="tag-search" class="search-input" placeholder="Search prompts or filter by tags...">
 </div>
 
-{global_tags_html}
+{tag_groups_container}
 
 <div class="chat-list">
 {cards_html}
