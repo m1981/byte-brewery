@@ -8,6 +8,7 @@ requires-python = ">=3.10"
 dependencies = [
     "aireview",
     "augment-ai",
+    "google-genai>=1.56.0",
     "prompt-extractor",
     "utils",
 ]

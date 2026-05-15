@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
-
+from prompt_extractor.tagger import TagManager
 from prompt_extractor.core import build_threads, format_timeline, format_tree, parse_chunks
 from prompt_extractor.html_formatter import format_html, format_prompts_list
 from prompt_extractor.models import MessageNode
@@ -129,6 +129,12 @@ examples:
         ),
     )
 
+    parser.add_argument(
+        "--auto-tag",
+        action="store_true",
+        help="Automatically generate tags for new conversations using LLM (requires API setup).",
+    )
+
     args = parser.parse_args()
 
     if args.input_path.is_dir():
@@ -179,10 +185,16 @@ examples:
 
         elif args.view == "prompts":
             conversations = [r for f in files if (r := _load_conversation(f)) is not None]
-            # Extract name, nodes, and file paths for prompts view
             conv_data = [(name, nodes) for name, nodes, _ in conversations]
             file_paths = [filepath for _, _, filepath in conversations]
-            result = format_prompts_list(conv_data, file_paths)
+
+            # NEW: Initialize TagManager and fetch tags
+            tagger = TagManager(args.input_path)
+            tags_map = tagger.get_tags(conv_data, fetch_missing=args.auto_tag)
+
+            # Pass tags_map to the formatter
+            result = format_prompts_list(conv_data, file_paths, tags_map)
+
             if args.output:
                 _write_output(result, args.output)
             else:
