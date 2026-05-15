@@ -57,7 +57,8 @@ class TagManager:
 
     def _call_llm_batch(self, batch_payload: List[dict], known_tags: List[str]) -> Dict[str, List[str]]:
         """
-        Calls the Gemini API to generate exactly 4 tags for a BATCH of prompts.
+        Calls the Gemini API to generate exactly 2 tags for a BATCH of prompts.
+        Forces Slot 1 to use a predefined list of domains.
         """
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -70,38 +71,48 @@ class TagManager:
             known_tags_str = ", ".join(
                 sorted(known_tags)) if known_tags else "None yet. You are creating the first tags."
 
-            sys_instruct = f"""Please help me tag my LLM prompts based on chat title and first prompt.
+            sys_instruct = f"""You are an expert librarian organizing a developer's knowledge base.
             You will receive a JSON array of items. Each item has an 'id', 'titles', and 'prompt'.
 
             For EACH item, you MUST generate an array of EXACTLY 2 tags. 
-            The s tags MUST follow this exact positional structure:
+            The 2 tags MUST follow this exact positional structure:
 
-            1. Domain Tag: The broad hobby name in brackets and PascalCase. (e.g., #Programming, #Elctronics, #KitchenDesign, #DIY, etc.)
-            2. Tool/Medium Tag: The primary language, framework, software, or physical medium. PascalCase with #. (e.g., #Python, #React, #Corpus). IF NO SPECIFIC TECH EXISTS, use the medium/toolset (e.g., #CadSoftware, #HandTools, #AgileFramework). NEVER use generic words like #GeneralTech or #Various.
+            1. Domain Tag: Try to choose the best match from your MAINSTREAM LIST:
+            #AI, #Audiophile, #Business, #ComputerHardware, #Construction, #Education, #Electronics, #Finance, #GrantWriting, #HealthAndFitness, #InteriorDesign, #Networking, #Productivity, #SoftwareArchitecture, #SoftwareEngineering, #WebDevelopment, #Woodworking.
+            ESCAPE HATCH: IF AND ONLY IF the chat is completely unrelated to any of the above (e.g., it's about cooking, gardening, or a new hobby), you may dynamically generate a NEW broad Domain tag (PascalCase with #).
 
-            EXISTING TAG VOCABULARY:
+            2. Tool/Medium Tag: The primary language, framework, software, or physical medium. PascalCase with #. (e.g., #Python, #React, #Corpus). 
+            IF NO SPECIFIC TECH EXISTS, use the core methodology or subject matter (e.g., #CurriculumDesign, #StrengthTraining, #AgileFramework). 
+
+            EXISTING TAG VOCABULARY (For Tool/Medium tags):
             {known_tags_str}
 
             CRITICAL RULES:
-            1. REUSE tags from the "EXISTING TAG VOCABULARY" whenever possible to prevent bloat!
-            2. EXACTLY 2 TAGS PER ITEM.
-            3. NO GENERIC WORDS. Banned tags: #GeneralTech, #Analysis, #InsightExtraction, #KnowledgeRetrieval, #ConceptExplanation.
+            1. EXACTLY 2 TAGS PER ITEM.
+            2. NO SQUARE BRACKETS. Both tags must start with a hashtag (#).
+            3. REUSE tags from the "EXISTING TAG VOCABULARY" for the Tool/Medium slot whenever possible to prevent bloat!
+            4. NO LAZY GENERIC WORDS. Banned tags: #GeneralTech, #Analysis, #Various, #Documentation, #Information, #Project.
 
-            Output ONLY a valid JSON object where keys are the 'id' from the input, and values are arrays of exactly 2 tags."""
+            Output ONLY a valid JSON object where keys are the 'id' from the input, and values are arrays of exactly 2 tags.
+            Example Output:
+            {{
+              "item_0": ["#Education", "#CurriculumDesign"],
+              "item_1": ["#HealthAndFitness", "#StrengthTraining"]
+            }}"""
 
             payload_str = json.dumps(batch_payload, indent=2)
 
             self._debug(f"Sending API Batch Request ({len(batch_payload)} items)...")
-            self._debug(f"  Model: gemini-3.1-pro-preview")
+            self._debug(f"  Model: gemini-3-flash-preview")
             self._debug(f"  Known Tags Count: {len(known_tags)}")
 
             response = client.models.generate_content(
-                model='gemini-3.1-pro-preview',
+                model='gemini-3-flash-preview',
                 contents=payload_str,
                 config=types.GenerateContentConfig(
                     system_instruction=sys_instruct,
                     response_mime_type="application/json",
-                    temperature=0.1,  # Low temperature ensures strict adherence to the 4-tag rule
+                    temperature=0.0,  # Set to 0.0 to force strict adherence to the hardcoded list
                 )
             )
 

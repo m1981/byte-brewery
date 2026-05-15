@@ -812,13 +812,13 @@ def format_prompts_list(
         for i, t in enumerate(tags):
             lower_t = t.lower()
 
-            # Slot 0: Domain
-            if t.startswith('[') or i == 0:
+            # Slot 0: Domain (Strictly by index 0)
+            if i == 0:
                 domains[lower_t] = t
-            # Slot 1: Tool/Medium
+            # Slot 1: Tool/Medium (Strictly by index 1)
             elif i == 1:
                 tools[lower_t] = t
-            # Ignore any tags beyond index 1 (in case of old cache)
+            # Ignore any extra tags
             else:
                 continue
 
