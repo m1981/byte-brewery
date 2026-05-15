@@ -410,24 +410,99 @@ h1 {
     font-weight: 600;
     letter-spacing: 0.02em;
 }
+
+/* ── Global Tag Cloud ── */
+.global-tags-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+.global-tag-pill {
+    background: #fff;
+    border: 1px solid #cbd5e0;
+    color: #4a5568;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.global-tag-pill:hover {
+    background: #edf2f7;
+    border-color: #a0aec0;
+    transform: translateY(-1px);
+}
+.global-tag-pill.active {
+    background: #4299e1;
+    color: #fff;
+    border-color: #3182ce;
+    box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
+}
 """
 
 _PROMPTS_JS = """
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('tag-search');
-    if (!searchInput) return;
+    const cards = document.querySelectorAll('.chat-card');
+    const globalTags = document.querySelectorAll('.global-tag-pill');
 
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const cards = document.querySelectorAll('.chat-card');
+    // Keep track of which tags are currently clicked/active
+    let activeTags = new Set();
+
+    function filterCards() {
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
 
         cards.forEach(card => {
-            const tags = card.getAttribute('data-tags') || "";
-            if (query === "" || tags.includes(query)) {
+            const cardTagsStr = card.getAttribute('data-tags') || "";
+            const cardTagsArray = cardTagsStr.split(' ').filter(t => t);
+
+            // 1. Check if it matches the text search bar
+            const matchesText = query === "" || cardTagsStr.includes(query) || card.innerText.toLowerCase().includes(query);
+
+            // 2. Check if it has ALL the active tags clicked in the cloud
+            let matchesPills = true;
+            if (activeTags.size > 0) {
+                for (let tag of activeTags) {
+                    if (!cardTagsArray.includes(tag)) {
+                        matchesPills = false;
+                        break;
+                    }
+                }
+            }
+
+            // Show card only if it passes both filters
+            if (matchesText && matchesPills) {
                 card.style.display = 'block';
             } else {
                 card.style.display = 'none';
             }
+        });
+    }
+
+    // Listen for typing in the search bar
+    if (searchInput) {
+        searchInput.addEventListener('input', filterCards);
+    }
+
+    // Listen for clicks on the tag cloud
+    globalTags.forEach(pill => {
+        pill.addEventListener('click', () => {
+            const tag = pill.getAttribute('data-tag');
+
+            // Toggle active state
+            if (activeTags.has(tag)) {
+                activeTags.delete(tag);
+                pill.classList.remove('active');
+            } else {
+                activeTags.add(tag);
+                pill.classList.add('active');
+            }
+
+            filterCards();
         });
     });
 });
@@ -667,7 +742,7 @@ def format_prompts_list(
     # Sort by timestamp (earliest first)
     chat_cards.sort(key=lambda x: x[0])
 
-    # Render cards, passing the specific tags for each chat
+    # 2. Render Chat Cards
     cards_html = "\n".join(
         _render_chat_card(name, unique_nodes, file_path, tags_map.get(name, []))
         for _, name, unique_nodes, file_path in chat_cards
@@ -676,6 +751,20 @@ def format_prompts_list(
     if not cards_html:
         cards_html = '<div class="no-prompts">No user prompts found.</div>'
 
+    # 3. Generate Global Tag Cloud
+    all_unique_tags = set()
+    for tags in tags_map.values():
+        all_unique_tags.update(t.lower() for t in tags)
+
+    global_tags_html = ""
+    if all_unique_tags:
+        pills = "\n".join(
+            f'<div class="global-tag-pill" data-tag="{escape(t)}">#{escape(t)}</div>'
+            for t in sorted(all_unique_tags)
+        )
+        global_tags_html = f'<div class="global-tags-cloud">\n{pills}\n</div>'
+
+    # 4. Return Final HTML
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -687,8 +776,11 @@ def format_prompts_list(
 <body>
 <h1>📝 User Prompts from All Chats</h1>
 <div class="search-container">
-    <input type="text" id="tag-search" class="search-input" placeholder="Filter by tags (e.g. python, architecture)...">
+    <input type="text" id="tag-search" class="search-input" placeholder="Search prompts or filter by tags...">
 </div>
+
+{global_tags_html}
+
 <div class="chat-list">
 {cards_html}
 </div>
