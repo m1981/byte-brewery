@@ -48,9 +48,9 @@ class TagManager:
                 return node.text.strip()
         return ""
 
-    def _call_llm(self, prompt: str) -> List[str]:
+    def _call_llm(self, prompt: str, chat_titles: List[str]) -> List[str]:
         """
-        Calls the Gemini API to generate tags for a given prompt.
+        Calls the Gemini API to generate tags for a given prompt and its associated titles.
         Requires GEMINI_API_KEY environment variable.
         """
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -64,8 +64,8 @@ class TagManager:
 
             # Define the system instruction separately
             sys_instruct = (
-                "You are an expert librarian organizing knowledge base. "
-                "Read the following initial prompt from a chat session and generate 2 to 4 tags. "
+                "You are an expert librarian organizing  knowledge base. "
+                "Read the provided Chat Titles and the Initial Prompt, then generate 2 to 4 tags. "
                 "\n\nRULES:"
                 "\n1. Focus ONLY on technologies (e.g., python, react), architectural patterns (e.g., solid, mvvm), or core business domains (e.g., cybersecurity, ecommerce)."
                 "\n2. IGNORE persona instructions (do NOT output tags like 'roleplay', 'expert', 'developer')."
@@ -74,14 +74,18 @@ class TagManager:
                 "\n\nOutput ONLY valid JSON in this exact format: {\"tags\": [\"tag1\", \"tag2\"]}"
             )
 
+            # Combine titles and prompt into a single payload
+            titles_str = " | ".join(chat_titles)
             truncated_prompt = prompt[:1000]
+            payload = f"Chat Titles: {titles_str}\n\nInitial Prompt: {truncated_prompt}"
+
             self._debug(f"Sending API Request...")
             self._debug(f"  Model: gemini-2.5-flash")
-            self._debug(f"  Payload Prompt: {truncated_prompt[:100]}...")
+            self._debug(f"  Payload: {payload[:150]}...")
 
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
-                contents=truncated_prompt,
+                contents=payload,
                 config=types.GenerateContentConfig(
                     system_instruction=sys_instruct,
                     response_mime_type="application/json",
@@ -140,9 +144,10 @@ class TagManager:
 
         for prompt_text, chat_names in pending_prompts.items():
             self._debug(f"Fetching tags for branches: {chat_names}")
-            tags = self._call_llm(prompt_text)
 
-            # Update our in-memory cache
+            # Pass both the prompt and the list of chat titles to the LLM
+            tags = self._call_llm(prompt_text, chat_names)
+
             self.cache_data[prompt_text] = tags
             cache_updated = True
 

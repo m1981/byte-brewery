@@ -128,11 +128,15 @@ examples:
             "or partial name match. Use without value to list all conversations."
         ),
     )
-
     parser.add_argument(
         "--auto-tag",
         action="store_true",
         help="Automatically generate tags for new conversations using LLM (requires API setup).",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit the number of files processed (useful for testing API calls quickly).",
     )
 
     args = parser.parse_args()
@@ -142,6 +146,13 @@ examples:
         if not files:
             print(f"Error: No files found in '{args.input_path}'.", file=sys.stderr)
             sys.exit(1)
+
+        if args.limit:
+            files = files[:args.limit]
+            print(f"Notice: Limited processing to {args.limit} files.")
+
+        # Handle --select flag for directory input
+        # ... (rest of the code remains exactly the same)
 
         # Handle --select flag for directory input
         if args.select:
