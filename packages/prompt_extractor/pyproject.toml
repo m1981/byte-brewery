@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "prompt-extractor"
+name = "prompt_extractor"
 version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [

@@ -3,7 +3,7 @@ from unittest.mock import patch, mock_open, MagicMock
 import json
 import os
 
-import src.dce as dce
+import dce as dce
 
 class TestConfigLoader(unittest.TestCase):
     def test_load_valid_config(self):

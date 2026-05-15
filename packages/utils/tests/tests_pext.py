@@ -4,7 +4,7 @@ import json
 import tempfile
 import sys
 from pathlib import Path
-from src.pext import (
+from pext import (
     ChatMessageExtractor,
     parse_chat_json,
     extract_prompts,

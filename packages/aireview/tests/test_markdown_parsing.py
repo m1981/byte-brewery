@@ -1,8 +1,8 @@
 import pytest
 import json
 from unittest.mock import Mock
-from src.aireview.engine import ReviewEngine
-from src.aireview.domain import Config
+from aireview.engine import ReviewEngine
+from aireview.domain import Config
 
 
 # --- Fixture ---

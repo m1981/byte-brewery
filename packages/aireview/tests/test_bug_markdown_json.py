@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
-from src.aireview.engine import ReviewEngine
-from src.aireview.domain import Config
+from aireview.engine import ReviewEngine
+from aireview.domain import Config
 
 def test_bug_markdown_wrapped_json_returns_manual_instead_of_fix():
     """
