@@ -13,5 +13,8 @@ dependencies = [
 [project.scripts]
 chatmap = "prompt_extractor.cli:main"
 
+[tool.hatchling.build.targets.wheel]
+packages = ["src/prompt_extractor"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
