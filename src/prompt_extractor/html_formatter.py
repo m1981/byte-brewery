@@ -440,15 +440,25 @@ def _format_relative_time(dt: datetime) -> str:
 
 
 def _sanitize_and_clip_text(text: str, max_length: int = 300) -> str:
-    """Safely clip text to max_length and sanitize to prevent HTML breaking.
+    """Safely clip text to max_length or the first '```', and sanitize.
 
-    Ensures we don't break in the middle of HTML entities or special characters.
+    Ensures we don't break in the middle of HTML entities or special characters,
+    and hides large code blocks from the summary view.
     """
-    if len(text) <= max_length:
+    code_block_idx = text.find("```")
+
+    # Determine the effective cutoff point
+    if code_block_idx != -1:
+        effective_max = min(max_length, code_block_idx)
+    else:
+        effective_max = max_length
+
+    # If text is short enough and has no code blocks, return it as-is
+    if len(text) <= effective_max and code_block_idx == -1:
         return escape(text)
 
-    # Clip to max_length
-    clipped = text[:max_length]
+    # Clip the text and strip trailing whitespace/newlines before the ellipsis
+    clipped = text[:effective_max].rstrip()
 
     # Escape HTML to prevent breaking
     safe_text = escape(clipped)
@@ -466,7 +476,7 @@ def _render_prompt_item(node: MessageNode, prompt_number: int, has_attachment: b
 
     if node.text:
         # Hard clip to 300 characters and sanitize
-        safe_text = _sanitize_and_clip_text(node.text, 1000)
+        safe_text = _sanitize_and_clip_text(node.text, 300)
         parts.append(f'<div class="prompt-text">{safe_text}</div>')
     else:
         parts.append('<div class="prompt-text">(empty prompt)</div>')
@@ -541,36 +551,55 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode], file_path: Optio
 
 
 def format_prompts_list(
-    conversations: List[Tuple[str, List[MessageNode]]],
-    file_paths: Optional[List[str]] = None
+        conversations: List[Tuple[str, List[MessageNode]]],
+        file_paths: Optional[List[str]] = None
 ) -> str:
     """Render all user prompts from all conversations as a list view.
 
     Conversations are sorted by their earliest user prompt timestamp.
-    Each chat shows its title, datetime, and all user prompts with
-    expandable content (max 200 chars visible initially).
-
-    Args:
-        conversations: List of (name, nodes) tuples
-        file_paths: Optional list of file paths for fallback timestamps
+    Shared history across branches is deduplicated so identical prompts
+    (matching timestamp + text) only appear once.
     """
-    # Filter out conversations with no user prompts and sort by earliest timestamp
     chat_cards = []
+
+    # NEW: A global set to track prompts we've already seen across all files
+    seen_prompts = set()
+
     for idx, (name, nodes) in enumerate(conversations):
-        user_prompts = [n for n in nodes if n.role == "user"]
-        if user_prompts:
-            earliest = min(n.timestamp for n in user_prompts)
-            # Get file path for this conversation if available
+        # 1. Find ALL user prompts to determine the true start time of the chat
+        all_user_prompts = [n for n in nodes if n.role == "user"]
+
+        if not all_user_prompts:
+            continue
+
+        # 2. Filter down to ONLY unique prompts we haven't rendered yet
+        unique_user_prompts = []
+        for n in all_user_prompts:
+            # Create a unique fingerprint for this prompt
+            prompt_fingerprint = (n.timestamp, n.text)
+
+            if prompt_fingerprint not in seen_prompts:
+                seen_prompts.add(prompt_fingerprint)
+                unique_user_prompts.append(n)
+
+        # 3. Only create a card if this file actually contains NEW unique prompts
+        if unique_user_prompts:
+            # We still sort the card based on the very first prompt of the chat,
+            # even if that first prompt was deduplicated out.
+            earliest = min(n.timestamp for n in all_user_prompts)
+
             file_path = file_paths[idx] if file_paths and idx < len(file_paths) else None
-            chat_cards.append((earliest, name, nodes, file_path))
+
+            # Pass ONLY the unique prompts to the renderer
+            chat_cards.append((earliest, name, unique_user_prompts, file_path))
 
     # Sort by timestamp (earliest first)
     chat_cards.sort(key=lambda x: x[0])
 
     # Render cards
     cards_html = "\n".join(
-        _render_chat_card(name, nodes, file_path)
-        for _, name, nodes, file_path in chat_cards
+        _render_chat_card(name, unique_nodes, file_path)
+        for _, name, unique_nodes, file_path in chat_cards
     )
 
     if not cards_html:
