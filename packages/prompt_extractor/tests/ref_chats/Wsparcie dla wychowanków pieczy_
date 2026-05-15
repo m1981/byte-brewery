@@ -1,0 +1,1088 @@
+{
+  "runSettings": {
+    "temperature": 0.0,
+    "model": "models/gemini-3.1-pro-preview",
+    "topP": 0.95,
+    "topK": 64,
+    "maxOutputTokens": 65536,
+    "safetySettings": [{
+      "category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_HATE_SPEECH",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "OFF"
+    }],
+    "enableCodeExecution": false,
+    "enableSearchAsATool": false,
+    "enableBrowseAsATool": true,
+    "enableAutoFunctionResponse": false,
+    "thinkingBudget": -1,
+    "outputResolution": "1K",
+    "thinkingLevel": "THINKING_LOW"
+  },
+  "systemInstruction": {
+  },
+  "chunkedPrompt": {
+    "chunks": [{
+      "text": "Czy znasz się na grantach i projektach organizowanych przez organizacje pozarządowe w Polsce skierowanych do wychowanków rodzinnych domów dziecka i placówek opiekuńczo wychowawczych?",
+      "role": "user",
+      "tokenCount": 46,
+      "createTime": "2026-03-01T21:51:04.775Z"
+    }, {
+      "text": "**Analyzing the User\u0027s Query**\n\nI\u0027m currently dissecting the user\u0027s initial inquiry. I\u0027m focusing on the keywords and the specific context - grants and projects for children/youth in Polish family children\u0027s homes and care institutions. My goal is to extract the core requirements before searching for relevant data. I\u0027m focusing on understanding the nuances of the request.\n\n\n**Defining the Response Strategy**\n\nI\u0027m now formulating my response. I will start by confirming my familiarity with the topic of grants and programs for Polish foster care youth. Next, I plan to provide examples of relevant organizations like Fundacja Ernst \u0026 Young, Fundacja Polsat/TVN, and Towarzystwo Nasz Dom to demonstrate my expertise. I also plan to mention Fundacja Robinson Crusoe and Fundacja Dobrych Inicjatyw, and Fundacja One Day, highlighting their specific focus areas like independence and working with care institutions.",
+      "role": "model",
+      "tokenCount": 509,
+      "isThought": true,
+      "parts": [{
+        "text": "**Analyzing the User\u0027s Query**\n\nI\u0027m currently dissecting the user\u0027s initial inquiry. I\u0027m focusing on the keywords and the specific context - grants and projects for children/youth in Polish family children\u0027s homes and care institutions. My goal is to extract the core requirements before searching for relevant data. I\u0027m focusing on understanding the nuances of the request.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Defining the Response Strategy**\n\nI\u0027m now formulating my response. I will start by confirming my familiarity with the topic of grants and programs for Polish foster care youth. Next, I plan to provide examples of relevant organizations like Fundacja Ernst \u0026 Young, Fundacja Polsat/TVN, and Towarzystwo Nasz Dom to demonstrate my expertise. I also plan to mention Fundacja Robinson Crusoe and Fundacja Dobrych Inicjatyw, and Fundacja One Day, highlighting their specific focus areas like independence and working with care institutions.",
+        "thought": true
+      }],
+      "createTime": "2026-03-01T21:52:52.192Z"
+    }, {
+      "text": "\n\n\nTak, znam ten temat. W Polsce działa wiele organizacji pozarządowych (NGO), które kierują swoje programy, granty i projekty bezpośrednio do wychowanków pieczy zastępczej – zarówno rodzinnych domów dziecka, rodzin zastępczych, jak i instytucjonalnych placówek opiekuńczo-wychowawczych.\n\nWsparcie to zazwyczaj dzieli się na kilka głównych obszarów:\n\n**1. Programy usamodzielnienia i mentoring (dla starszych wychowanków)**\n*   **Fundacja Robinson Crusoe** – jedna z najbardziej znanych organizacji w tym obszarze. Prowadzi m.in. \"Wehikuł Usamodzielnienia\", wspierając młodzież w płynnym wejściu w dorosłość (doradztwo zawodowe, warsztaty, wsparcie psychologiczne).\n*   **Fundacja One Day** – skupia się na młodzieży opuszczającej pieczę zastępczą. Organizują szkolenia zawodowe, wsparcie w znalezieniu pierwszej pracy, a także stworzyli aplikację \"Usamodzielnieni\", która jest kompendium wiedzy dla młodych dorosłych.\n*   **Fundacja Dobrych Inicjatyw (FDI)** – prowadzi m.in. \"Akademię Dobrych Inicjatyw\", wspierając wychowanków placówek opiekuńczo-wychowawczych w odkrywaniu talentów i zdobywaniu kompetencji zawodowych.\n\n**2. Stypendia, edukacja i rozwój pasji**\n*   **Fundacja EY (Ernst \u0026 Young)** – od lat prowadzi programy dla rodzin zastępczych i rodzinnych domów dziecka. Oferują m.in. wsparcie edukacyjne, psychologiczne oraz granty na rozwój pasji i korepetycje dla dzieci.\n*   **Towarzystwo \"Nasz Dom\"** – organizator słynnej akcji \"Góra Grosza\". Zebrane środki przeznaczane są na pomoc dzieciom wychowującym się poza własną rodziną, w tym na stypendia, pomoc rzeczową i specjalistyczną.\n*   **Fundacja Świętego Mikołaja** – choć ich program stypendialny jest szerszy, często trafia do dzieci w trudnej sytuacji materialnej i rodzinnej, w tym z pieczy zastępczej.\n\n**3. Wsparcie psychologiczne i terapeutyczne**\nWiele fundacji (np. wspomniana Fundacja EY czy lokalne stowarzyszenia) oferuje granty na pokrycie kosztów diagnozy, terapii psychologicznej, psychiatrycznej czy rehabilitacji, do których dostęp w ramach NFZ jest często utrudniony.\n\n**4. Granty infrastrukturalne i rzeczowe (dla samych placówek)**\nCzęsto duże fundacje korporacyjne (np. Fundacja Polsat, Fundacja TVN, fundacje bankowe) ogłaszają konkursy grantowe, w których placówki opiekuńczo-wychowawcze lub rodzinne domy dziecka mogą wnioskować o środki na remonty, wyposażenie sal komputerowych, zakup sprzętu rehabilitacyjnego czy organizację wyjazdów wakacyjnych.\n\n**W czym dokładnie mogę Ci pomóc?** \n*   Szukasz dofinansowania dla konkretnego wychowanka (np. na kurs, terapię, stypendium)?\n*   Reprezentujesz placówkę/rodzinny dom dziecka i szukasz środków na działalność lub remont?\n*   Piszesz wniosek o grant i potrzebujesz pomocy w jego sformułowaniu lub znalezieniu odpowiedniego konkursu?",
+      "role": "model",
+      "finishReason": "STOP",
+      "tokenCount": 814,
+      "parts": [{
+        "text": "\n\n\nTak, znam ten temat. W Polsce działa wiele organizacji pozar"
+      }, {
+        "text": "ządowych (NGO), które kierują swoje programy, granty i projekty bezpośrednio do wychowanków"
+      }, {
+        "text": " pieczy zastępczej – zarówno rodzinnych domów dziecka, rodzin zastępczych, jak i instytucjonalnych placó"
+      }, {
+        "text": "wek opiekuńczo-wychowawczych.\n\nWsparcie to zazwyczaj dzieli się na kilka"
+      }, {
+        "text": " głównych obszarów:\n\n**1. Programy usamodzielnienia i mentoring (dla starszych wychowanków"
+      }, {
+        "text": ")**\n*   **Fundacja Robinson Crusoe** – jedna z najbardziej znanych organizacji w tym obszarze. P"
+      }, {
+        "text": "rowadzi m.in. \"Wehikuł Usamodzielnienia\", wspierając młodzież w pł"
+      }, {
+        "text": "ynnym wejściu w dorosłość (doradztwo zawodowe, warsztaty, wsparcie psychologiczne"
+      }, {
+        "text": ").\n*   **Fundacja One Day** – skupia się na młodzieży opuszczającej pieczę zastępczą."
+      }, {
+        "text": " Organizują szkolenia zawodowe, wsparcie w znalezieniu pierwszej pracy, a także stworzyli aplikację \""
+      }, {
+        "text": "Usamodzielnieni\", która jest kompendium wiedzy dla młodych dorosłych.\n*   **"
+      }, {
+        "text": "Fundacja Dobrych Inicjatyw (FDI)** – prowadzi m.in. \"Akademię"
+      }, {
+        "text": " Dobrych Inicjatyw\", wspierając wychowanków placówek opiekuńczo-wychow"
+      }, {
+        "text": "awczych w odkrywaniu talentów i zdobywaniu kompetencji zawodowych.\n\n**2. Stypendia, eduk"
+      }, {
+        "text": "acja i rozwój pasji**\n*   **Fundacja EY (Ernst \u0026 Young)** – od lat prowadzi program"
+      }, {
+        "text": "y dla rodzin zastępczych i rodzinnych domów dziecka. Oferują m.in. wsparcie edukacyjne, psych"
+      }, {
+        "text": "ologiczne oraz granty na rozwój pasji i korepetycje dla dzieci.\n*   **Towar"
+      }, {
+        "text": "zystwo \"Nasz Dom\"** – organizator słynnej akcji \"Góra Grosza\". Zebrane"
+      }, {
+        "text": " środki przeznaczane są na pomoc dzieciom wychowującym się poza własną rodziną, w tym na st"
+      }, {
+        "text": "ypendia, pomoc rzeczową i specjalistyczną.\n*   **Fundacja Świętego Mikołaja**"
+      }, {
+        "text": " – choć ich program stypendialny jest szerszy, często trafia do dzieci w trudnej sytuacji material"
+      }, {
+        "text": "nej i rodzinnej, w tym z pieczy zastępczej.\n\n**3. Wsparcie psychologiczne i tera"
+      }, {
+        "text": "peutyczne**\nWiele fundacji (np. wspomniana Fundacja EY czy lokalne stowarzyszenia) ofer"
+      }, {
+        "text": "uje granty na pokrycie kosztów diagnozy, terapii psychologicznej, psychiatrycznej czy rehabilitacji,"
+      }, {
+        "text": " do których dostęp w ramach NFZ jest często utrudniony.\n\n**4. Granty infrastrukturalne i"
+      }, {
+        "text": " rzeczowe (dla samych placówek)**\nCzęsto duże fundacje korporacyjne (np. Fund"
+      }, {
+        "text": "acja Polsat, Fundacja TVN, fundacje bankowe) ogłaszają konkursy grantowe, w których"
+      }, {
+        "text": " placówki opiekuńczo-wychowawcze lub rodzinne domy dziecka mogą wnioskować o"
+      }, {
+        "text": " środki na remonty, wyposażenie sal komputerowych, zakup sprzętu rehabilitacyjnego czy organizację wyjazdów wakacyjnych."
+      }, {
+        "text": "\n\n**W czym dokładnie mogę Ci pomóc?** \n*   Szukasz dofinansowania dla konkretnego wychow"
+      }, {
+        "text": "anka (np. na kurs, terapię, stypendium)?\n*   Reprezentujesz placówkę/rodzinny"
+      }, {
+        "text": " dom dziecka i szukasz środków na działalność lub remont?\n*   Piszesz wniosek o grant i potrzebujesz"
+      }, {
+        "text": " pomocy w jego sformułowaniu lub znalezieniu odpowiedniego konkursu?"
+      }, {
+        "text": "",
+        "thoughtSignature": "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"
+      }]
+    }, {
+      "text": "Przeanlizuj ten projekt i powiedz co mogę zorgazniować w ramach tego projektu?\n\nhttps://www.stiftung-evz.de/en/what-we-support/localhistory/",
+      "role": "user",
+      "tokenCount": 46,
+      "createTime": "2026-03-01T22:09:35.280Z"
+    }, {
+      "text": "**Initiating the Analysis**\n\nI\u0027m now diving into the provided URL, focusing on the \"localhistory\" aspect as per the instructions. The initial assessment involves extracting key themes and identifying program goals. I\u0027m prioritizing the identification of relevant data points for a comprehensive overview and starting the analysis of the project. I am starting to form a framework to use in the analysis.",
+      "role": "model",
+      "isThought": true,
+      "parts": [{
+        "text": "**Initiating the Analysis**\n\nI\u0027m now diving into the provided URL, focusing on the \"localhistory\" aspect as per the instructions. The initial assessment involves extracting key themes and identifying program goals. I\u0027m prioritizing the identification of relevant data points for a comprehensive overview and starting the analysis of the project. I am starting to form a framework to use in the analysis.",
+        "thought": true
+      }],
+      "createTime": "2026-03-01T22:09:35.280Z"
+    }, {
+      "text": "\n\n\nW ramach programu **local.history** organizowanego przez Fundację EVZ (Pamięć, Odpowiedzialność i Przyszłość) możesz zorganizować projekty, które skupiają się na lokalnej i regionalnej historii z okresu narodowego socjalizmu i II wojny światowej w Europie Środkowej i Wschodniej. \n\nOto co konkretnie możesz zorganizować w ramach tego grantu:\n\n**1. Projekty edukacyjne i badawcze dotyczące lokalnej historii:**\n*   **Badanie i upamiętnianie zapomnianych miejsc:** Możesz zorganizować projekt badający i dokumentujący zapomniane miejsca zbrodni, masowe groby czy obozy pracy przymusowej w Twojej okolicy (np. w ramach tzw. \"Holocaustu przez kule\").\n*   **Tworzenie materiałów edukacyjnych:** Opracowanie wirtualnych map, portali internetowych, podcastów, krótkich filmów czy świadectw audio/wideo, które przybliżą lokalną historię mieszkańcom i turystom.\n*   **Współpraca ze szkołami i społecznością:** Organizacja warsztatów, lekcji historii czy spacerów edukacyjnych dla uczniów, seniorów i lokalnej społeczności, wykorzystujących stworzone materiały.\n\n**2. Projekty artystyczne i kulturalne:**\n*   **Wystawy sztuki współczesnej:** Organizacja wystaw, które łączą historyczne doświadczenia (np. marginalizację i prześladowania określonych grup) ze współczesnymi problemami, zachęcając do refleksji nad odpowiedzialnością i wartościami demokratycznymi.\n*   **Działania artystyczne w przestrzeni miejskiej:** Wykorzystanie sztuki do przywracania pamięci o osobach i wydarzeniach z czasów II wojny światowej w lokalnej przestrzeni.\n\n**Główne założenia, o których musisz pamiętać:**\n*   **Lokalny kontekst:** Projekt musi odnosić się do konkretnych miejsc, osób i wydarzeń z Twojego regionu.\n*   **Krytyczne spojrzenie:** Działania powinny krytycznie analizować aspekty prześladowań (np. praca przymusowa, prześladowania Sinti i Romów, osób z niepełnosprawnościami czy ruch oporu).\n*   **Współczesne odniesienie:** Ważne jest, aby projekt łączył historię z obecnymi debatami społecznymi i zadawał pytania z dzisiejszej perspektywy.\n*   **Włączenie społeczne:** Projekt powinien angażować różne grupy docelowe i lokalnych aktorów w celu tworzenia współczesnej i inkluzywnej kultury pamięci.\n\n**Ważna informacja:** Obecnie trwa nabór wniosków do programu local.history, a termin ich składania upływa **7 kwietnia 2026 roku**.",
+      "role": "model",
+      "grounding": {
+        "corroborationSegments": [{
+          "index": 296,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 671,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 889,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1102,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1419,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1600,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1770,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1969,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 2128,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 2297,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 2436,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "footnoteNumber": 1
+        }],
+        "groundingSources": [{
+          "referenceNumber": 1,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.stiftung-evz.de%2Fen%2Fwhat-we-support%2Flocalhistory%2F",
+          "title": "local.history"
+        }]
+      },
+      "finishReason": "STOP",
+      "tokenCount": 691,
+      "parts": [{
+        "text": "\n\n\nW"
+      }, {
+        "text": " ramach programu **local.history** organizowanego przez Fundację EVZ (P"
+      }, {
+        "text": "amięć, Odpowiedzialność i Przyszłość) możesz zorganizować projekty, które skupiają się na lokalnej i"
+      }, {
+        "text": " regionalnej historii z okresu narodowego socjalizmu i II wojny światowej w Europie Środkowej i Wschodniej"
+      }, {
+        "text": ". \n\nOto co konkretnie możesz zorganizować w ramach tego grantu:\n\n**"
+      }, {
+        "text": "1. Projekty edukacyjne i badawcze dotyczące lokalnej historii:**\n*   **Badanie i upamiętn"
+      }, {
+        "text": "ianie zapomnianych miejsc:** Możesz zorganizować projekt badający i dokumentujący zapomniane miejsca zbrodni"
+      }, {
+        "text": ", masowe groby czy obozy pracy przymusowej w Twojej okolicy (np. w ramach tzw"
+      }, {
+        "text": ". \"Holocaustu przez kule\").\n*   **Tworzenie materiałów edukacyjnych:**"
+      }, {
+        "text": " Opracowanie wirtualnych map, portali internetowych, podcastów, krótkich filmów czy świadectw audio/"
+      }, {
+        "text": "wideo, które przybliżą lokalną historię mieszkańcom i turystom.\n*   **W"
+      }, {
+        "text": "spółpraca ze szkołami i społecznością:** Organizacja warsztatów, lekcji historii czy spacerów eduk"
+      }, {
+        "text": "acyjnych dla uczniów, seniorów i lokalnej społeczności, wykorzystujących stworzone materiały.\n\n**2"
+      }, {
+        "text": ". Projekty artystyczne i kulturalne:**\n*   **Wystawy sztuki współczesnej:** Organiz"
+      }, {
+        "text": "acja wystaw, które łączą historyczne doświadczenia (np. marginalizację i prześladowania określonych grup)"
+      }, {
+        "text": " ze współczesnymi problemami, zachęcając do refleksji nad odpowiedzialnością i wartościami demokratycznymi"
+      }, {
+        "text": ".\n*   **Działania artystyczne w przestrzeni miejskiej:** Wykorzystanie sztuki do"
+      }, {
+        "text": " przywracania pamięci o osobach i wydarzeniach z czasów II wojny światowej w lokalnej przestrzeni"
+      }, {
+        "text": ".\n\n**Główne założenia, o których musisz pamiętać:**\n*   **Lokal"
+      }, {
+        "text": "ny kontekst:** Projekt musi odnosić się do konkretnych miejsc, osób i wydarzeń z Twojego regionu"
+      }, {
+        "text": ".\n*   **Krytyczne spojrzenie:** Działania powinny krytycznie analiz"
+      }, {
+        "text": "ować aspekty prześladowań (np. praca przymusowa, prześladowania Sinti"
+      }, {
+        "text": " i Romów, osób z niepełnosprawnościami czy ruch oporu).\n*   **"
+      }, {
+        "text": "Współczesne odniesienie:** Ważne jest, aby projekt łączył historię z obecnymi debatami"
+      }, {
+        "text": " społecznymi i zadawał pytania z dzisiejszej perspektywy.\n*"
+      }, {
+        "text": "   **Włączenie społeczne:** Projekt powinien angażować różne grupy docelowe i lokalnych aktorów w"
+      }, {
+        "text": " celu tworzenia współczesnej i inkluzywnej kultury pamięci.\n\n**Ważna"
+      }, {
+        "text": " informacja:** Obecnie trwa nabór wniosków do programu local.history, a termin ich składania upływa **7 kwietnia"
+      }, {
+        "text": " 2026 roku**."
+      }, {
+        "text": ""
+      }]
+    }, {
+      "text": "A co mogę zorganizować tutaj?\n\nhttps://nbp.pl/edukacja/dofinansowania-nbp/jak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego/",
+      "role": "user",
+      "tokenCount": 56,
+      "createTime": "2026-03-01T22:11:07.588Z"
+    }, {
+      "text": "**Analyzing the User\u0027s Query**\n\nOkay, I\u0027m currently focused on dissecting the user\u0027s question. I understand they want to know the scope of projects suitable for the grant program. My goal is to grasp the nuances of their request so I can formulate a proper response to the user.\n\n\n**Defining Grant Possibilities**\n\nI\u0027m currently focused on defining the potential organizational structures under the NBP educational grant program, considering the specific context of NGOs that are working with youth from foster care and orphanages. My key points are coming from the NBP grant.",
+      "role": "model",
+      "tokenCount": 508,
+      "isThought": true,
+      "parts": [{
+        "text": "**Analyzing the User\u0027s Query**\n\nOkay, I\u0027m currently focused on dissecting the user\u0027s question. I understand they want to know the scope of projects suitable for the grant program. My goal is to grasp the nuances of their request so I can formulate a proper response to the user.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Defining Grant Possibilities**\n\nI\u0027m currently focused on defining the potential organizational structures under the NBP educational grant program, considering the specific context of NGOs that are working with youth from foster care and orphanages. My key points are coming from the NBP grant.",
+        "thought": true
+      }],
+      "createTime": "2026-03-01T22:11:07.588Z"
+    }, {
+      "text": "\n\n\nNarodowy Bank Polski (NBP) oferuje dofinansowania na **projekty edukacyjne z zakresu ekonomii i finansów**. Biorąc pod uwagę Twoją grupę docelową – czyli wychowanków rodzinnych domów dziecka i placówek opiekuńczo-wychowawczych – ten grant to **strzał w dziesiątkę**, ponieważ jednym z głównych celów NBP jest *przeciwdziałanie wykluczeniu finansowemu* oraz edukacja młodzieży wchodzącej na rynek pracy.\n\nOto konkretne pomysły na to, co możesz zorganizować dla swoich podopiecznych w ramach tego dofinansowania:\n\n### 1. Warsztaty z zarządzania domowym budżetem (Trening Usamodzielnienia)\nDla młodzieży opuszczającej pieczę zastępczą największym wyzwaniem jest często zderzenie z rzeczywistością finansową. Możesz zorganizować cykl warsztatów, na których eksperci nauczą ich:\n*   Jak zaplanować miesięczny budżet (opłaty za mieszkanie, jedzenie, rachunki).\n*   Jak mądrze korzystać z konta bankowego i karty płatniczej.\n*   Jak unikać pułapek finansowych (np. szybkich pożyczek, tzw. \"chwilówek\", które są częstym problemem młodych dorosłych z placówek).\n*   Jak czytać umowy (np. o pracę, najmu mieszkania, kredytowe).\n\n### 2. Kursy przedsiębiorczości i wejścia na rynek pracy\nNBP chętnie wspiera kształtowanie postaw sprzyjających przedsiębiorczości. Możesz zorganizować projekt, w którym młodzież dowie się:\n*   Jak założyć własną działalność gospodarczą lub jak działają inkubatory przedsiębiorczości.\n*   Jakie są formy zatrudnienia i z czym wiążą się podatki (brutto vs netto).\n*   Możesz zorganizować symulacje rozmów kwalifikacyjnych z elementami negocjacji wynagrodzenia.\n\n### 3. Gry terenowe, turnieje i konkursy ekonomiczne\nNBP dopuszcza takie formy działań. Zamiast nudnych wykładów, możesz zorganizować dla młodszych i starszych wychowanków:\n*   Grę miejską lub terenową polegającą na rozwiązywaniu zagadek ekonomicznych (np. związanych z historią polskiego pieniądza).\n*   Turniej wiedzy finansowej z nagrodami (NBP pozwala na finansowanie nagród rzeczowych dla uczestników, nawet tych powyżej 1000 zł, co jest rzadkością w grantach).\n\n### 4. Stworzenie materiałów edukacyjnych (np. aplikacji, gry planszowej, poradnika)\nMożesz wnioskować o środki na stworzenie narzędzia, które zostanie w placówkach na dłużej:\n*   Wydanie \"Poradnika Finansowego Usamodzielnianego Wychowanka\".\n*   Stworzenie edukacyjnej gry planszowej uczącej oszczędzania, w którą wychowawcy będą mogli grać z dziećmi w świetlicach.\n*   NBP pokrywa koszty honorariów autorskich, ekspertów, a także koszty produkcji (druk, skład, grafika).\n\n### Najważniejsze zasady grantu NBP, o których musisz wiedzieć:\n*   **Kto może złożyć wniosek:** Organizacje pozarządowe (osoby prawne, np. fundacje, stowarzyszenia).\n*   **Terminy:** Nabór ma charakter **ciągły** (nie ma jednej daty zamknięcia konkursu), ale wniosek musisz złożyć w generatorze **co najmniej 90 dni przed planowanym startem projektu**.\n*   **Koszty:** NBP sfinansuje wynagrodzenia ekspertów, koszty materiałów, promocji i nagród. Nie sfinansuje jednak zakupu sprzętu (np. komputerów do placówki), chyba że są to nagrody dla uczestników.\n*   **Wkład własny:** Jest wymagany, ale co ważne – może to być wkład niefinansowy (np. wyceniona praca wolontariuszy lub udostępnienie sali w placówce).\n*   **Budżet:** Projekty do 30 tys. zł są oceniane szybciej, na poziomie oddziałów okręgowych NBP. Można wnioskować o więcej, ale wtedy ocena odbywa się w centrali.\n\n**Moja rada:** We wniosku mocno podkreśl, że Twoją grupą docelową jest młodzież zagrożona wykluczeniem społecznym i ekonomicznym. Dla NBP to bardzo ważny wskaźnik, a edukacja finansowa tej konkretnej grupy ma ogromny wpływ na ich udane usamodzielnienie.",
+      "role": "model",
+      "grounding": {
+        "corroborationSegments": [{
+          "index": 429,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1325,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 1771,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 2170,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 2667,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 2843,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3037,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3135,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3248,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3412,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3517,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3587,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }, {
+          "index": 3727,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "footnoteNumber": 1
+        }],
+        "groundingSources": [{
+          "referenceNumber": 1,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fnbp.pl%2Fedukacja%2Fdofinansowania-nbp%2Fjak-ubiegac-sie-o-dofinansowanie-nbp-projektu-edukacyjnego%2F",
+          "title": "Dofinasowania NBP | Projekty edukacyjne"
+        }]
+      },
+      "finishReason": "STOP",
+      "tokenCount": 1169,
+      "parts": [{
+        "text": "\n\n\nNarodowy Bank Polski (NBP) oferuje dofinansowania na **pro"
+      }, {
+        "text": "jekty edukacyjne z zakresu ekonomii i finansów**. Biorąc pod uwagę Twoją grupę docelową"
+      }, {
+        "text": " – czyli wychowanków rodzinnych domów dziecka i placówek opiekuńczo-wychowawczych"
+      }, {
+        "text": " – ten grant to **strzał w dziesiątkę**, ponieważ jednym z głównych celów NBP jest *"
+      }, {
+        "text": "przeciwdziałanie wykluczeniu finansowemu* oraz edukacja młodzieży wchodzącej"
+      }, {
+        "text": " na rynek pracy.\n\nOto konkretne pomysły na to, co możesz zorganizować dla"
+      }, {
+        "text": " swoich podopiecznych w ramach tego dofinansowania:\n\n### 1. Warsztaty z zarządzania domowym bud"
+      }, {
+        "text": "żetem (Trening Usamodzielnienia)\nDla młodzieży opuszczającej pieczę zastępczą najwięks"
+      }, {
+        "text": "zym wyzwaniem jest często zderzenie z rzeczywistością finansową. Możesz zorganizować cykl warsztatów"
+      }, {
+        "text": ", na których eksperci nauczą ich:\n*   Jak zaplanować miesięczny budżet (op"
+      }, {
+        "text": "łaty za mieszkanie, jedzenie, rachunki).\n*   Jak mądrze korzystać z kont"
+      }, {
+        "text": "a bankowego i karty płatniczej.\n*   Jak unikać pułapek finansowych (np. szyb"
+      }, {
+        "text": "kich pożyczek, tzw. \"chwilówek\", które są częstym problemem młodych doros"
+      }, {
+        "text": "łych z placówek).\n*   Jak czytać umowy (np. o pracę, najmu mieszkania, kredyt"
+      }, {
+        "text": "owe).\n\n### 2. Kursy przedsiębiorczości i wejścia na rynek pracy\nNBP ch"
+      }, {
+        "text": "ętnie wspiera kształtowanie postaw sprzyjających przedsiębiorczości. Możesz z"
+      }, {
+        "text": "organizować projekt, w którym młodzież dowie się:\n*   Jak założyć własną działalność gospodarczą lub jak dział"
+      }, {
+        "text": "ają inkubatory przedsiębiorczości.\n*   Jakie są formy zatrudnienia i z czym wiążą"
+      }, {
+        "text": " się podatki (brutto vs netto).\n*   Możesz zorganizować symulacje rozmów kwalifikacyjnych"
+      }, {
+        "text": " z elementami negocjacji wynagrodzenia.\n\n### 3. Gry terenowe, turnieje i konkursy"
+      }, {
+        "text": " ekonomiczne\nNBP dopuszcza takie formy działań. Zamiast nudnych wykładów,"
+      }, {
+        "text": " możesz zorganizować dla młodszych i starszych wychowanków:\n*   Grę miejską lub teren"
+      }, {
+        "text": "ową polegającą na rozwiązywaniu zagadek ekonomicznych (np. związanych z historią polskiego pienią"
+      }, {
+        "text": "dza).\n*   Turniej wiedzy finansowej z nagrodami (NBP pozwala na finansowanie nagród rzecz"
+      }, {
+        "text": "owych dla uczestników, nawet tych powyżej 1000 zł, co jest rzadkością w grantach"
+      }, {
+        "text": ").\n\n### 4. Stworzenie materiałów edukacyjnych (np. aplikacji, gry planszowej"
+      }, {
+        "text": ", poradnika)\nMożesz wnioskować o środki na stworzenie narzędzia, które zostanie w placówkach"
+      }, {
+        "text": " na dłużej:\n*   Wydanie \"Poradnika Finansowego Usamodzielnianego W"
+      }, {
+        "text": "ychowanka\".\n*   Stworzenie edukacyjnej gry planszowej uczącej oszczędzania,"
+      }, {
+        "text": " w którą wychowawcy będą mogli grać z dziećmi w świetlicach.\n*   NBP pokrywa koszty"
+      }, {
+        "text": " honorariów autorskich, ekspertów, a także koszty produkcji (druk, skład, grafika)"
+      }, {
+        "text": ".\n\n### Najważniejsze zasady grantu NBP, o których musisz wiedzieć:\n*"
+      }, {
+        "text": "   **Kto może złożyć wniosek:** Organizacje pozarządowe (osoby prawne,"
+      }, {
+        "text": " np. fundacje, stowarzyszenia).\n*   **Terminy:** Nabór ma"
+      }, {
+        "text": " charakter **ciągły** (nie ma jednej daty zamknięcia konkursu), ale wniosek musisz złożyć w"
+      }, {
+        "text": " generatorze **co najmniej 90 dni przed planowanym startem projektu**.\n*   **"
+      }, {
+        "text": "Koszty:** NBP sfinansuje wynagrodzenia ekspertów, koszty materiałów, promocji i nag"
+      }, {
+        "text": "ród. Nie sfinansuje jednak zakupu sprzętu (np. komputerów do placówki),"
+      }, {
+        "text": " chyba że są to nagrody dla uczestników.\n*   **Wkład własny:** Jest"
+      }, {
+        "text": " wymagany, ale co ważne – może to być wkład niefinansowy (np. wyceniona praca"
+      }, {
+        "text": " wolontariuszy lub udostępnienie sali w placówce).\n*   **Bud"
+      }, {
+        "text": "żet:** Projekty do 30 tys. zł są oceniane szybciej, na poziomie oddziałów ok"
+      }, {
+        "text": "ręgowych NBP. Można wnioskować o więcej, ale wtedy ocena odbywa się w central"
+      }, {
+        "text": "i.\n\n**Moja rada:** We wniosku mocno podkreśl, że Twoją grupą docel"
+      }, {
+        "text": "ową jest młodzież zagrożona wykluczeniem społecznym i ekonomicznym. Dla N"
+      }, {
+        "text": "BP to bardzo ważny wskaźnik, a edukacja finansowa tej konkretnej grupy ma ogromny wpływ na ich ud"
+      }, {
+        "text": "ane usamodzielnienie."
+      }, {
+        "text": "",
+        "thoughtSignature": "Es8LCswLAb4+9vsP0SIp8mRSUv3KcUebsDP66xLyhqOKD7pzL1CO93R7GCdX3PXysJnbR6HU/hWXOZ+w+ZBrndJ0eZdvvh7nghrWHcbi8TdgP/5JV4zaBIy7G6nmKvDAt114FRtELb0wL2R8KMT7B6b0MKfey1jmkSzJxKqnj0U+W13ZpWJEgLMYf3O9bK16IP0np2imdU5lDXXjdP3AwVy0vOOGdiDf7+PPKsCuWwjTLHtePMQMvfRdd+btyUab/sbAm4CTSoXWiaFLm163VNCimIEcx7LRsndUePi22Wk2x+YZ7TT9o2VJiYGfIJLFwPU8H9TiWGbT1w9wr/UsuWtY5e4LG5qvtkVAzsgHZtNYAv5g3F9gPbwW5zMdyctqUUOfEYMqBiib6aqgY7F+rR5JPJeS1lgPFUZy6UvVJNxFGUTMmwnNFAdfHDdl0rM4nRVoYkvUDwMbfR9fpUg0eMMsKaAcgS2aeh+Kv2sjqzuVWigUPKTdKtc6HuU32ktfU+q4phhev2udcpaQor+uAlf9IcgGZ0sGjo5APATGTidKXo15f2EQQ1DHE6aIkmKhcCery6l5yV67XFIn1HZPN16SUQeCkVgO1Lcnqe12tAZpCOROOpNDAqbizFgu7Vxm5+kR735/QCBMLfOqaO6hIpBQKMWM9J0gLx8axcU27Vsm3yCuIjC5e3SQu6K7OjXeWdzCmS0YhFPn2gpg1BE1hXFUNrAfGpy0/Ir7pdI2aQyePfkVTSlLYLQ1paknYHDkmKkiW5IHwkzgvYXIyQ/H2t1gq818u8AXWYzp6ocQHl1HqnrZ9uGf+kL3xUZRJWCuhjjGkqh2hboIvf59TIBxpnKSBA8j5LnW+qOLIYZLJncm/qFHzY5PjuJLFwZMeneG4zjG0BoYEFqOb5EQ9sK9Mk95Wr0F2F9y40ZBkVQiuKbqzk9XMnd8Wz4ustkMjTrvaZ0Vj7XRAyuGvYwgNBRlN46Z2NJ2fsFWp+XithAIn8zssrAvbuIHtzureH8fPtA4DJA+bfPvGRjY2V8a94eirjQzIYldchhgShelWfgP/b6qjDf6wYyHtJCEcH2rl3T8Af1XRpslEx0y4QMzIVsv2+SRi2UhNupyb4ElfZoqLlJNBktAbE3J/hDenFuQZBCdqtc0+QYPAT2WV54tlnfF3Dm0eHljsdA27AiZoH7rcZf54qDhgT0cu9Ch9oOwH1v/e18nhexgs/QX+KFKtK2cpnnEa0bshFc8CRsRa/FepxOWaNmiyVPn9GC5ZtFZzMjBhpgCJJY8XUaMq/usE+/5jwN196q1Zz+/iVKf8vDOfeEw47ncZae/lcE6ke2znxicDPwPQ9jZWN1x0ux9cVYSEk0XrYB6POPz0N3ApksPqiw+pd5hp6gNNnxuGR9xqAtfFlI+Ggim4VSXBsW8ScBSrWAQ5hqo6BciqIr/YmMt7yCY21s/1JsXyzd6ISrp19I83azhdqQzSkq/0ZyKrUPtTliOfe9cRUmG9J8BBKXnzkImF85BRri7w5Ie5T2/Zh5VfRZM1ptEje5fjaPS0BBtDf7A6uWTs4mJsyQq4sw2lLzWXZClXHhe3wm+NUPtgP6hQ8uOAJ13ErY9SnjZFM5G0zLbGe1R/FGLf88HUaRB0U3sJ8vOEQ41TkfEK3dMlvkoqKCLDg1pjKNMPx4nNPqarSF2G3CdL9sNqiFVqqty+JayEn418XBSVDkIqGt3SE8ymolMRYa4edq1bk3yhKn55hsMFluBBn3D4drpIz8XBkZfpcGY3nmq2Jd05bgjjV1IYES7E+jTjBIAmjIMWvKumhNV0XQsx9SDeQS1vHYcTnOdkjdfIBDbvkoonWer3J5h/3M5f9qnI7i5wLx+QmlrD+b64Pbu8sqpO/yD0Zu/gXIcFTy0sxBVlWFgeHbOtxKwAoboT1s67p0BX0LG/QTV8ErNCNdvqt6o+O2r1GkCQNFDc4hT1FfqSBAdI6Md1arF5q8="
+      }]
+    }, {
+      "text": "a tutaj?\nhttps://fundusze.ngo.pl/526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+      "role": "user",
+      "tokenCount": 59,
+      "createTime": "2026-03-01T22:21:26.026Z"
+    }, {
+      "text": "**Analyzing the Proposal**\n\nI\u0027m currently focused on dissecting the user\u0027s request. My priority is understanding the scope of their project. I have identified that the user needs help organizing a project for youth in foster care/orphanages, and am exploring the URL to get ideas on projects.\n\n\n**Defining Project Goals**\n\nI\u0027m currently focused on pinpointing suitable project types for the target group, youth from foster care/orphanages, within the framework of the \"Upowszechnianie i ochrona praw konsumentów\" 2026 grant. My primary aim is to identify the intersection of consumer rights and the specific needs of this demographic, in order to propose a project that can utilize the given funding link.\n\n\n**Refining Project Scope**\n\nNow, I\u0027m integrating the grant\u0027s specifics: the Mazowieckie Voivodeship location, the youth target demographic from foster care, and the budget constraints. My focus is narrowing down potential project ideas to maximize their impact within this framework. Specifically, I\u0027m considering workshops on online safety and financial literacy, as well as developing a youth-led educational campaign centered around these themes. I\u0027m also ensuring the project adheres to the implementation timeline and the application deadline.\n\n\n**Prioritizing Project Concepts**\n\nI\u0027m now zeroing in on project specifics, having considered the grant\u0027s scope and demographic. I\u0027ve formulated three core workshop ideas: \"Safe Start into Adulthood\" focusing on financial services, \"Cybersecurity and Online Shopping\" covering online safety, and \"Conscious Shopping\" addressing budgeting and label reading. These workshop concepts directly address the vulnerability of youth leaving care in the Mazowieckie Voivodeship, specifically linking consumer rights to their life challenges. I\u0027m focusing on aligning these with the grant\u0027s requirements.",
+      "role": "model",
+      "tokenCount": 1636,
+      "isThought": true,
+      "parts": [{
+        "text": "**Analyzing the Proposal**\n\nI\u0027m currently focused on dissecting the user\u0027s request. My priority is understanding the scope of their project. I have identified that the user needs help organizing a project for youth in foster care/orphanages, and am exploring the URL to get ideas on projects.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Defining Project Goals**\n\nI\u0027m currently focused on pinpointing suitable project types for the target group, youth from foster care/orphanages, within the framework of the \"Upowszechnianie i ochrona praw konsumentów\" 2026 grant. My primary aim is to identify the intersection of consumer rights and the specific needs of this demographic, in order to propose a project that can utilize the given funding link.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Refining Project Scope**\n\nNow, I\u0027m integrating the grant\u0027s specifics: the Mazowieckie Voivodeship location, the youth target demographic from foster care, and the budget constraints. My focus is narrowing down potential project ideas to maximize their impact within this framework. Specifically, I\u0027m considering workshops on online safety and financial literacy, as well as developing a youth-led educational campaign centered around these themes. I\u0027m also ensuring the project adheres to the implementation timeline and the application deadline.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Prioritizing Project Concepts**\n\nI\u0027m now zeroing in on project specifics, having considered the grant\u0027s scope and demographic. I\u0027ve formulated three core workshop ideas: \"Safe Start into Adulthood\" focusing on financial services, \"Cybersecurity and Online Shopping\" covering online safety, and \"Conscious Shopping\" addressing budgeting and label reading. These workshop concepts directly address the vulnerability of youth leaving care in the Mazowieckie Voivodeship, specifically linking consumer rights to their life challenges. I\u0027m focusing on aligning these with the grant\u0027s requirements.",
+        "thought": true
+      }],
+      "createTime": "2026-03-01T22:21:26.026Z"
+    }, {
+      "text": "\n\n\nTen link prowadzi do konkursu ogłoszonego przez **Urząd Marszałkowski Województwa Mazowieckiego**. Dotyczy on **upowszechniania i ochrony praw konsumentów**. \n\n**Bardzo ważna uwaga na start:** Ponieważ jest to grant samorządowy, projekt **musi być skierowany do mieszkańców województwa mazowieckiego**. Jeśli Twoja placówka lub podopieczni znajdują się na Mazowszu, to jest to świetna okazja.\n\nDla Twojej grupy docelowej (młodzież z pieczy zastępczej, zwłaszcza ta przygotowująca się do usamodzielnienia) ten temat jest absolutnie kluczowy. Młodzi dorośli opuszczający placówki są jedną z grup najbardziej narażonych na oszustwa finansowe i konsumenckie.\n\nOto co konkretnie możesz zorganizować w ramach tego konkursu dla swoich podopiecznych:\n\n### 1. Cykl warsztatów \"Bezpieczny start w dorosłość – nie daj się oszukać\"\nMożesz zorganizować zajęcia edukacyjne (np. w formie warsztatów w placówkach), które przygotują młodzież do zderzenia z rynkiem usług finansowych i handlowych. Tematy, które idealnie wpisują się w ten grant:\n*   **Pułapki szybkich pożyczek:** Jak działają \"chwilówki\", czym jest RRSO i dlaczego łatwo wpaść w spiralę zadłużenia.\n*   **Czytanie umów ze zrozumieniem:** Na co uważać podpisując pierwszą umowę o abonament telefoniczny, umowę najmu mieszkania czy umowę o otwarcie konta w banku.\n*   **Prawa konsumenta w praktyce:** Jak złożyć reklamację, kiedy można zwrócić towar kupiony w sklepie stacjonarnym, a kiedy przez internet.\n\n### 2. Szkolenia z cyberbezpieczeństwa i zakupów online\nGrant kładzie duży nacisk na zagrożenia w sieci. Młodzież spędza tam mnóstwo czasu, więc możesz zorganizować projekt uczący:\n*   Jak bezpiecznie kupować w internecie i rozpoznawać fałszywe sklepy (tzw. scam).\n*   Jak chronić swoje dane osobowe przed kradzieżą tożsamości (co jest ogromnym problemem, gdy ktoś weźmie kredyt na skradziony dowód osobisty).\n*   Jak nie dać się oszukać na platformach społecznościowych i portalach aukcyjnych (np. Vinted, OLX).\n\n### 3. Trening \"Świadomego Konsumenta\"\nMożesz połączyć edukację z praktyką, organizując zajęcia z tzw. świadomych zakupów:\n*   Jak czytać etykiety produktów i nie nabierać się na chwyty marketingowe (np. \"pseudo-promocje\" w supermarketach).\n*   Zwracanie uwagi na etykę produkcji i kraj pochodzenia produktów.\n*   Możesz zorganizować grę terenową po sklepach, gdzie młodzież dostaje określony budżet i musi zrobić zakupy, analizując stosunek jakości do ceny i omijając pułapki sprzedażowe.\n\n### Najważniejsze zasady tego konkursu, o których musisz wiedzieć:\n*   **Termin naboru:** Wnioski można składać **od 23 lutego 2026 r. do 23 marca 2026 r.**.\n*   **Budżet:** Maksymalna kwota dotacji, o którą możesz prosić, to **33 300 zł**.\n*   **Wkład własny:** Wymagane jest wniesienie minimum **10% wkładu własnego**. Co ważne, nie muszą to być żywe pieniądze – może to być wkład osobowy (np. wyceniona praca wolontariuszy) lub rzeczowy (np. udostępnienie sali w placówce).\n*   **Dodatkowe punkty na etapie oceny:** Twój wniosek dostanie dodatkowe punkty, jeśli obejmie zasięgiem co najmniej dwa powiaty (np. zorganizujesz warsztaty w placówkach w Warszawie i w powiecie piaseczyńskim) oraz jeśli przewidzisz udział osób z niepełnosprawnościami.\n*   **Czas realizacji:** Projekt musi zostać zrealizowany między 5 maja a 15 grudnia 2026 roku.\n\n**Moja rekomendacja:** We wniosku koniecznie podkreśl, że młodzież z pieczy zastępczej nie ma naturalnego wsparcia rodziny w nauce zarządzania budżetem i praw konsumenckich, dlatego edukacja w tym zakresie jest dla nich \"być albo nie być\" w dorosłym życiu. To bardzo mocny argument dla komisji oceniającej.",
+      "role": "model",
+      "grounding": {
+        "corroborationSegments": [{
+          "index": 104,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 164,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 316,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1031,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1645,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1969,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2077,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2212,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2405,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2764,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2853,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2937,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 3105,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 3387,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 3485,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "footnoteNumber": 1
+        }],
+        "groundingSources": [{
+          "referenceNumber": 1,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F526502-konkurs-ofert-w-obszarze-upowszechnianie-i-ochrona-praw-konsumentow-526502.html",
+          "title": "Konkurs ofert w obszarze ,,Upowszechnianie i ochrona praw ..."
+        }]
+      },
+      "finishReason": "STOP",
+      "tokenCount": 1155,
+      "parts": [{
+        "text": "\n\n\nTen link prowadzi do konkurs"
+      }, {
+        "text": "u ogłoszonego przez **Urząd Marszałkowski Województwa Mazowieckiego**."
+      }, {
+        "text": " Dotyczy on **upowszechniania i ochrony praw konsumentów**. \n\n**Bard"
+      }, {
+        "text": "zo ważna uwaga na start:** Ponieważ jest to grant samorządowy, projekt **musi być skierowany do mieszkańców"
+      }, {
+        "text": " województwa mazowieckiego**. Jeśli Twoja placówka lub podopieczni znajdują się na Mazow"
+      }, {
+        "text": "szu, to jest to świetna okazja.\n\nDla Twojej grupy docelowej (młodzież z pie"
+      }, {
+        "text": "czy zastępczej, zwłaszcza ta przygotowująca się do usamodzielnienia) ten temat jest absolut"
+      }, {
+        "text": "nie kluczowy. Młodzi dorośli opuszczający placówki są jedną z grup najbardziej narażonych"
+      }, {
+        "text": " na oszustwa finansowe i konsumenckie.\n\nOto co konkretnie możesz zorganizować w ramach tego"
+      }, {
+        "text": " konkursu dla swoich podopiecznych:\n\n### 1. Cykl warsztatów \"Bezpieczny start w dor"
+      }, {
+        "text": "osłość – nie daj się oszukać\"\nMożesz zorganizować zajęcia edukacyjne (np. w"
+      }, {
+        "text": " formie warsztatów w placówkach), które przygotują młodzież do zderzenia z rynkiem usług finans"
+      }, {
+        "text": "owych i handlowych. Tematy, które idealnie wpisują się w ten grant:\n*"
+      }, {
+        "text": "   **Pułapki szybkich pożyczek:** Jak działają \"chwilówki\", czym jest RRSO i"
+      }, {
+        "text": " dlaczego łatwo wpaść w spiralę zadłużenia.\n*   **Czytanie umów ze"
+      }, {
+        "text": " zrozumieniem:** Na co uważać podpisując pierwszą umowę o abonament telefoniczny, umowę najmu miesz"
+      }, {
+        "text": "kania czy umowę o otwarcie konta w banku.\n*   **Prawa konsumenta w praktyce:** Jak"
+      }, {
+        "text": " złożyć reklamację, kiedy można zwrócić towar kupiony w sklepie stacjonarnym, a kiedy przez internet."
+      }, {
+        "text": "\n\n### 2. Szkolenia z cyberbezpieczeństwa i zakupów online\nGrant kładzie duży"
+      }, {
+        "text": " nacisk na zagrożenia w sieci. Młodzież spędza tam mnóstwo czasu, więc możesz z"
+      }, {
+        "text": "organizować projekt uczący:\n*   Jak bezpiecznie kupować w internecie i rozpoznawać fałszywe skle"
+      }, {
+        "text": "py (tzw. scam).\n*   Jak chronić swoje dane osobowe przed kradzieżą tożsamości"
+      }, {
+        "text": " (co jest ogromnym problemem, gdy ktoś weźmie kredyt na skradziony dowód osobisty)"
+      }, {
+        "text": ".\n*   Jak nie dać się oszukać na platformach społecznościowych i"
+      }, {
+        "text": " portalach aukcyjnych (np. Vinted, OLX).\n\n### 3. Tre"
+      }, {
+        "text": "ning \"Świadomego Konsumenta\"\nMożesz połączyć edukację z praktyką, organizując zaj"
+      }, {
+        "text": "ęcia z tzw. świadomych zakupów:\n*   Jak czytać etykiety produktów"
+      }, {
+        "text": " i nie nabierać się na chwyty marketingowe (np. \"pseudo-promocje\" w supermarketach)."
+      }, {
+        "text": "\n*   Zwracanie uwagi na etykę produkcji i kraj pochodzenia produktów.\n*"
+      }, {
+        "text": "   Możesz zorganizować grę terenową po sklepach, gdzie młodzież dostaje określony budż"
+      }, {
+        "text": "et i musi zrobić zakupy, analizując stosunek jakości do ceny i omijając pułapki sprzedażowe."
+      }, {
+        "text": "\n\n### Najważniejsze zasady tego konkursu, o których musisz wiedzieć:\n*   **Termin n"
+      }, {
+        "text": "aboru:** Wnioski można składać **od 23 lutego 2026 r. do"
+      }, {
+        "text": " 23 marca 2026 r.**.\n*   **Budżet:** Maks"
+      }, {
+        "text": "ymalna kwota dotacji, o którą możesz prosić, to **33 300 zł**"
+      }, {
+        "text": ".\n*   **Wkład własny:** Wymagane jest wniesienie minimum **10% w"
+      }, {
+        "text": "kładu własnego**. Co ważne, nie muszą to być żywe pieniądze – może to być"
+      }, {
+        "text": " wkład osobowy (np. wyceniona praca wolontariuszy) lub rzeczowy (np. ud"
+      }, {
+        "text": "ostępnienie sali w placówce).\n*   **Dodatkowe punkty na et"
+      }, {
+        "text": "apie oceny:** Twój wniosek dostanie dodatkowe punkty, jeśli obejmie zasięgiem co najmniej"
+      }, {
+        "text": " dwa powiaty (np. zorganizujesz warsztaty w placówkach w Warszawie i w powiecie piaseczyńskim"
+      }, {
+        "text": ") oraz jeśli przewidzisz udział osób z niepełnosprawnościami.\n*"
+      }, {
+        "text": "   **Czas realizacji:** Projekt musi zostać zrealizowany między 5 maja a 15 grudnia 2026 roku"
+      }, {
+        "text": ".\n\n**Moja rekomendacja:** We wniosku koniecznie podkreśl, że młodzież z pie"
+      }, {
+        "text": "czy zastępczej nie ma naturalnego wsparcia rodziny w nauce zarządzania budżetem i praw konsum"
+      }, {
+        "text": "enckich, dlatego edukacja w tym zakresie jest dla nich \"być albo nie być\" w dorosłym życiu."
+      }, {
+        "text": " To bardzo mocny argument dla komisji oceniającej."
+      }, {
+        "text": "",
+        "thoughtSignature": "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"
+      }]
+    }, {
+      "text": "a tutaj?\nhttps://fundusze.ngo.pl/525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+      "role": "user",
+      "tokenCount": 43,
+      "createTime": "2026-03-01T22:22:56.542Z"
+    }, {
+      "text": "**Analyzing the Grant Program**\n\nOkay, I\u0027m now focused on grasping the essence of the user\u0027s request, I\u0027m working to fully understand what analysis is being sought. I\u0027m starting with a comprehensive review of the \"Kulturalny ORLEN\" grant details via the URL. I\u0027m focusing on the grant\u0027s specific stipulations and parameters.\n\n\n**Defining Youth Project Scope**\n\nOkay, I\u0027m now honing in on potential project scopes suitable for youth from foster care and orphanages within the \"Kulturalny ORLEN\" program. Considering the grant\u0027s focus and organizers, I\u0027m brainstorming ideas that align with cultural engagement, potentially focusing on skill-building and creative expression. The aim is to generate a few concrete project options soon.\n\n\n**Analyzing Grant Guidelines**\n\nI\u0027ve been drilling down into the grant details from Fundacja ORLEN. The budget cap is 100,000 PLN per project, with 100% funding – no matching contributions needed. The target is youth, focusing on initiatives to build social bonds and personal growth via joint artistic projects. I\u0027m noting the eligible entities and costs, which include workshops, animator remuneration, venue rentals, and even accessibility services. I need to make sure the youth project scopes I come up with fit those criteria.\n\n\n**Detailing Eligible Expenses**\n\nI\u0027m now cataloging all the eligible expenses. The fund covers various costs: accessibility services (e.g., sign language), educational aids (art supplies, books), equipment, promotion (up to 10%), transport, and project admin (up to 10%). Also, the application period is from February 2, 2026 to March 6, 2026, with the project starting September 1, 2026. This is perfect!\n\\n\\n\nI\u0027ve started exploring specific project ideas suited for foster care youth. Art therapy, theatrical workshops, music classes, or creating a play or short film are great ideas. Cultural trips are an option, too, as is purchasing equipment for an art/culture room at the orphanage.\n\n\n**Refining Project Concepts**\n\nI\u0027m now refining the youth project concepts. Specifically, I\u0027m thinking about drama workshops to produce a play based on their experiences or dreams. I also like the idea of regular art therapy classes with materials and equipment. The grant also makes possible cultural trips. Finally, a film or podcast project could be fun, allowing the youth to express their ideas and concerns.",
+      "role": "model",
+      "tokenCount": 1824,
+      "isThought": true,
+      "parts": [{
+        "text": "**Analyzing the Grant Program**\n\nOkay, I\u0027m now focused on grasping the essence of the user\u0027s request, I\u0027m working to fully understand what analysis is being sought. I\u0027m starting with a comprehensive review of the \"Kulturalny ORLEN\" grant details via the URL. I\u0027m focusing on the grant\u0027s specific stipulations and parameters.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Defining Youth Project Scope**\n\nOkay, I\u0027m now honing in on potential project scopes suitable for youth from foster care and orphanages within the \"Kulturalny ORLEN\" program. Considering the grant\u0027s focus and organizers, I\u0027m brainstorming ideas that align with cultural engagement, potentially focusing on skill-building and creative expression. The aim is to generate a few concrete project options soon.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Analyzing Grant Guidelines**\n\nI\u0027ve been drilling down into the grant details from Fundacja ORLEN. The budget cap is 100,000 PLN per project, with 100% funding – no matching contributions needed. The target is youth, focusing on initiatives to build social bonds and personal growth via joint artistic projects. I\u0027m noting the eligible entities and costs, which include workshops, animator remuneration, venue rentals, and even accessibility services. I need to make sure the youth project scopes I come up with fit those criteria.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Detailing Eligible Expenses**\n\nI\u0027m now cataloging all the eligible expenses. The fund covers various costs: accessibility services (e.g., sign language), educational aids (art supplies, books), equipment, promotion (up to 10%), transport, and project admin (up to 10%). Also, the application period is from February 2, 2026 to March 6, 2026, with the project starting September 1, 2026. This is perfect!\n\\n\\n\nI\u0027ve started exploring specific project ideas suited for foster care youth. Art therapy, theatrical workshops, music classes, or creating a play or short film are great ideas. Cultural trips are an option, too, as is purchasing equipment for an art/culture room at the orphanage.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Refining Project Concepts**\n\nI\u0027m now refining the youth project concepts. Specifically, I\u0027m thinking about drama workshops to produce a play based on their experiences or dreams. I also like the idea of regular art therapy classes with materials and equipment. The grant also makes possible cultural trips. Finally, a film or podcast project could be fun, allowing the youth to express their ideas and concerns.",
+        "thought": true
+      }],
+      "createTime": "2026-03-01T22:22:56.542Z"
+    }, {
+      "text": "\n\n\nProgram **„Kulturalny ORLEN” (2. edycja)** to fantastyczna szansa dla Twojej grupy docelowej. Głównym celem tego grantu jest rozwój edukacji i aktywności kulturalnej dzieci i młodzieży, a także odciągnięcie ich od ekranów komputerów i telefonów. Dla wychowanków pieczy zastępczej, którzy często borykają się z trudnymi emocjami i potrzebują budowania poczucia własnej wartości, projekty artystyczne mają ogromny walor terapeutyczny i integracyjny.\n\nCo bardzo ważne – w tym programie **możesz uzyskać do 100 000 zł i nie jest wymagany wkład własny (dofinansowanie wynosi do 100%)**.\n\nOto konkretne pomysły na to, co możesz zorganizować dla wychowanków rodzinnych domów dziecka i placówek opiekuńczo-wychowawczych w ramach tego grantu:\n\n### 1. Warsztaty teatralne i arteterapia (np. \"Teatr Emocji\")\nMożesz zorganizować cykl regularnych warsztatów teatralnych, muzycznych lub plastycznych, które pomogą młodzieży wyrazić siebie. W ramach grantu sfinansujesz:\n*   Wynagrodzenia dla profesjonalnych animatorów, aktorów czy arteterapeutów prowadzących zajęcia.\n*   Zakup materiałów dydaktycznych: farb, sztalug, rekwizytów teatralnych, kostiumów czy książek.\n*   Organizację finałowego spektaklu lub wystawy prac podopiecznych.\n\n### 2. Stworzenie pracowni artystycznej / multimedialnej w placówce\nGrant pozwala na **zakup wyposażenia, narzędzi i aparatury** na potrzeby realizacji projektu. Możesz to wykorzystać, aby stworzyć dla dzieci przestrzeń do rozwoju pasji:\n*   Zakup aparatów fotograficznych, kamer czy mikrofonów, aby młodzież mogła stworzyć własny film krótkometrażowy, reportaż lub podcast o kulturze.\n*   Zakup instrumentów muzycznych do wspólnego muzykowania.\n*   Środki pokryją też realizację nagrań audio/video i montaż.\n\n### 3. Wyjazdy kulturalne połączone z warsztatami plenerowymi\nDzieci z placówek często mają ograniczony dostęp do \"wielkiej kultury\". Program pozwala na sfinansowanie **kosztów transportu uczestników**. Możesz zorganizować:\n*   Wyjazdy do teatrów, muzeów czy filharmonii w większych miastach.\n*   Plenery malarskie lub fotograficzne poza miejscem zamieszkania (np. wyjazd weekendowy połączony z warsztatami).\n\n### 4. Wsparcie dla dzieci ze specjalnymi potrzebami (np. FAS, spektrum autyzmu)\nJeśli w placówkach są dzieci z niepełnosprawnościami lub zaburzeniami integracji sensorycznej, grant przewiduje specjalną kategorię wydatków na zwiększenie dostępności. Możesz sfinansować:\n*   Zakup **pomocy sensorycznych** dla dzieci.\n*   Tłumaczenia migowe czy audiodeskrypcję, jeśli organizujecie większe wydarzenie kulturalne.\n\n### Najważniejsze zasady i terminy, o których musisz pamiętać:\n*   **Kto może złożyć wniosek:** Fundacje, stowarzyszenia (w tym zwykłe), instytucje kultury, spółdzielnie socjalne.\n*   **Termin naboru:** Wnioski można składać **od 2 lutego 2026 r. do 6 marca 2026 r.**.\n*   **Start projektów:** Działania projektowe mogą rozpocząć się od **1 września 2026 r.** (idealnie na nowy rok szkolny).\n*   **Koszty obsługi:** Z grantu możesz przeznaczyć do 10% na promocję oraz do 10% na obsługę projektu (np. wynagrodzenie dla Ciebie jako koordynatora oraz na księgowość).\n\n**Moja rekomendacja:** We wniosku warto mocno zaakcentować, że projekt ma na celu wyrównywanie szans edukacyjnych i kulturalnych dzieci z pieczy zastępczej. Podkreśl, że wspólne działania artystyczne będą dla nich nie tylko alternatywą dla smartfonów (co jest głównym celem ORLENU), ale przede wszystkim narzędziem do budowania relacji społecznych, zaufania do dorosłych i odkrywania własnych talentów.",
+      "role": "model",
+      "grounding": {
+        "corroborationSegments": [{
+          "index": 263,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 617,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1110,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1214,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1285,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1451,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1689,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 1820,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2032,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2245,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2576,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2675,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2867,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 2959,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 3058,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 3270,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }, {
+          "index": 3567,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "footnoteNumber": 1
+        }],
+        "groundingSources": [{
+          "referenceNumber": 1,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Ffundusze.ngo.pl%2F525203-kulturalny-orlen-dolacz-do-2-edycji-programu.html",
+          "title": "Kulturalny ORLEN. Dołącz do 2. edycji programu! - Fundusz - ngo.pl"
+        }]
+      },
+      "finishReason": "STOP",
+      "tokenCount": 1112,
+      "parts": [{
+        "text": "\n\n\nProgram **„Kulturalny OR"
+      }, {
+        "text": "LEN” (2. edycja)** to fantastyczna szansa dla Twojej grupy docelowej. Gł"
+      }, {
+        "text": "ównym celem tego grantu jest rozwój edukacji i aktywności kulturalnej dzieci i młodzieży,"
+      }, {
+        "text": " a także odciągnięcie ich od ekranów komputerów i telefonów. Dla wychowanków pie"
+      }, {
+        "text": "czy zastępczej, którzy często borykają się z trudnymi emocjami i potrzebują budowania poc"
+      }, {
+        "text": "zucia własnej wartości, projekty artystyczne mają ogromny walor terapeutyczny i integracyjny.\n\nCo"
+      }, {
+        "text": " bardzo ważne – w tym programie **możesz uzyskać do 100 000 zł i"
+      }, {
+        "text": " nie jest wymagany wkład własny (dofinansowanie wynosi do 100%)**"
+      }, {
+        "text": ".\n\nOto konkretne pomysły na to, co możesz zorganizować dla wychowanków rodzin"
+      }, {
+        "text": "nych domów dziecka i placówek opiekuńczo-wychowawczych w ramach tego grantu"
+      }, {
+        "text": ":\n\n### 1. Warsztaty teatralne i arteterapia (np. \"Teatr Emocji\")"
+      }, {
+        "text": "\nMożesz zorganizować cykl regularnych warsztatów teatralnych, muzycznych lub plastycznych, które pom"
+      }, {
+        "text": "ogą młodzieży wyrazić siebie. W ramach grantu sfinansujesz:\n*   Wynagrodzenia dla"
+      }, {
+        "text": " profesjonalnych animatorów, aktorów czy arteterapeutów prowadzących zajęcia.\n*   Zak"
+      }, {
+        "text": "up materiałów dydaktycznych: farb, sztalug, rekwizytów teatralnych, kostiumów czy książ"
+      }, {
+        "text": "ek.\n*   Organizację finałowego spektaklu lub wystawy prac podopiecznych"
+      }, {
+        "text": ".\n\n### 2. Stworzenie pracowni artystycznej / multimedialnej w plac"
+      }, {
+        "text": "ówce\nGrant pozwala na **zakup wyposażenia, narzędzi i aparatury** na potrzeby realizacji projektu."
+      }, {
+        "text": " Możesz to wykorzystać, aby stworzyć dla dzieci przestrzeń do rozwoju pasji:\n*   Zakup aparat"
+      }, {
+        "text": "ów fotograficznych, kamer czy mikrofonów, aby młodzież mogła stworzyć własny film krótkometrażowy"
+      }, {
+        "text": ", reportaż lub podcast o kulturze.\n*   Zakup instrumentów muzycznych do wspól"
+      }, {
+        "text": "nego muzykowania.\n*   Środki pokryją też realizację nagrań audio/video i montaż"
+      }, {
+        "text": ".\n\n### 3. Wyjazdy kulturalne połączone z warsztatami plener"
+      }, {
+        "text": "owymi\nDzieci z placówek często mają ograniczony dostęp do \"wielkiej kultury\". Program pozwala na s"
+      }, {
+        "text": "finansowanie **kosztów transportu uczestników**. Możesz zorganizować:\n*"
+      }, {
+        "text": "   Wyjazdy do teatrów, muzeów czy filharmonii w większych miastach.\n*"
+      }, {
+        "text": "   Plenery malarskie lub fotograficzne poza miejscem zamieszkania (np. wyjazd weekendowy połączony z wars"
+      }, {
+        "text": "ztatami).\n\n### 4. Wsparcie dla dzieci ze specjalnymi potrzebami (np"
+      }, {
+        "text": ". FAS, spektrum autyzmu)\nJeśli w placówkach są dzieci z niepełnosprawnościami lub zab"
+      }, {
+        "text": "urzeniami integracji sensorycznej, grant przewiduje specjalną kategorię wydatków na zwiększenie dostępności"
+      }, {
+        "text": ". Możesz sfinansować:\n*   Zakup **pomocy sensorycznych** dla dzieci"
+      }, {
+        "text": ".\n*   Tłumaczenia migowe czy audiodeskrypcję, jeśli organizujecie więks"
+      }, {
+        "text": "ze wydarzenie kulturalne.\n\n### Najważniejsze zasady i terminy, o których"
+      }, {
+        "text": " musisz pamiętać:\n*   **Kto może złożyć wniosek:** Fundacje, stowarzyszenia"
+      }, {
+        "text": " (w tym zwykłe), instytucje kultury, spółdzielnie socjalne.\n*   **Term"
+      }, {
+        "text": "in naboru:** Wnioski można składać **od 2 lutego 2026 r. do"
+      }, {
+        "text": " 6 marca 2026 r.**.\n*   **Start projektów:** D"
+      }, {
+        "text": "ziałania projektowe mogą rozpocząć się od **1 września 2026 r.** ("
+      }, {
+        "text": "idealnie na nowy rok szkolny).\n*   **Koszty obsługi:** Z grantu możesz przeznaczyć do"
+      }, {
+        "text": " 10% na promocję oraz do 10% na obsługę projektu (np. wynagrodzenie dla Ciebie"
+      }, {
+        "text": " jako koordynatora oraz na księgowość).\n\n**Moja rekomendacja:** We wniosku"
+      }, {
+        "text": " warto mocno zaakcentować, że projekt ma na celu wyrównywanie szans edukacyjnych i kulturalnych dzieci"
+      }, {
+        "text": " z pieczy zastępczej. Podkreśl, że wspólne działania artystyczne będą dla nich nie tylko altern"
+      }, {
+        "text": "atywą dla smartfonów (co jest głównym celem ORLENU), ale przede"
+      }, {
+        "text": " wszystkim narzędziem do budowania relacji społecznych, zaufania do dorosłych i odkrywania własnych talent"
+      }, {
+        "text": "ów."
+      }, {
+        "text": "",
+        "thoughtSignature": "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"
+      }]
+    }, {
+      "text": "zapoznaj się z regulaminem i znajdz potencjalne utrudnienia i wymagania\n\nhttps://www.orlen.pl/content/dam/internet/orlen/pl/pl/o-firmie/wspieramy/kulturalny-orlen/dokumenty/2026/Kulturalny%20ORLEN%20-%20Regulamin%20(2.%20edycja%20programu).pdf",
+      "role": "user",
+      "tokenCount": 103,
+      "createTime": "2026-03-01T22:25:49.731Z"
+    }, {
+      "text": "**Analyzing User Intent**\n\nI am now focused on understanding the user\u0027s need to analyze the \"Kulturalny ORLEN\" grant regulations. My primary task involves pinpointing potential hurdles and requirements, as they relate to the user\u0027s specific circumstances. I\u0027m carefully reviewing the provided PDF, paying close attention to the second edition of the regulations.\n\n\n**Analyzing Program Regulations**\n\nI\u0027m currently focused on dissecting the \"Kulturalny ORLEN\" program\u0027s regulations, second edition. I\u0027m prioritizing identifying potential roadblocks and specific requirements for NGOs that support children from foster care and orphanages. My analysis is progressing well, and I should have something tangible soon.\n\n\n**Reviewing Project Eligibility**\n\nNow, I\u0027m delving deeper into eligibility. I\u0027ve pinpointed key parameters, like the 2026-2027 project timeline, budget maximum of 100,000 PLN, and VAT considerations. I\u0027m especially focusing on requirements for eligible entities, including NGOs, like the mandated two years of cultural activity and experience, which can be critical for working with minors.\n\n\n**Identifying Key Limitations**\n\nI\u0027ve been scrutinizing the ineligible costs section, specifically focusing on items like gadgets, sports, renovations, and participant rewards, as these may limit project scope. Additionally, I\u0027m analyzing evaluation criteria, and prioritizing limitations relating to the project concept quality. It\u0027s becoming clearer where the program\u0027s priorities lie.",
+      "role": "model",
+      "tokenCount": 1978,
+      "isThought": true,
+      "parts": [{
+        "text": "**Analyzing User Intent**\n\nI am now focused on understanding the user\u0027s need to analyze the \"Kulturalny ORLEN\" grant regulations. My primary task involves pinpointing potential hurdles and requirements, as they relate to the user\u0027s specific circumstances. I\u0027m carefully reviewing the provided PDF, paying close attention to the second edition of the regulations.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Analyzing Program Regulations**\n\nI\u0027m currently focused on dissecting the \"Kulturalny ORLEN\" program\u0027s regulations, second edition. I\u0027m prioritizing identifying potential roadblocks and specific requirements for NGOs that support children from foster care and orphanages. My analysis is progressing well, and I should have something tangible soon.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Reviewing Project Eligibility**\n\nNow, I\u0027m delving deeper into eligibility. I\u0027ve pinpointed key parameters, like the 2026-2027 project timeline, budget maximum of 100,000 PLN, and VAT considerations. I\u0027m especially focusing on requirements for eligible entities, including NGOs, like the mandated two years of cultural activity and experience, which can be critical for working with minors.",
+        "thought": true
+      }, {
+        "text": "\n\n\n**Identifying Key Limitations**\n\nI\u0027ve been scrutinizing the ineligible costs section, specifically focusing on items like gadgets, sports, renovations, and participant rewards, as these may limit project scope. Additionally, I\u0027m analyzing evaluation criteria, and prioritizing limitations relating to the project concept quality. It\u0027s becoming clearer where the program\u0027s priorities lie.",
+        "thought": true
+      }],
+      "createTime": "2026-03-01T22:25:49.731Z"
+    }, {
+      "text": "\n\n\nZapoznałem się z regulaminem 2. edycji programu „Kulturalny ORLEN”. Choć jest to świetny program, z perspektywy organizacji wspierającej wychowanków pieczy zastępczej i placówek opiekuńczo-wychowawczych, musisz zwrócić uwagę na kilka bardzo ważnych wymagań i potencjalnych utrudnień.\n\nOto najważniejsze z nich:\n\n### 1. Kluczowe wymagania formalne (Wymagania)\n*   **Wymóg doświadczenia (BARDZO WAŻNE):** Twoja organizacja musi w sposób nieprzerwany prowadzić działalność kulturalną przez **co najmniej 2 lata** przed złożeniem wniosku oraz posiadać udokumentowane doświadczenie (min. 2 lata) w realizacji podobnych projektów kulturalnych. Jeśli Twoja fundacja zajmowała się dotąd tylko pomocą społeczną, a nie kulturą, wniosek może zostać odrzucony.\n*   **Weryfikacja kadry (tzw. Ustawa Kamilka):** Ponieważ projekt dotyczy dzieci, każda osoba zaangażowana w projekt (animatorzy, warsztatowcy), która będzie miała kontakt z małoletnimi, musi posiadać aktualne zaświadczenie o niekaralności oraz zaświadczenie z Rejestru Sprawców Przestępstw na Tle Seksualnym. Musisz o to zadbać przed startem zajęć.\n*   **Bezpłatność:** Wszystkie wydarzenia i zajęcia organizowane w ramach projektu muszą być całkowicie bezpłatne dla uczestników.\n*   **Grupa docelowa:** Projekt musi być skierowany do **dzieci i młodzieży w wieku szkolnym**. Jeśli Twoimi podopiecznymi są wyłącznie młodzi dorośli (np. 19-20 lat, w trakcie usamodzielniania), projekt nie wpisze się w regulamin. Dopuszczalne są grupy międzypokoleniowe, ale udział dzieci w wieku szkolnym jest obowiązkowy.\n*   **Termin realizacji:** Działania muszą być zaplanowane w ścisłych ramach czasowych: od 1 września 2026 r. do 31 sierpnia 2027 r.\n\n### 2. Potencjalne utrudnienia i koszty niekwalifikowalne (Czego NIE sfinansujesz)\nRegulamin bardzo rygorystycznie podchodzi do tego, na co można wydać środki. Dla placówek opiekuńczo-wychowawczych utrudnieniem mogą być następujące zakazy:\n*   **Zakaz finansowania remontów i modernizacji:** Nie możesz za te środki wyremontować świetlicy czy sali w domu dziecka. Możesz kupić wyposażenie (np. sztalugi, instrumenty), ale nie zrobisz remontu.\n*   **Zakaz zakupu nagród rzeczowych w formie voucherów/bonów oraz nagród finansowych:** Jeśli planujesz konkurs artystyczny dla dzieci, nagrodami nie mogą być karty podarunkowe (np. do Empiku) ani gotówka.\n*   **Zakaz zakupu niezdrowego jedzenia:** To bardzo specyficzny, ale ważny punkt. Z grantu nie możesz kupić na warsztaty słodzonych napojów gazowanych, energetyków ani niezdrowych przekąsek (np. chipsów, chrupek). Musisz zaplanować zdrowy catering.\n*   **Brak działań sportowych i rekreacyjnych:** Projekt musi być stricte kulturalny. Wyjście na basen, park linowy czy zawody sportowe zostaną odrzucone.\n*   **Zakaz wyjazdów zagranicznych:** Wycieczki kulturalne są dozwolone, ale tylko na terenie Polski.\n*   **Zakaz zakupu gadżetów:** Nie sfinansujesz kubków, smyczy czy długopisów z logo projektu (wyjątkiem są tylko notatniki i torby materiałowe).\n\n### 3. Utrudnienia organizacyjne i finansowe\n*   **Powiązania osobowe (Konflikt interesów):** Nie możesz opłacać z grantu usług (np. prowadzenia warsztatów) zlecanych osobom, z którymi Ty lub Twoja organizacja jesteście powiązani rodzinnie lub kapitałowo. Jeśli np. prezes fundacji chce zatrudnić swoją żonę jako arteterapeutkę, wymaga to specjalnego, pisemnego uzasadnienia we wniosku i zgody Zarządu Fundacji ORLEN.\n*   **Limity procentowe:** Koszty obsługi projektu (np. wynagrodzenie koordynatora, księgowość) nie mogą przekroczyć **10%** wartości grantu. Podobnie koszty promocji – to maksymalnie kolejne **10%**.\n*   **Kryteria oceny (konkurencja):** Wnioski są oceniane punktowo. Dodatkowe punkty (do 9 pkt) dostają projekty realizowane w małych miejscowościach oraz w sąsiedztwie zakładów produkcyjnych ORLENU. Jeśli realizujesz projekt w dużym mieście (np. w Warszawie), na starcie tracisz te punkty, co oznacza, że sam pomysł merytoryczny musi być wybitnie dobry (jakość koncepcji to aż 60 pkt).\n\n**Podsumowując:** Jeśli Twoja organizacja ma 2-letnie doświadczenie w kulturze, a projekt skupi się na warsztatach artystycznych, wyjściach do teatru czy zakupie sprzętu multimedialnego dla dzieci w wieku szkolnym (z zachowaniem zdrowego cateringu i bez voucherów) – macie ogromne szanse na sukces.",
+      "role": "model",
+      "grounding": {
+        "corroborationSegments": [{
+          "index": 75,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 673,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 1117,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 1300,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 1399,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 1640,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 1779,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 2158,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 2240,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 2455,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 2678,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 2874,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 2978,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 3132,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 3400,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 3569,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 3718,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 3779,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 3986,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 4182,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 4266,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 4404,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }, {
+          "index": 4455,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "footnoteNumber": 1
+        }],
+        "groundingSources": [{
+          "referenceNumber": 1,
+          "uri": "https://www.google.com/url?sa\u003dE\u0026q\u003dhttps%3A%2F%2Fwww.orlen.pl%2Fcontent%2Fdam%2Finternet%2Forlen%2Fpl%2Fpl%2Fo-firmie%2Fwspieramy%2Fkulturalny-orlen%2Fdokumenty%2F2026%2FKulturalny%2520ORLEN%2520-%2520Regulamin%2520(2.%2520edycja%2520programu).pdf",
+          "title": "Strona 1 z 14 Regulamin programu „Kulturalny ORLEN” - edycja II ..."
+        }]
+      },
+      "finishReason": "STOP",
+      "tokenCount": 1376,
+      "parts": [{
+        "text": "\n\n\nZapoznałem się"
+      }, {
+        "text": " z regulaminem 2. edycji programu „Kulturalny ORLEN”. Choć jest to świet"
+      }, {
+        "text": "ny program, z perspektywy organizacji wspierającej wychowanków pieczy zastępczej i placó"
+      }, {
+        "text": "wek opiekuńczo-wychowawczych, musisz zwrócić uwagę na kilka bardzo ważnych wymagań i"
+      }, {
+        "text": " potencjalnych utrudnień.\n\nOto najważniejsze z nich:\n\n### 1. Kluczowe wymagania"
+      }, {
+        "text": " formalne (Wymagania)\n*   **Wymóg doświadczenia (BARDZO WAŻNE):** Two"
+      }, {
+        "text": "ja organizacja musi w sposób nieprzerwany prowadzić działalność kulturalną przez **co najmniej 2 lata"
+      }, {
+        "text": "** przed złożeniem wniosku oraz posiadać udokumentowane doświadczenie (min. 2 lata) w realizacji"
+      }, {
+        "text": " podobnych projektów kulturalnych. Jeśli Twoja fundacja zajmowała się dotąd tylko pomocą społec"
+      }, {
+        "text": "zną, a nie kulturą, wniosek może zostać odrzucony.\n*   **Weryfikacja"
+      }, {
+        "text": " kadry (tzw. Ustawa Kamilka):** Ponieważ projekt dotyczy dzieci, każda osoba zaangażowana w"
+      }, {
+        "text": " projekt (animatorzy, warsztatowcy), która będzie miała kontakt z małoletnimi, musi posiadać aktualne zaświad"
+      }, {
+        "text": "czenie o niekaralności oraz zaświadczenie z Rejestru Sprawców Przestępstw na Tle Seksual"
+      }, {
+        "text": "nym. Musisz o to zadbać przed startem zajęć.\n*   **Be"
+      }, {
+        "text": "zpłatność:** Wszystkie wydarzenia i zajęcia organizowane w ramach projektu muszą być całkowicie bezpłatne dla uczestników"
+      }, {
+        "text": ".\n*   **Grupa docelowa:** Projekt musi być skierowany do **dzieci i młod"
+      }, {
+        "text": "zieży w wieku szkolnym**. Jeśli Twoimi podopiecznymi są wyłącznie młodzi doro"
+      }, {
+        "text": "śli (np. 19-20 lat, w trakcie usamodzielniania), projekt nie wp"
+      }, {
+        "text": "isze się w regulamin. Dopuszczalne są grupy międzypokoleniowe, ale udział dzieci w"
+      }, {
+        "text": " wieku szkolnym jest obowiązkowy.\n*   **Termin realizacji:** Działania muszą być"
+      }, {
+        "text": " zaplanowane w ścisłych ramach czasowych: od 1 września 2026 r. do 31 sierpnia"
+      }, {
+        "text": " 2027 r.\n\n### 2. Potencjalne utrudnienia i kos"
+      }, {
+        "text": "zty niekwalifikowalne (Czego NIE sfinansujesz)\nRegulamin bardzo rygorystycz"
+      }, {
+        "text": "nie podchodzi do tego, na co można wydać środki. Dla placówek opiekuńczo-wych"
+      }, {
+        "text": "owawczych utrudnieniem mogą być następujące zakazy:\n*   **Zakaz finansowania remontów i"
+      }, {
+        "text": " modernizacji:** Nie możesz za te środki wyremontować świetlicy czy sali w domu dziecka."
+      }, {
+        "text": " Możesz kupić wyposażenie (np. sztalugi, instrumenty), ale nie zrobisz remontu"
+      }, {
+        "text": ".\n*   **Zakaz zakupu nagród rzeczowych w formie voucherów/bonów oraz"
+      }, {
+        "text": " nagród finansowych:** Jeśli planujesz konkurs artystyczny dla dzieci, nagrodami nie mogą być karty podarunk"
+      }, {
+        "text": "owe (np. do Empiku) ani gotówka.\n*   **Zakaz zakupu niezd"
+      }, {
+        "text": "rowego jedzenia:** To bardzo specyficzny, ale ważny punkt. Z grantu nie możesz kupić na"
+      }, {
+        "text": " warsztaty słodzonych napojów gazowanych, energetyków ani niezdrowych przekąsek ("
+      }, {
+        "text": "np. chipsów, chrupek). Musisz zaplanować zdrowy catering.\n*"
+      }, {
+        "text": "   **Brak działań sportowych i rekreacyjnych:** Projekt musi być stricte kulturalny. Wyj"
+      }, {
+        "text": "ście na basen, park linowy czy zawody sportowe zostaną odrzucone.\n*"
+      }, {
+        "text": "   **Zakaz wyjazdów zagranicznych:** Wycieczki kulturalne są dozwolone, ale tylko na"
+      }, {
+        "text": " terenie Polski.\n*   **Zakaz zakupu gadżetów:** Nie sfinansujesz kub"
+      }, {
+        "text": "ków, smyczy czy długopisów z logo projektu (wyjątkiem są tylko notatniki i torby materiał"
+      }, {
+        "text": "owe).\n\n### 3. Utrudnienia organizacyjne i finansowe\n*"
+      }, {
+        "text": "   **Powiązania osobowe (Konflikt interesów):** Nie możesz opłacać z grantu usług ("
+      }, {
+        "text": "np. prowadzenia warsztatów) zlecanych osobom, z którymi Ty lub Twoja organizacja jeste"
+      }, {
+        "text": "ście powiązani rodzinnie lub kapitałowo. Jeśli np. prezes fundacji chce"
+      }, {
+        "text": " zatrudnić swoją żonę jako arteterapeutkę, wymaga to specjalnego, pisemnego uzasadnienia"
+      }, {
+        "text": " we wniosku i zgody Zarządu Fundacji ORLEN.\n*   **Limity procent"
+      }, {
+        "text": "owe:** Koszty obsługi projektu (np. wynagrodzenie koordynatora, księgowość) nie"
+      }, {
+        "text": " mogą przekroczyć **10%** wartości grantu. Podobnie koszty promocji – to"
+      }, {
+        "text": " maksymalnie kolejne **10%**.\n*   **Kryteria oceny (kon"
+      }, {
+        "text": "kurencja):** Wnioski są oceniane punktowo. Dodatkowe punkty (do 9 pkt)"
+      }, {
+        "text": " dostają projekty realizowane w małych miejscowościach oraz w sąsiedztwie zakładów produkcyjnych OR"
+      }, {
+        "text": "LENU. Jeśli realizujesz projekt w dużym mieście (np. w Warszawie), na starcie tracisz"
+      }, {
+        "text": " te punkty, co oznacza, że sam pomysł merytoryczny musi być wybitnie dobry (j"
+      }, {
+        "text": "akość koncepcji to aż 60 pkt).\n\n**Podsumowując:** Jeśli"
+      }, {
+        "text": " Twoja organizacja ma 2-letnie doświadczenie w kulturze, a projekt skupi się na"
+      }, {
+        "text": " warsztatach artystycznych, wyjściach do teatru czy zakupie sprzętu multimedialnego dla dzieci w wieku szkol"
+      }, {
+        "text": "nym (z zachowaniem zdrowego cateringu i bez voucherów) – mac"
+      }, {
+        "text": "ie ogromne szanse na sukces."
+      }, {
+        "text": "",
+        "thoughtSignature": "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"
+      }]
+    }],
+    "pendingInputs": [{
+      "text": "",
+      "role": "user"
+    }]
+  }
+}

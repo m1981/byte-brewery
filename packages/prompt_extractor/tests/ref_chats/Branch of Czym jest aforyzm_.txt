@@ -1,0 +1,72 @@
+{
+  "runSettings": {
+    "temperature": 0.0,
+    "model": "models/gemini-3.1-pro-preview",
+    "topP": 0.95,
+    "topK": 64,
+    "maxOutputTokens": 65536,
+    "safetySettings": [{
+      "category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_HATE_SPEECH",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "OFF"
+    }],
+    "enableCodeExecution": false,
+    "enableSearchAsATool": false,
+    "enableBrowseAsATool": false,
+    "enableAutoFunctionResponse": false,
+    "outputResolution": "1K",
+    "thinkingLevel": "THINKING_LOW",
+    "enableImageSearch": false
+  },
+  "systemInstruction": {
+  },
+  "chunkedPrompt": {
+    "chunks": [{
+      "text": "Napisz mi krótko czy jest aforyzm",
+      "role": "user",
+      "tokenCount": 13,
+      "createTime": "2026-03-19T13:30:56.796Z"
+    }, {
+      "text": "**Defining Aphorism in Polish**\n\nI\u0027m now focusing on defining \"aphorism\" in Polish, aiming for conciseness. My goal is a brief, accurate explanation. I\u0027m exploring various Polish synonyms and related terms to ensure clarity and precision in the description, keeping the target format in mind. I want to convey the essence of an aphorism effectively.\n\n\n**Refining Polish Definitions**\n\nI\u0027m now refining the Polish definition, focusing on key characteristics like wit and memorability. I\u0027m incorporating synonyms like \"złota myśl\" to enrich the explanation. Also, I have drafted the definition, and included synonyms.\n\n\n**Selecting Polish Examples**\n\nI\u0027ve selected Polish aphorism examples to enrich the definition, opting for clarity over overly philosophical ones. I\u0027m prioritizing relatable and thought-provoking examples, such as \"Czas robi swoje. A ty człowieku?\" and \"Wyobraźnia jest ważniejsza od wiedzy.\" This stage focuses on showcasing the aphorism\u0027s essence concretely.\n\nI\u0027m now revising the structure to include an example.\n\n\n",
+      "role": "model",
+      "tokenCount": 720,
+      "isThought": true,
+      "thinkingBudget": -1,
+      "createTime": "2026-03-19T13:30:56.796Z"
+    }, {
+      "text": "**Aforyzm** to krótkie, zwięzłe i błyskotliwe zdanie, które wyraża głęboką prawdę życiową, filozoficzną lub moralną. Ma za zadanie skłonić do refleksji i jest zazwyczaj łatwe do zapamiętania. \n\nInaczej aforyzm nazywa się **sentencją**, **maksymą** lub potocznie **„złotą myślą”**.\n\n**Przykłady aforyzmów:**\n* „Czas robi swoje. A ty człowieku?” – *Stanisław Jerzy Lec*\n* „Wiedzieć, co się wie, i wiedzieć, czego się nie wie – oto prawdziwa wiedza.” – *Konfucjusz*\n* „Lepiej zaliczać się do niektórych, niż do wszystkich.” – *Andrzej Sapkowski*",
+      "role": "model",
+      "finishReason": "STOP",
+      "tokenCount": 187,
+      "createTime": "2026-03-19T13:31:05.664Z"
+    }, {
+      "driveImage": {
+        "id": "1M1J2xkyNfQbBIjqXCERObECjmzZatjhz"
+      },
+      "role": "user",
+      "tokenCount": 1081,
+      "createTime": "2026-03-19T13:31:54.943Z"
+    }, {
+      "text": "Napisz trzy aforyzmy do poniższej instrukcji",
+      "role": "user",
+      "tokenCount": 15,
+      "branchParent": {
+        "promptId": "prompts/1CeVK1pW2xE1BMRkTQFzo3vMLre-P_acO",
+        "displayName": "Czym jest aforyzm?"
+      },
+      "createTime": "2026-03-19T13:31:54.943Z"
+    }],
+    "pendingInputs": [{
+      "text": "",
+      "role": "user"
+    }]
+  }
+}

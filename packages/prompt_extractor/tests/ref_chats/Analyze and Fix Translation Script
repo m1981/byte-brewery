@@ -1,0 +1,241 @@
+{
+  "runSettings": {
+    "temperature": 0.0,
+    "model": "models/gemini-3-pro-preview",
+    "topP": 0.95,
+    "topK": 64,
+    "maxOutputTokens": 65536,
+    "safetySettings": [{
+      "category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_HATE_SPEECH",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "OFF"
+    }, {
+      "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "OFF"
+    }],
+    "enableCodeExecution": false,
+    "enableSearchAsATool": false,
+    "enableBrowseAsATool": false,
+    "enableAutoFunctionResponse": false,
+    "outputResolution": "1K",
+    "thinkingLevel": "THINKING_LOW"
+  },
+  "systemInstruction": {
+  },
+  "chunkedPrompt": {
+    "chunks": [{
+      "text": "Act as commercial grade python developer who where type hints.\nPlease analzye my script and understand types and provide necessary fixes\n```\nimport json\nfrom typing import Any, cast\n\n\ndef merge_translations(\n    questions_file: str, translations_file: str, output_file: str | None \u003d None\n) -\u003e list[dict[str, Any]]:\n    \"\"\"\n    Merge translations into questions file by matching ID.\n\n    Args:\n        questions_file: Path to the questions JSON file\n        translations_file: Path to the translations JSON file\n        output_file: Path to save merged result (optional, returns data if None)\n\n    Returns:\n        List of merged question objects with translations\n    \"\"\"\n\n    # Read files\n    with open(questions_file, encoding\u003d\"utf-8\") as f:\n        questions \u003d json.load(f)\n\n    with open(translations_file, encoding\u003d\"utf-8\") as f:\n        translations \u003d json.load(f)\n\n    # Create lookup dictionary for translations by ID\n    trans_dict \u003d {item[\"id\"]: item[\"translations\"] for item in translations}\n\n    # Merge translations into questions\n    merged \u003d []\n    for question in questions:\n        q_id \u003d question[\"id\"]\n\n        if q_id in trans_dict:\n            question[\"translations\"] \u003d trans_dict[q_id]\n            merged.append(question)\n            print(f\"✓ Matched ID {q_id}\")\n        else:\n            print(f\"⚠ Warning: No translation found for ID {q_id}\")\n            merged.append(question)\n\n    # Save to file if output path provided\n    if output_file:\n        with open(output_file, \"w\", encoding\u003d\"utf-8\") as f:\n            json.dump(merged, f, ensure_ascii\u003dFalse, indent\u003d2)\n        print(f\"\\n✅ Merged data saved to: {output_file}\")\n\n    return merged\n\n\ndef add_translation_field(\n    questions_file: str, output_file: str | None \u003d None\n) -\u003e list[dict[str, Any]]:\n    \"\"\"\n    Add empty \u0027translations\u0027 field to all questions if not present.\n    Useful for initializing the structure.\n\n    Args:\n        questions_file: Path to the questions JSON file\n        output_file: Path to save result (optional)\n\n    Returns:\n        List of questions with translations field\n    \"\"\"\n\n    with open(questions_file, encoding\u003d\"utf-8\") as f:\n        questions \u003d json.load(f)\n\n    for question in questions:\n        if \"translations\" not in question:\n            question[\"translations\"] \u003d {}\n\n    if output_file:\n        with open(output_file, \"w\", encoding\u003d\"utf-8\") as f:\n            json.dump(questions, f, ensure_ascii\u003dFalse, indent\u003d2)\n        print(f\"✅ Updated questions saved to: {output_file}\")\n\n    return questions\n\n\ndef validate_ids(questions_file: str, translations_file: str) -\u003e dict[str, list[str]]:\n    \"\"\"\n    Check for ID mismatches between files.\n\n    Args:\n        questions_file: Path to the questions JSON file\n        translations_file: Path to the translations JSON file\n\n    Returns:\n        Dictionary with \u0027missing_in_translations\u0027 and \u0027extra_in_translations\u0027 lists\n    \"\"\"\n\n    with open(questions_file, encoding\u003d\"utf-8\") as f:\n        questions: list[dict[str, Any]] \u003d json.load(f)\n\n    with open(translations_file, encoding\u003d\"utf-8\") as f:\n        translations: list[dict[str, Any]] \u003d json.load(f)\n\n    q_ids: set[str] \u003d {item[\"id\"] for item in questions}\n    t_ids: set[str] \u003d {item[\"id\"] for item in translations}\n\n    return {\n        \"missing_in_translations\": cast(list[str], list(q_ids - t_ids)),\n        \"extra_in_translations\": cast(list[str], list(t_ids - q_ids)),\n    }\n\n\nif __name__ \u003d\u003d \"__main__\":\n    # Example usage:\n\n    # 1. Merge translations into questions\n    merge_translations(\n        questions_file\u003d\"seed_questions_demo.json\",\n        translations_file\u003d\"mapping_hints_en.json\",\n        output_file\u003d\"questions_merged.json\",\n    )\n\n    # 2. Validate IDs before merging\n    # mismatches \u003d validate_ids(\"questions.json\", \"translations.json\")\n    # if mismatches[\u0027missing_in_translations\u0027]:\n    #     print(f\"Missing translations for IDs: {mismatches[\u0027missing_in_translations\u0027]}\")\n    # if mismatches[\u0027extra_in_translations\u0027]:\n    #     print(f\"Extra translations for IDs: {mismatches[\u0027extra_in_translations\u0027]}\")\n\n    # 3. Add empty translations field to initialize structure\n    # add_translation_field(\"questions.json\", \"questions_initialized.json\")\n\n```",
+      "role": "user",
+      "tokenCount": 1144
+    }, {
+      "text": "**Defining the Focus**\n\nI\u0027m zeroing in on the core of this task: a Python script that will be the focal point of my work. My role is clear – commercial-grade developer, and my goal – type hints, code analysis, and fixes. This analysis sets the foundation.\n\n\n",
+      "role": "model",
+      "tokenCount": 111,
+      "isThought": true,
+      "parts": [{
+        "text": "**Defining the Focus**\n\nI\u0027m zeroing in on the core of this task: a Python script that will be the focal point of my work. My role is clear – commercial-grade developer, and my goal – type hints, code analysis, and fixes. This analysis sets the foundation.\n\n\n",
+        "thought": true
+      }]
+    }, {
+      "text": "Here is a commercial-grade analysis and refactoring of your script.\n\n### Analysis Summary\n\nYour script works logically but lacks the type safety required for a \"commercial grade\" application. Here are the key issues identified:\n\n1.  **`json.load` returns `Any`**: By default, `json.load` returns `Any`. Without explicit casting or validation, your IDE and type checker (like MyPy) cannot help you catch errors (e.g., if the JSON is a dict instead of a list).\n2.  **Loose Typing (`dict[str, Any]`)**: While `Any` is convenient, it defeats the purpose of type hints. We should define a `TypedDict` or a data class to represent the structure of a \"Question\" and a \"Translation\".\n3.  **Implicit Assumptions**: The code assumes `item[\"id\"]` always exists and is hashable (likely a string or int). If a JSON object is missing an ID, the script will crash at runtime.\n4.  **File I/O Error Handling**: Commercial code should handle `FileNotFoundError` or `JSONDecodeError` gracefully rather than letting the raw exception crash the main thread.\n\n### Refactored Code\n\nHere is the improved version. I have introduced `TypedDict` for structural validation and added robust error handling.\n\n```python\nimport json\nimport sys\nfrom pathlib import Path\nfrom typing import Any, TypedDict, cast\n\n# ---------------------------------------------------------------------------\n# Type Definitions\n# ---------------------------------------------------------------------------\n\nclass TranslationMap(TypedDict, total\u003dFalse):\n    \"\"\"\n    Represents the structure of the \u0027translations\u0027 dictionary.\n    Using total\u003dFalse allows for flexible language keys (en, fr, es, etc.).\n    \"\"\"\n    en: str\n    es: str\n    fr: str\n    de: str\n    # Add other languages as needed, or use Dict[str, str] if strictly dynamic\n\n\nclass QuestionItem(TypedDict):\n    \"\"\"\n    Represents the expected structure of a question item in the JSON list.\n    \"\"\"\n    id: str | int\n    translations: TranslationMap\n    # We use total\u003dFalse for fields that might not exist in raw input,\n    # but here we assume \u0027id\u0027 is mandatory.\n\n\nclass TranslationItem(TypedDict):\n    \"\"\"\n    Represents the expected structure of a translation item in the JSON list.\n    \"\"\"\n    id: str | int\n    translations: TranslationMap\n\n\n# ---------------------------------------------------------------------------\n# Helper Functions\n# ---------------------------------------------------------------------------\n\ndef _load_json_list(file_path: str) -\u003e list[dict[str, Any]]:\n    \"\"\"\n    Helper to safely load a JSON file and ensure it is a list of dictionaries.\n    \"\"\"\n    path \u003d Path(file_path)\n    if not path.exists():\n        raise FileNotFoundError(f\"File not found: {file_path}\")\n\n    try:\n        with path.open(encoding\u003d\"utf-8\") as f:\n            data \u003d json.load(f)\n    except json.JSONDecodeError as e:\n        raise ValueError(f\"Invalid JSON in {file_path}: {e}\") from e\n\n    if not isinstance(data, list):\n        raise TypeError(f\"Expected JSON root to be a list in {file_path}, got {type(data).__name__}\")\n    \n    return data\n\n\n# ---------------------------------------------------------------------------\n# Core Logic\n# ---------------------------------------------------------------------------\n\ndef merge_translations(\n    questions_file: str, translations_file: str, output_file: str | None \u003d None\n) -\u003e list[QuestionItem]:\n    \"\"\"\n    Merge translations into questions file by matching ID.\n\n    Args:\n        questions_file: Path to the questions JSON file\n        translations_file: Path to the translations JSON file\n        output_file: Path to save merged result (optional)\n\n    Returns:\n        List of merged question objects with translations\n    \"\"\"\n    # Load and cast data\n    raw_questions \u003d _load_json_list(questions_file)\n    raw_translations \u003d _load_json_list(translations_file)\n\n    # We cast here because we\u0027ve validated it\u0027s a list, but we trust the internal structure matches TypedDict\n    questions \u003d cast(list[QuestionItem], raw_questions)\n    translations \u003d cast(list[TranslationItem], raw_translations)\n\n    # Create lookup dictionary for translations by ID\n    # We use a generic dict for lookup to handle potential missing \u0027id\u0027 keys gracefully during creation\n    trans_dict: dict[str | int, TranslationMap] \u003d {}\n    \n    for item in translations:\n        if \"id\" not in item:\n            print(f\"⚠ Warning: Skipping translation item without \u0027id\u0027: {item}\")\n            continue\n        trans_dict[item[\"id\"]] \u003d item.get(\"translations\", {})\n\n    # Merge translations into questions\n    merged: list[QuestionItem] \u003d []\n    \n    for question in questions:\n        # Ensure ID exists\n        if \"id\" not in question:\n            print(f\"⚠ Warning: Skipping question without \u0027id\u0027: {question}\")\n            continue\n\n        q_id \u003d question[\"id\"]\n\n        if q_id in trans_dict:\n            # Update or create the translations field\n            question[\"translations\"] \u003d trans_dict[q_id]\n            merged.append(question)\n            print(f\"✓ Matched ID {q_id}\")\n        else:\n            print(f\"⚠ Warning: No translation found for ID {q_id}\")\n            merged.append(question)\n\n    # Save to file if output path provided\n    if output_file:\n        try:\n            with open(output_file, \"w\", encoding\u003d\"utf-8\") as f:\n                json.dump(merged, f, ensure_ascii\u003dFalse, indent\u003d2)\n            print(f\"\\n✅ Merged data saved to: {output_file}\")\n        except OSError as e:\n            print(f\"❌ Error saving file {output_file}: {e}\")\n\n    return merged\n\n\ndef add_translation_field(\n    questions_file: str, output_file: str | None \u003d None\n) -\u003e list[QuestionItem]:\n    \"\"\"\n    Add empty \u0027translations\u0027 field to all questions if not present.\n    \"\"\"\n    raw_questions \u003d _load_json_list(questions_file)\n    questions \u003d cast(list[QuestionItem], raw_questions)\n\n    for question in questions:\n        if \"translations\" not in question:\n            question[\"translations\"] \u003d {}\n\n    if output_file:\n        try:\n            with open(output_file, \"w\", encoding\u003d\"utf-8\") as f:\n                json.dump(questions, f, ensure_ascii\u003dFalse, indent\u003d2)\n            print(f\"✅ Updated questions saved to: {output_file}\")\n        except OSError as e:\n            print(f\"❌ Error saving file {output_file}: {e}\")\n\n    return questions\n\n\ndef validate_ids(questions_file: str, translations_file: str) -\u003e dict[str, list[str | int]]:\n    \"\"\"\n    Check for ID mismatches between files.\n\n    Returns:\n        Dictionary with \u0027missing_in_translations\u0027 and \u0027extra_in_translations\u0027 lists\n    \"\"\"\n    raw_questions \u003d _load_json_list(questions_file)\n    raw_translations \u003d _load_json_list(translations_file)\n\n    # Extract IDs safely, ignoring items without IDs\n    q_ids: set[str | int] \u003d {\n        item[\"id\"] for item in raw_questions if \"id\" in item\n    }\n    t_ids: set[str | int] \u003d {\n        item[\"id\"] for item in raw_translations if \"id\" in item\n    }\n\n    return {\n        \"missing_in_translations\": list(q_ids - t_ids),\n        \"extra_in_translations\": list(t_ids - q_ids),\n    }\n\n\nif __name__ \u003d\u003d \"__main__\":\n    # Example usage wrapped in try/except for top-level error handling\n    try:\n        # 1. Merge translations into questions\n        merge_translations(\n            questions_file\u003d\"seed_questions_demo.json\",\n            translations_file\u003d\"mapping_hints_en.json\",\n            output_file\u003d\"questions_merged.json\",\n        )\n    except Exception as e:\n        print(f\"❌ Critical Error: {e}\", file\u003dsys.stderr)\n        sys.exit(1)\n```\n\n### Key Changes Explained\n\n1.  **`TypedDict` Definitions**:\n    *   I defined `QuestionItem` and `TranslationItem`. This tells other developers (and your IDE) exactly what fields to expect inside the dictionaries.\n    *   `id: str | int`: Handles cases where IDs might be numeric in JSON but strings in Python, or vice versa.\n\n2.  **Helper `_load_json_list`**:\n    *   Instead of repeating `open(...)` and `json.load(...)`, I centralized it.\n    *   **Validation**: It explicitly checks `if not isinstance(data, list)`. This prevents the script from crashing later if the JSON file contains a single object instead of a list.\n    *   **Error Handling**: It catches `JSONDecodeError` and `FileNotFoundError` to provide readable error messages.\n\n3.  **Safe Dictionary Access**:\n    *   In the original code: `q_id \u003d question[\"id\"]`. If a question was missing an ID, the script crashed.\n    *   In the fix: I added checks `if \"id\" not in question` to skip malformed data gracefully.\n\n4.  **Type Casting**:\n    *   `cast(list[QuestionItem], raw_questions)`: Since `json.load` is dynamic, we use `cast` to tell the type checker \"I have validated this, treat it as a list of QuestionItems now.\"\n\n5.  **Pathlib**:\n    *   Switched to `pathlib.Path` for file existence checks, which is the modern Python standard over `os.path`.",
+      "role": "model",
+      "finishReason": "STOP",
+      "tokenCount": 2253,
+      "parts": [{
+        "text": "Here is a"
+      }, {
+        "text": " commercial-grade analysis and refactoring of your script.\n\n### Analysis Summary\n\nYour script works logically but lacks the type"
+      }, {
+        "text": " safety required for a \"commercial grade\" application. Here are the key issues identified:\n\n1.  **`json.load"
+      }, {
+        "text": "` returns `Any`**: By default, `json.load` returns `Any`. Without explicit casting or validation, your"
+      }, {
+        "text": " IDE and type checker (like MyPy) cannot help you catch errors (e.g., if the JSON is a dict"
+      }, {
+        "text": " instead of a list).\n2.  **Loose Typing (`dict[str, Any]`)**: While `Any` is convenient"
+      }, {
+        "text": ", it defeats the purpose of type hints. We should define a `TypedDict` or a data class to represent the"
+      }, {
+        "text": " structure of a \"Question\" and a \"Translation\".\n3.  **Implicit Assumptions**: The code assumes `item"
+      }, {
+        "text": "[\"id\"]` always exists and is hashable (likely a string or int). If a JSON object is missing an ID"
+      }, {
+        "text": ", the script will crash at runtime.\n4.  **File I/O Error Handling**: Commercial code should handle `FileNotFoundError"
+      }, {
+        "text": "` or `JSONDecodeError` gracefully rather than letting the raw exception crash the main thread.\n\n### Refactored Code\n\n"
+      }, {
+        "text": "Here is the improved version. I have introduced `TypedDict` for structural validation and added robust error handling.\n\n"
+      }, {
+        "text": "```python\nimport json\nimport sys\nfrom pathlib import Path\nfrom typing import Any, TypedDict, cast\n\n# "
+      }, {
+        "text": "---------------------------------------------------------------------------\n# Type Definitions\n# ---------------------------------------------------------------------------\n\nclass TranslationMap(TypedDict,"
+      }, {
+        "text": " total\u003dFalse):\n    \"\"\"\n    Represents the structure of the \u0027translations\u0027 dictionary.\n    Using total"
+      }, {
+        "text": "\u003dFalse allows for flexible language keys (en, fr, es, etc.).\n    \"\"\"\n    en: str\n    es"
+      }, {
+        "text": ": str\n    fr: str\n    de: str\n    # Add other languages as needed, or use Dict"
+      }, {
+        "text": "[str, str] if strictly dynamic\n\n\nclass QuestionItem(TypedDict):\n    \"\"\"\n    Represents the"
+      }, {
+        "text": " expected structure of a question item in the JSON list.\n    \"\"\"\n    id: str | int\n    translations"
+      }, {
+        "text": ": TranslationMap\n    # We use total\u003dFalse for fields that might not exist in raw input,\n    # but"
+      }, {
+        "text": " here we assume \u0027id\u0027 is mandatory.\n\n\nclass TranslationItem(TypedDict):\n    \"\"\"\n    Represents the"
+      }, {
+        "text": " expected structure of a translation item in the JSON list.\n    \"\"\"\n    id: str | int\n    translations: TranslationMap"
+      }, {
+        "text": "\n\n\n# ---------------------------------------------------------------------------\n# Helper Functions\n# ---------------------------------------------------------------------------\n\ndef _load_json_"
+      }, {
+        "text": "list(file_path: str) -\u003e list[dict[str, Any]]:\n    \"\"\"\n    Helper to safely load a"
+      }, {
+        "text": " JSON file and ensure it is a list of dictionaries.\n    \"\"\"\n    path \u003d Path(file_path)\n    "
+      }, {
+        "text": "if not path.exists():\n        raise FileNotFoundError(f\"File not found: {file_path}\")\n\n    try:"
+      }, {
+        "text": "\n        with path.open(encoding\u003d\"utf-8\") as f:\n            data \u003d json.load(f)\n"
+      }, {
+        "text": "    except json.JSONDecodeError as e:\n        raise ValueError(f\"Invalid JSON in {file_path}:"
+      }, {
+        "text": " {e}\") from e\n\n    if not isinstance(data, list):\n        raise TypeError(f\"Expected JSON root to"
+      }, {
+        "text": " be a list in {file_path}, got {type(data).__name__}\")\n    \n    return data\n\n\n# "
+      }, {
+        "text": "---------------------------------------------------------------------------\n# Core Logic\n# ---------------------------------------------------------------------------\n\ndef merge_translations(\n"
+      }, {
+        "text": "    questions_file: str, translations_file: str, output_file: str | None \u003d None\n)"
+      }, {
+        "text": " -\u003e list[QuestionItem]:\n    \"\"\"\n    Merge translations into questions file by matching ID.\n\n    Args:"
+      }, {
+        "text": "\n        questions_file: Path to the questions JSON file\n        translations_file: Path to the translations JSON file"
+      }, {
+        "text": "\n        output_file: Path to save merged result (optional)\n\n    Returns:\n        List of merged question objects with"
+      }, {
+        "text": " translations\n    \"\"\"\n    # Load and cast data\n    raw_questions \u003d _load_json_list(questions"
+      }, {
+        "text": "_file)\n    raw_translations \u003d _load_json_list(translations_file)\n\n    # We"
+      }, {
+        "text": " cast here because we\u0027ve validated it\u0027s a list, but we trust the internal structure matches TypedDict\n    "
+      }, {
+        "text": "questions \u003d cast(list[QuestionItem], raw_questions)\n    translations \u003d cast(list[TranslationItem], raw_"
+      }, {
+        "text": "translations)\n\n    # Create lookup dictionary for translations by ID\n    # We use a generic dict for lookup to handle potential missing"
+      }, {
+        "text": " \u0027id\u0027 keys gracefully during creation\n    trans_dict: dict[str | int, TranslationMap] \u003d {}\n    \n"
+      }, {
+        "text": "    for item in translations:\n        if \"id\" not in item:\n            print(f\"⚠ Warning"
+      }, {
+        "text": ": Skipping translation item without \u0027id\u0027: {item}\")\n            continue\n        trans_dict[item[\"id\"]] \u003d"
+      }, {
+        "text": " item.get(\"translations\", {})\n\n    # Merge translations into questions\n    merged: list[QuestionItem] \u003d"
+      }, {
+        "text": " []\n    \n    for question in questions:\n        # Ensure ID exists\n        if \"id\" not in question"
+      }, {
+        "text": ":\n            print(f\"⚠ Warning: Skipping question without \u0027id\u0027: {question}\")\n            continue\n\n        q_id"
+      }, {
+        "text": " \u003d question[\"id\"]\n\n        if q_id in trans_dict:\n            # Update or create the translations field\n            "
+      }, {
+        "text": "question[\"translations\"] \u003d trans_dict[q_id]\n            merged.append(question)\n            print"
+      }, {
+        "text": "(f\"✓ Matched ID {q_id}\")\n        else:\n            print(f\"⚠ Warning"
+      }, {
+        "text": ": No translation found for ID {q_id}\")\n            merged.append(question)\n\n    # Save to file if"
+      }, {
+        "text": " output path provided\n    if output_file:\n        try:\n            with open(output_file, \"w"
+      }, {
+        "text": "\", encoding\u003d\"utf-8\") as f:\n                json.dump(merged, f, ensure_ascii\u003d"
+      }, {
+        "text": "False, indent\u003d2)\n            print(f\"\\n✅ Merged data saved to: {output_file"
+      }, {
+        "text": "}\")\n        except OSError as e:\n            print(f\"❌ Error saving file {output_file}: {e}\")\n\n"
+      }, {
+        "text": "    return merged\n\n\ndef add_translation_field(\n    questions_file: str, output_file: str"
+      }, {
+        "text": " | None \u003d None\n) -\u003e list[QuestionItem]:\n    \"\"\"\n    Add empty \u0027translations\u0027 field to"
+      }, {
+        "text": " all questions if not present.\n    \"\"\"\n    raw_questions \u003d _load_json_list(questions_file)"
+      }, {
+        "text": "\n    questions \u003d cast(list[QuestionItem], raw_questions)\n\n    for question in questions:\n        "
+      }, {
+        "text": "if \"translations\" not in question:\n            question[\"translations\"] \u003d {}\n\n    if output_file:\n"
+      }, {
+        "text": "        try:\n            with open(output_file, \"w\", encoding\u003d\"utf-8\") as f:"
+      }, {
+        "text": "\n                json.dump(questions, f, ensure_ascii\u003dFalse, indent\u003d2)\n            print("
+      }, {
+        "text": "f\"✅ Updated questions saved to: {output_file}\")\n        except OSError as e:\n            print("
+      }, {
+        "text": "f\"❌ Error saving file {output_file}: {e}\")\n\n    return questions\n\n\ndef validate_ids("
+      }, {
+        "text": "questions_file: str, translations_file: str) -\u003e dict[str, list[str | int]]:\n"
+      }, {
+        "text": "    \"\"\"\n    Check for ID mismatches between files.\n\n    Returns:\n        Dictionary with \u0027missing_in"
+      }, {
+        "text": "_translations\u0027 and \u0027extra_in_translations\u0027 lists\n    \"\"\"\n    raw_questions \u003d _load_"
+      }, {
+        "text": "json_list(questions_file)\n    raw_translations \u003d _load_json_list(translations_file"
+      }, {
+        "text": ")\n\n    # Extract IDs safely, ignoring items without IDs\n    q_ids: set[str | int] \u003d"
+      }, {
+        "text": " {\n        item[\"id\"] for item in raw_questions if \"id\" in item\n    }\n    t"
+      }, {
+        "text": "_ids: set[str | int] \u003d {\n        item[\"id\"] for item in raw_translations if"
+      }, {
+        "text": " \"id\" in item\n    }\n\n    return {\n        \"missing_in_translations\": list(q"
+      }, {
+        "text": "_ids - t_ids),\n        \"extra_in_translations\": list(t_ids - q_"
+      }, {
+        "text": "ids),\n    }\n\n\nif __name__ \u003d\u003d \"__main__\":\n    # Example usage wrapped in try/except"
+      }, {
+        "text": " for top-level error handling\n    try:\n        # 1. Merge translations into questions\n        merge_translations(\n"
+      }, {
+        "text": "            questions_file\u003d\"seed_questions_demo.json\",\n            translations_file\u003d\"mapping_hints_en"
+      }, {
+        "text": ".json\",\n            output_file\u003d\"questions_merged.json\",\n        )\n    except Exception as e:\n"
+      }, {
+        "text": "        print(f\"❌ Critical Error: {e}\", file\u003dsys.stderr)\n        sys.exit("
+      }, {
+        "text": "1)\n```\n\n### Key Changes Explained\n\n1.  **`TypedDict` Definitions**:\n    *   I"
+      }, {
+        "text": " defined `QuestionItem` and `TranslationItem`. This tells other developers (and your IDE) exactly what fields to expect inside the dictionaries"
+      }, {
+        "text": ".\n    *   `id: str | int`: Handles cases where IDs might be numeric in JSON but strings in Python"
+      }, {
+        "text": ", or vice versa.\n\n2.  **Helper `_load_json_list`**:\n    *   "
+      }, {
+        "text": "Instead of repeating `open(...)` and `json.load(...)`, I centralized it.\n    *   **Validation**: It explicitly"
+      }, {
+        "text": " checks `if not isinstance(data, list)`. This prevents the script from crashing later if the JSON file contains a single"
+      }, {
+        "text": " object instead of a list.\n    *   **Error Handling**: It catches `JSONDecodeError` and `FileNotFoundError"
+      }, {
+        "text": "` to provide readable error messages.\n\n3.  **Safe Dictionary Access**:\n    *   In the original code:"
+      }, {
+        "text": " `q_id \u003d question[\"id\"]`. If a question was missing an ID, the script crashed.\n    *"
+      }, {
+        "text": "   In the fix: I added checks `if \"id\" not in question` to skip malformed data gracefully.\n\n"
+      }, {
+        "text": "4.  **Type Casting**:\n    *   `cast(list[QuestionItem], raw_questions)`: Since"
+      }, {
+        "text": " `json.load` is dynamic, we use `cast` to tell the type checker \"I have validated this,"
+      }, {
+        "text": " treat it as a list of QuestionItems now.\"\n\n5.  **Pathlib**:\n    *   Switched to "
+      }, {
+        "text": "`pathlib.Path` for file existence checks, which is the modern Python standard over `os.path`."
+      }, {
+        "text": "",
+        "thoughtSignature": "EtYECtMEAb4+9vuNuu+KCHdAmIzwUuN6Le2Ec/8WIrE8hNMjPVqm57M5Y1Qotip8mNCDyDqGH1g36flO/c7aJe5HE1aY6uc5tyzpBRgdZbsI/t/nWYFUJO14RDx3bZF0HWgX63oBRuhJqgp7oX8Q3V0T2IMF3k4Nyqz8kSx+Jtkb+v/GUfRxoWZ+cZBigct2qznVCcySzQQSamYz+8U87kwzzdQ/firgrulqLcmbOIzd8o54GEoRWyaUiS+SMk6IQBWG8Pxci2T+rpTyyUTn7N10j6Gslf6aWa62zYjmaKUKz5oOLZyz0C5HxEIEWVz5ZNigBZ+ar1efiiEIc6//q8D3+6TMi921Od+VlyjYWwfs6RkXVYZk+JW2iCn6+bUlJg1dMQXuRWeq9ff/CjJqxfuZyLF87QsmdPei5S/jZnsUFXJJnlUovR8q4/GyShhk3VSBJ+9t2ClDJ+i9ZTs1Nk+lvLU1O6V9obxwtPk+knShC0e+OZsstk4xG0Lp3aPpXKMuX2+rpnkYvWvNYZu0sXr2eaYgSq0vD903+vg+9LM8NiTZpMlrDXSQQjeP1tk9gCnWObVqISfqK0WeOG5F1UIUImL/fjrsvVBzpHQUyPQHk/weZCl/wmb7MOWChfZVyMepF33klYur0+fNgtCmfS4uo6ZeEHLwn6LZ8vWU4A1ia7x00FoqBu2/xUo1gSvXjBsnx48TN8bZWeu4v4Pw9wEE/fz5hKGJGyWdC7zhkW+HzsS596pVgRVyRAAwQ7WOnhPGWvBij7i0lF6bNe3JupAivvQ1vpmhog=="
+      }]
+    }],
+    "pendingInputs": [{
+      "text": "",
+      "role": "user"
+    }]
+  }
+}

@@ -1,34 +1,23 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+# /pyproject.toml (Root)
 
 [project]
 name = "byte-brewery"
 version = "1.0.0"
 description = "Scripts crafted like fine, magical ales for AI development"
 requires-python = ">=3.10"
-dependencies = [
-    "anthropic>=0.75.0",
-    "google-genai>=1.56.0",
-    "openai>=2.14.0",
-    "pydantic>=2.12.5",
+# Notice: No production dependencies here! They go to the individual packages.
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+# Modern uv way to handle development/testing dependencies globally
+[dependency-groups]
+dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-watch>=4.2.0",
-    "python-dotenv>=1.2.1",
-    "pyyaml>=6.0.3",
 ]
 
-[project.scripts]
-# Main Pipeline
-aug = "augment_ai.aug_pipeline:main"
-
-# Utilities (Now properly namespaced)
-aug-recap = "augment_ai.recap:main"
-dce = "augment_ai.dce:main"
-pext = "augment_ai.pext:main"
-aireview = "aireview.main:main"
-chatmap = "prompt_extractor.cli:main"
-
-[tool.setuptools.packages.find]
-where = ["src"]
+# Global pytest configuration
+[tool.pytest.ini_options]
+addopts = "-v"
