@@ -43,10 +43,11 @@ class TagManager:
         # TODO: Implement actual API call here
         return []
 
-    def get_tags(self, conversations: List[Tuple[str, List[MessageNode]]]) -> Dict[str, List[str]]:
+    def get_tags(self, conversations: List[Tuple[str, List[MessageNode]]], fetch_missing: bool = True) -> Dict[
+        str, List[str]]:
         """
-        Process conversations, fetch missing tags via LLM, and return a mapping
-        of chat_name -> list of tags.
+        Process conversations, fetch missing tags via LLM (if fetch_missing is True),
+        and return a mapping of chat_name -> list of tags.
         """
         result: Dict[str, List[str]] = {}
 
@@ -67,10 +68,14 @@ class TagManager:
                 # Cache hit! No API call needed.
                 result[chat_name] = self.cache_data[first_prompt]
             else:
-                # Cache miss. Queue it up.
-                if first_prompt not in pending_prompts:
-                    pending_prompts[first_prompt] = []
-                pending_prompts[first_prompt].append(chat_name)
+                # Cache miss. Queue it up if we are allowed to fetch.
+                if fetch_missing:
+                    if first_prompt not in pending_prompts:
+                        pending_prompts[first_prompt] = []
+                    pending_prompts[first_prompt].append(chat_name)
+                else:
+                    # Offline mode, no tags available
+                    result[chat_name] = []
 
         # 2. Fetch missing tags from LLM (Deduplicated by unique prompt text)
         cache_updated = False

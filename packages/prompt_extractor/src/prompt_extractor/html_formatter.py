@@ -1,8 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from html import escape
 from pathlib import Path
-from typing import List, Tuple, Optional
-
+from typing import List, Tuple, Optional,  Dict
 from prompt_extractor.models import MessageNode
 
 # ---------------------------------------------------------------------------
@@ -377,10 +376,61 @@ h1 {
     text-align: center;
     padding: 20px;
 }
+
+/* ── Search & Tags ── */
+.search-container {
+    margin-bottom: 24px;
+}
+.search-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.search-input:focus {
+    border-color: #667eea;
+}
+.tags-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #edf2f7;
+}
+.tag-pill {
+    background: #edf2f7;
+    color: #4a5568;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
 """
 
 _PROMPTS_JS = """
-// No JavaScript needed - prompts are hard-clipped to 300 characters
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('tag-search');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const cards = document.querySelectorAll('.chat-card');
+
+        cards.forEach(card => {
+            const tags = card.getAttribute('data-tags') || "";
+            if (query === "" || tags.includes(query)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+});
 """
 
 
@@ -490,13 +540,19 @@ def _render_prompt_item(node: MessageNode, prompt_number: int, has_attachment: b
     return f'<div class="prompt-item">{content}</div>'
 
 
-def _render_chat_card(chat_name: str, nodes: List[MessageNode], file_path: Optional[str] = None) -> str:
-    """Render a single chat card with all user prompts.
+def _render_chat_card(
+    chat_name: str,
+    nodes: List[MessageNode],
+    file_path: Optional[str] = None,
+    tags: Optional[List[str]] = None
+) -> str:
+    """Render a single chat card with all user prompts and tags.
 
     Args:
         chat_name: Name of the chat
         nodes: List of message nodes
         file_path: Optional path to source file for fallback timestamp
+        tags: Optional list of tags for this chat
     """
     # Filter only user messages
     user_prompts = [n for n in nodes if n.role == "user"]
@@ -534,7 +590,16 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode], file_path: Optio
     # Add prompt count to title
     title_with_count = f"{escape(chat_name)} ({prompt_count} prompt{'s' if prompt_count != 1 else ''})"
 
-    return f"""<div class="chat-card">
+    # Handle Tags
+    tags = tags or []
+    data_tags_attr = " ".join(escape(t.lower()) for t in tags)
+
+    tags_html = ""
+    if tags:
+        pills = "\n".join(f'<span class="tag-pill">#{escape(t)}</span>' for t in tags)
+        tags_html = f'<div class="tags-container">{pills}</div>'
+
+    return f"""<div class="chat-card" data-tags="{data_tags_attr}">
     <div class="chat-header">
         <div class="chat-title">{title_with_count}</div>
         <div class="chat-datetime">
@@ -546,23 +611,31 @@ def _render_chat_card(chat_name: str, nodes: List[MessageNode], file_path: Optio
         <div class="prompts-list">
 {prompts_html}
         </div>
+        {tags_html}
     </div>
 </div>"""
 
 
 def format_prompts_list(
         conversations: List[Tuple[str, List[MessageNode]]],
-        file_paths: Optional[List[str]] = None
+    file_paths: Optional[List[str]] = None,
+    tags_map: Optional[Dict[str, List[str]]] = None
 ) -> str:
     """Render all user prompts from all conversations as a list view.
 
     Conversations are sorted by their earliest user prompt timestamp.
     Shared history across branches is deduplicated so identical prompts
     (matching timestamp + text) only appear once.
+
+    Args:
+        conversations: List of (name, nodes) tuples
+        file_paths: Optional list of file paths for fallback timestamps
+        tags_map: Optional dictionary mapping chat names to lists of tags
     """
+    tags_map = tags_map or {}
     chat_cards = []
 
-    # NEW: A global set to track prompts we've already seen across all files
+    # A global set to track prompts we've already seen across all files
     seen_prompts = set()
 
     for idx, (name, nodes) in enumerate(conversations):
@@ -584,8 +657,6 @@ def format_prompts_list(
 
         # 3. Only create a card if this file actually contains NEW unique prompts
         if unique_user_prompts:
-            # We still sort the card based on the very first prompt of the chat,
-            # even if that first prompt was deduplicated out.
             earliest = min(n.timestamp for n in all_user_prompts)
 
             file_path = file_paths[idx] if file_paths and idx < len(file_paths) else None
@@ -596,9 +667,9 @@ def format_prompts_list(
     # Sort by timestamp (earliest first)
     chat_cards.sort(key=lambda x: x[0])
 
-    # Render cards
+    # Render cards, passing the specific tags for each chat
     cards_html = "\n".join(
-        _render_chat_card(name, unique_nodes, file_path)
+        _render_chat_card(name, unique_nodes, file_path, tags_map.get(name, []))
         for _, name, unique_nodes, file_path in chat_cards
     )
 
@@ -615,6 +686,9 @@ def format_prompts_list(
 </head>
 <body>
 <h1>📝 User Prompts from All Chats</h1>
+<div class="search-container">
+    <input type="text" id="tag-search" class="search-input" placeholder="Filter by tags (e.g. python, architecture)...">
+</div>
 <div class="chat-list">
 {cards_html}
 </div>
