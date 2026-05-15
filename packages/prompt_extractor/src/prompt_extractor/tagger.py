@@ -70,36 +70,33 @@ class TagManager:
             known_tags_str = ", ".join(
                 sorted(known_tags)) if known_tags else "None yet. You are creating the first tags."
 
-            sys_instruct = f"""You are an expert librarian organizing a developer's knowledge base.
+            sys_instruct = f"""Please help me tag my LLM prompts based on chat title and first prompt.
             You will receive a JSON array of items. Each item has an 'id', 'titles', and 'prompt'.
 
-            For EACH item, you MUST generate an array of EXACTLY 4 tags. 
-            The 4 tags MUST follow this exact positional structure:
+            For EACH item, you MUST generate an array of EXACTLY 2 tags. 
+            The s tags MUST follow this exact positional structure:
 
-            1. Domain Tag: The broad industry/field. UPPERCASE in brackets. (e.g., [SOFTWARE_ENGINEERING], [MANUFACTURING], [AI], [HARDWARE], [DESIGN])
+            1. Domain Tag: The broad hobby name in brackets and PascalCase. (e.g., #Programming, #Elctronics, #KitchenDesign, #DIY, etc.)
             2. Tool/Medium Tag: The primary language, framework, software, or physical medium. PascalCase with #. (e.g., #Python, #React, #Corpus). IF NO SPECIFIC TECH EXISTS, use the medium/toolset (e.g., #CadSoftware, #HandTools, #AgileFramework). NEVER use generic words like #GeneralTech or #Various.
-            3. Concept Tag: The architectural pattern, methodology, or core subject. PascalCase with #. (e.g., #Solid, #DataModeling, #MaterialScience, #InteriorDesign).
-            4. Deliverable Tag: The actual output or goal of the chat. PascalCase with #. (e.g., #CodeReview, #Blueprint, #DiagramGeneration, #Specification, #Troubleshooting, #LearningRoadmap).
 
             EXISTING TAG VOCABULARY:
             {known_tags_str}
 
             CRITICAL RULES:
             1. REUSE tags from the "EXISTING TAG VOCABULARY" whenever possible to prevent bloat!
-            2. EXACTLY 4 TAGS PER ITEM.
+            2. EXACTLY 2 TAGS PER ITEM.
             3. NO GENERIC WORDS. Banned tags: #GeneralTech, #Analysis, #InsightExtraction, #KnowledgeRetrieval, #ConceptExplanation.
-            4. Use ONLY alphanumeric characters for hashtags (No slashes, dashes, or spaces).
 
-            Output ONLY a valid JSON object where keys are the 'id' from the input, and values are arrays of exactly 4 tags."""
+            Output ONLY a valid JSON object where keys are the 'id' from the input, and values are arrays of exactly 2 tags."""
 
             payload_str = json.dumps(batch_payload, indent=2)
 
             self._debug(f"Sending API Batch Request ({len(batch_payload)} items)...")
-            self._debug(f"  Model: gemini-2.5-flash")
+            self._debug(f"  Model: gemini-3.1-pro-preview")
             self._debug(f"  Known Tags Count: {len(known_tags)}")
 
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.1-pro-preview',
                 contents=payload_str,
                 config=types.GenerateContentConfig(
                     system_instruction=sys_instruct,
@@ -153,7 +150,7 @@ class TagManager:
             self._debug(f"Found {len(unique_prompts)} unique prompts requiring API calls.")
 
             known_tags_set = self._get_all_known_tags()
-            batch_size = 20
+            batch_size = 50
 
             # Chunk the unique prompts into batches of 20
             for i in range(0, len(unique_prompts), batch_size):

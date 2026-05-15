@@ -455,8 +455,15 @@ h1 {
 
 .pill-deliverable { color: #553c9a; border-color: #d6bcfa; background: #faf5ff; }
 .pill-deliverable.active { background: #805ad5; color: #fff; border-color: #553c9a; }
-"""
 
+.global-tag-pill.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(100%);
+    border-color: #e2e8f0;
+    background: #f7fafc;
+}
+"""
 
 _PROMPTS_JS = """
 document.addEventListener('DOMContentLoaded', () => {
@@ -469,15 +476,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function filterCards() {
         const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+        
+        // NEW: Track which tags are actually present in the currently visible cards
+        let availableTags = new Set();
 
+        // 1. Filter Cards and Harvest Available Tags
         cards.forEach(card => {
             const cardTagsStr = card.getAttribute('data-tags') || "";
             const cardTagsArray = cardTagsStr.split(' ').filter(t => t);
 
-            // 1. Check if it matches the text search bar
+            // Check text search
             const matchesText = query === "" || cardTagsStr.includes(query) || card.innerText.toLowerCase().includes(query);
 
-            // 2. Check if it has ALL the active tags clicked in the cloud
+            // Check active tags (AND logic - card must have ALL active tags)
             let matchesPills = true;
             if (activeTags.size > 0) {
                 for (let tag of activeTags) {
@@ -488,11 +499,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Show card only if it passes both filters
+            // Apply visibility
             if (matchesText && matchesPills) {
                 card.style.display = 'block';
+                // HARVEST: If card is visible, add its tags to our available pool
+                cardTagsArray.forEach(t => availableTags.add(t));
             } else {
                 card.style.display = 'none';
+            }
+        });
+
+        // 2. Update Tag Pills UI (Cascading Filter)
+        globalTags.forEach(pill => {
+            const tag = pill.getAttribute('data-tag');
+            
+            // If the tag is in the available pool, OR if it's currently selected by the user
+            if (availableTags.has(tag) || activeTags.has(tag)) {
+                pill.classList.remove('disabled');
+            } else {
+                pill.classList.add('disabled');
             }
         });
     }
@@ -519,6 +544,9 @@ document.addEventListener('DOMContentLoaded', () => {
             filterCards();
         });
     });
+    
+    // Run once on load to set initial state
+    filterCards();
 });
 """
 
@@ -768,23 +796,21 @@ def format_prompts_list(
     # ---------------------------------------------------------
     # Group Tags by Slot (Index)
     # ---------------------------------------------------------
-    domains, tools, concepts, deliverables = {}, {}, {}, {}
+    domains, tools = {}, {}
 
     for tags in tags_map.values():
         for i, t in enumerate(tags):
             lower_t = t.lower()
-            # Fallback: If it starts with [, it's always a domain
-            if t.startswith('['):
+
+            # Slot 0: Domain
+            if t.startswith('[') or i == 0:
                 domains[lower_t] = t
+            # Slot 1: Tool/Medium
             elif i == 1:
                 tools[lower_t] = t
-            elif i == 2:
-                concepts[lower_t] = t
-            elif i == 3:
-                deliverables[lower_t] = t
+            # Ignore any tags beyond index 1 (in case of old cache)
             else:
-                # Fallback for extra tags (if LLM hallucinates > 4 tags)
-                concepts[lower_t] = t
+                continue
 
     def _render_tag_group(title: str, tag_dict: dict, color_class: str) -> str:
         if not tag_dict: return ""
@@ -797,10 +823,8 @@ def format_prompts_list(
     groups_html = []
     groups_html.append(_render_tag_group("🌐 Domains", domains, "pill-domain"))
     groups_html.append(_render_tag_group("🛠️ Tools & Mediums", tools, "pill-tool"))
-    groups_html.append(_render_tag_group("💡 Concepts", concepts, "pill-concept"))
-    groups_html.append(_render_tag_group("🎯 Deliverables", deliverables, "pill-deliverable"))
 
-    tag_groups_container = f'<div class="tag-groups-container">{"".join(groups_html)}</div>' if any(domains or tools or concepts or deliverables) else ""
+    tag_groups_container = f'<div class="tag-groups-container">{"".join(groups_html)}</div>' if any(domains or tools) else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
