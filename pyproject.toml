@@ -5,7 +5,12 @@ name = "byte-brewery"
 version = "1.0.0"
 description = "Scripts crafted like fine, magical ales for AI development"
 requires-python = ">=3.10"
-# Notice: No production dependencies here! They go to the individual packages.
+dependencies = [
+    "aireview",
+    "augment-ai",
+    "prompt-extractor",
+    "utils",
+]
 
 [tool.uv.workspace]
 members = ["packages/*"]
