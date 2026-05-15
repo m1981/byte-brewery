@@ -1,7 +1,7 @@
 import os
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 
 from google import genai
 from google.genai import types
@@ -48,10 +48,17 @@ class TagManager:
                 return node.text.strip()
         return ""
 
-    def _call_llm(self, prompt: str, chat_titles: List[str]) -> List[str]:
+    def _get_all_known_tags(self) -> Set[str]:
+        """Extract all unique tags currently stored in the cache."""
+        known_tags = set()
+        for tags in self.cache_data.values():
+            known_tags.update(tags)
+        return known_tags
+
+    def _call_llm(self, prompt: str, chat_titles: List[str], known_tags: List[str]) -> List[str]:
         """
         Calls the Gemini API to generate tags for a given prompt and its associated titles.
-        Requires GEMINI_API_KEY environment variable.
+        Passes known_tags to prevent tag bloat and enforce reuse, but allows dynamic creation.
         """
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -62,26 +69,37 @@ class TagManager:
             # Initialize the new Gemini Client
             client = genai.Client(api_key=api_key)
 
-            # Define the system instruction separately
-            sys_instruct = (
-                "You are an expert librarian organizing  knowledge base. "
-                "Read the provided Chat Titles and the Initial Prompt, then generate 2 to 4 tags. "
-                "\n\nRULES:"
-                "\n1. Focus ONLY on technologies (e.g., python, react), architectural patterns (e.g., solid, mvvm), or core business domains (e.g., cybersecurity, ecommerce)."
-                "\n2. IGNORE persona instructions (do NOT output tags like 'roleplay', 'expert', 'developer')."
-                "\n3. IGNORE action words (do NOT output tags like 'analysis', 'summary', 'opinion', 'help', 'transcript')."
-                "\n4. Use singular, lowercase nouns."
-                "\n\nOutput ONLY valid JSON in this exact format: {\"tags\": [\"tag1\", \"tag2\"]}"
-            )
+            # Format known tags for the prompt
+            known_tags_str = ", ".join(sorted(known_tags)) if known_tags else "None yet. You are creating the first tags."
 
-            # Combine titles and prompt into a single payload
+            # Updated System Instruction: Explains the FORMAT, but leaves the actual tags 100% dynamic
+            sys_instruct = f"""You are an expert librarian organizing a developer's knowledge base.
+We use a dynamic Prefix Tagging System. You must generate tags using these formats:
+1. Domain Tags: Enclosed in brackets representing the broad industry or field (e.g., [DOMAIN_NAME]).
+2. Tech/Tool Tags: Prefixed with # representing specific technologies, frameworks, or tools (e.g., #TechnologyName).
+3. Intent/Concept Tags: Prefixed with # representing the architectural pattern or goal (e.g., #ConceptName).
+
+EXISTING TAG VOCABULARY:
+{known_tags_str}
+
+Read the provided Chat Titles and the Initial Prompt, then generate 2 to 4 tags.
+
+RULES:
+1. REUSE tags from the "EXISTING TAG VOCABULARY" whenever possible to prevent tag bloat!
+2. If no existing tag fits, dynamically GENERATE a new one strictly following the Prefix Tagging System formats above.
+3. Always try to include at least one Domain tag (in brackets).
+4. IGNORE persona instructions (do NOT output tags like '#Roleplay', '#Expert').
+5. IGNORE generic action words (do NOT output tags like '#Analysis', '#Summary').
+
+Output ONLY valid JSON in this exact format: {{"tags": ["tag1", "tag2"]}}"""
+
             titles_str = " | ".join(chat_titles)
             truncated_prompt = prompt[:1000]
             payload = f"Chat Titles: {titles_str}\n\nInitial Prompt: {truncated_prompt}"
 
             self._debug(f"Sending API Request...")
             self._debug(f"  Model: gemini-2.5-flash")
-            self._debug(f"  Payload: {payload[:150]}...")
+            self._debug(f"  Known Tags Count: {len(known_tags)}")
 
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
@@ -89,11 +107,9 @@ class TagManager:
                 config=types.GenerateContentConfig(
                     system_instruction=sys_instruct,
                     response_mime_type="application/json",
-                    temperature=0.1,
+                    temperature=0.1, # Keep low so it prefers reusing existing tags over hallucinating synonyms
                 )
             )
-
-            self._debug(f"  Raw Response: {response.text.strip()}")
 
             data = json.loads(response.text)
             tags = data.get("tags", [])
@@ -142,11 +158,18 @@ class TagManager:
         if pending_prompts:
             self._debug(f"Found {len(pending_prompts)} unique prompts requiring API calls.")
 
+            # 1. Load all currently known tags from the cache
+            known_tags_set = self._get_all_known_tags()
+
         for prompt_text, chat_names in pending_prompts.items():
             self._debug(f"Fetching tags for branches: {chat_names}")
 
-            # Pass both the prompt and the list of chat titles to the LLM
-            tags = self._call_llm(prompt_text, chat_names)
+            # 2. Pass the current known_tags_set to the LLM
+            tags = self._call_llm(prompt_text, chat_names, list(known_tags_set))
+
+            # 3. Immediately add the newly generated tags to our running set!
+            # This ensures the NEXT prompt in this loop knows about the tags we JUST created.
+            known_tags_set.update(tags)
 
             self.cache_data[prompt_text] = tags
             cache_updated = True
