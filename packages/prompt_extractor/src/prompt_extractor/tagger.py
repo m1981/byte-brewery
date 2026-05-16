@@ -103,11 +103,11 @@ class TagManager:
             payload_str = json.dumps(batch_payload, indent=2)
 
             self._debug(f"Sending API Batch Request ({len(batch_payload)} items)...")
-            self._debug(f"  Model: gemini-3-flash-preview")
+            self._debug(f"  Model: gemini-3.1-pro-preview")
             self._debug(f"  Known Tags Count: {len(known_tags)}")
 
             response = client.models.generate_content(
-                model='gemini-3-flash-preview',
+                model='gemini-3.1-pro-preview',
                 contents=payload_str,
                 config=types.GenerateContentConfig(
                     system_instruction=sys_instruct,
