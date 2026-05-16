@@ -459,33 +459,114 @@ h1 {
 .global-tag-pill.disabled {
     display: none !important;
 }
+
+/* ── Favorites ── */
+.fav-btn {
+    position: absolute;
+    top: 8px;
+    right: 50px; /* Place it next to the prompt number */
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #cbd5e0;
+    transition: all 0.2s;
+    outline: none;
+}
+.fav-btn:hover { transform: scale(1.1); }
+.prompt-item.is-favorite .fav-btn { color: #ecc94b; /* Gold star */ }
+.prompt-item.is-favorite {
+    border-left-color: #ecc94b;
+    background: #fffff0; /* Slight yellow tint */
+}
+
+/* Favorite Filter Toggle */
+.fav-filter-btn {
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    color: #4a5568;
+    transition: all 0.2s;
+}
+.fav-filter-btn.active {
+    border-color: #ecc94b;
+    background: #fffff0;
+    color: #b7791f;
+}
+.search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+}
 """
 
 _PROMPTS_JS = """
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('tag-search');
+    const favFilterBtn = document.getElementById('fav-filter');
     const cards = document.querySelectorAll('.chat-card');
     const globalTags = document.querySelectorAll('.global-tag-pill');
     const tagGroups = document.querySelectorAll('.tag-group');
 
-    // Keep track of which tags are currently clicked/active
     let activeTags = new Set();
+    let showOnlyFavorites = false;
 
+    // 1. Load Favorites from LocalStorage
+    let favorites = new Set(JSON.parse(localStorage.getItem('chatmap_favorites') || '[]'));
+
+    // 2. Apply Favorite State and Sort DOM
+    function applyFavoritesAndSort() {
+        cards.forEach(card => {
+            const promptsList = card.querySelector('.prompts-list');
+            const prompts = Array.from(promptsList.querySelectorAll('.prompt-item'));
+
+            let hasAnyFavorite = false;
+
+            prompts.forEach(prompt => {
+                const pid = prompt.getAttribute('data-prompt-id');
+                if (favorites.has(pid)) {
+                    prompt.classList.add('is-favorite');
+                    hasAnyFavorite = true;
+                } else {
+                    prompt.classList.remove('is-favorite');
+                }
+            });
+
+            // Mark the card itself if it contains favorites (useful for filtering)
+            if (hasAnyFavorite) {
+                card.setAttribute('data-has-favorites', 'true');
+            } else {
+                card.removeAttribute('data-has-favorites');
+            }
+
+            // Sort: Favorites first, then by original DOM order
+            prompts.sort((a, b) => {
+                const aFav = a.classList.contains('is-favorite') ? -1 : 1;
+                const bFav = b.classList.contains('is-favorite') ? -1 : 1;
+                return aFav - bFav; 
+            });
+
+            // Re-append in sorted order
+            prompts.forEach(p => promptsList.appendChild(p));
+        });
+    }
+
+    // 3. Main Filter Function
     function filterCards() {
         const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
-        
-        // Track which tags are actually present in the currently visible cards
         let availableTags = new Set();
 
-        // 1. Filter Cards and Harvest Available Tags
         cards.forEach(card => {
             const cardTagsStr = card.getAttribute('data-tags') || "";
             const cardTagsArray = cardTagsStr.split(' ').filter(t => t);
+            const hasFavs = card.hasAttribute('data-has-favorites');
 
-            // Check text search
             const matchesText = query === "" || cardTagsStr.includes(query) || card.innerText.toLowerCase().includes(query);
+            const matchesFavFilter = !showOnlyFavorites || hasFavs;
 
-            // Check active tags (AND logic - card must have ALL active tags)
             let matchesPills = true;
             if (activeTags.size > 0) {
                 for (let tag of activeTags) {
@@ -496,21 +577,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Apply visibility
-            if (matchesText && matchesPills) {
+            if (matchesText && matchesPills && matchesFavFilter) {
                 card.style.display = 'block';
-                // HARVEST: If card is visible, add its tags to our available pool
                 cardTagsArray.forEach(t => availableTags.add(t));
+
+                // If "Show Favorites" is on, hide non-favorited prompts inside the visible cards
+                const prompts = card.querySelectorAll('.prompt-item');
+                prompts.forEach(p => {
+                    if (showOnlyFavorites && !p.classList.contains('is-favorite')) {
+                        p.style.display = 'none';
+                    } else {
+                        p.style.display = 'block';
+                    }
+                });
+
             } else {
                 card.style.display = 'none';
             }
         });
 
-        // 2. Update Tag Pills UI (Hide unavailable tags)
+        // Update Tag Pills UI
         globalTags.forEach(pill => {
             const tag = pill.getAttribute('data-tag');
-            
-            // If the tag is in the available pool, OR if it's currently selected by the user
             if (availableTags.has(tag) || activeTags.has(tag)) {
                 pill.classList.remove('disabled');
             } else {
@@ -518,31 +606,47 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 3. Hide empty Tag Groups (so you don't see orphaned headers)
+        // Hide empty Tag Groups
         tagGroups.forEach(group => {
-            const pillsInGroup = group.querySelectorAll('.global-tag-pill');
-            // Check if at least one pill in this group is visible
-            const hasVisiblePills = Array.from(pillsInGroup).some(p => !p.classList.contains('disabled'));
-            
-            if (hasVisiblePills) {
-                group.style.display = 'block';
-            } else {
-                group.style.display = 'none';
-            }
+            const hasVisiblePills = Array.from(group.querySelectorAll('.global-tag-pill')).some(p => !p.classList.contains('disabled'));
+            group.style.display = hasVisiblePills ? 'block' : 'none';
         });
     }
 
-    // Listen for typing in the search bar
-    if (searchInput) {
-        searchInput.addEventListener('input', filterCards);
+    // 4. Event Listeners
+    document.querySelectorAll('.fav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const promptItem = e.target.closest('.prompt-item');
+            const pid = promptItem.getAttribute('data-prompt-id');
+
+            if (favorites.has(pid)) {
+                favorites.delete(pid);
+            } else {
+                favorites.add(pid);
+            }
+
+            // Save to storage
+            localStorage.setItem('chatmap_favorites', JSON.stringify(Array.from(favorites)));
+
+            // Re-apply and re-sort
+            applyFavoritesAndSort();
+            filterCards();
+        });
+    });
+
+    if (favFilterBtn) {
+        favFilterBtn.addEventListener('click', () => {
+            showOnlyFavorites = !showOnlyFavorites;
+            favFilterBtn.classList.toggle('active', showOnlyFavorites);
+            filterCards();
+        });
     }
 
-    // Listen for clicks on the tag cloud
+    if (searchInput) searchInput.addEventListener('input', filterCards);
+
     globalTags.forEach(pill => {
         pill.addEventListener('click', () => {
             const tag = pill.getAttribute('data-tag');
-
-            // Toggle active state
             if (activeTags.has(tag)) {
                 activeTags.delete(tag);
                 pill.classList.remove('active');
@@ -550,12 +654,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeTags.add(tag);
                 pill.classList.add('active');
             }
-
             filterCards();
         });
     });
-    
-    // Run once on load to set initial state
+
+    // Initialize
+    applyFavoritesAndSort();
     filterCards();
 });
 """
@@ -645,26 +749,27 @@ def _sanitize_and_clip_text(text: str, max_length: int = 300) -> str:
 
 
 def _render_prompt_item(node: MessageNode, prompt_number: int, has_attachment: bool) -> str:
-    """Render a single user prompt item with number and attachment indicator."""
+    """Render a single user prompt item with number, attachment, and favorite button."""
     parts = []
 
-    # Add prompt number
+    # Generate a unique ID based on the timestamp
+    prompt_id = str(int(node.timestamp.timestamp()))
+
+    parts.append(f'<button class="fav-btn" title="Toggle Favorite">★</button>')
     parts.append(f'<div class="prompt-number">#{prompt_number}</div>')
 
     if node.text:
-        # Hard clip to 300 characters and sanitize
         safe_text = _sanitize_and_clip_text(node.text, 300)
         parts.append(f'<div class="prompt-text">{safe_text}</div>')
     else:
         parts.append('<div class="prompt-text">(empty prompt)</div>')
 
-    # Show attachment count instead of details
     if has_attachment:
         parts.append('<div class="attachment-count">📎 1 attachment</div>')
 
     content = "\n".join(parts)
-
-    return f'<div class="prompt-item">{content}</div>'
+    # Add the data-prompt-id attribute here
+    return f'<div class="prompt-item" data-prompt-id="{prompt_id}">{content}</div>'
 
 
 def _render_chat_card(
@@ -846,8 +951,9 @@ def format_prompts_list(
 </head>
 <body>
 <h1>📝 User Prompts from All Chats</h1>
-<div class="search-container">
+<div class="search-row">
     <input type="text" id="tag-search" class="search-input" placeholder="Search prompts or filter by tags...">
+    <button id="fav-filter" class="fav-filter-btn">⭐ Favorites</button>
 </div>
 
 {tag_groups_container}
