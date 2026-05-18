@@ -141,7 +141,7 @@ def _print_node(node: ast.AST, indent: int = 0) -> None:
     if isinstance(node, ast.ClassDef):
         bases = [ast.unparse(b) for b in node.bases]
         base_str = f"({', '.join(bases)})" if bases else ""
-        print(f"{pad}🔷 class {node.name}{base_str}  [line {node.lineno}]")
+        print(f"{pad}class {node.name}{base_str}  [line {node.lineno}]")
         for child in node.body:
             _print_node(child, indent + 1)
 
@@ -150,7 +150,7 @@ def _print_node(node: ast.AST, indent: int = 0) -> None:
         args_str = _format_args(node.args)
         for dec in node.decorator_list:
             print(f"{pad}  @{ast.unparse(dec)}")
-        print(f"{pad}🔹 {prefix} {node.name}({args_str})  [line {node.lineno}]")
+        print(f"{pad}  {prefix} {node.name}({args_str})  [line {node.lineno}]")
 
     elif isinstance(node, ast.Assign):
         for target in node.targets:

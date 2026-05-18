@@ -1,21 +1,55 @@
 # byte-brewery
-Scripts crafted like fine, magical ales for AI development
 
-## Installation
+Small Python CLI utilities for AI-assisted development workflows.
 
-Install byte-brewery tools with this command:
+## Projects
+
+- `utils` — general developer helpers:
+  - `repo-map`: print a compact structural map of a Python project.
+  - `gen-diagram`: emit a Graphviz DOT class diagram for a Python project.
+  - `dce`, `pext`: smaller command-line helpers.
+- `augment-ai` — tools for extracting and summarizing Augment IDE chat/state exports.
+  Commands: `aug`, `aug-recap`.
+- `prompt_extractor` — map Google AI Studio / LLM conversation exports into timeline, tree, HTML, or prompt-list views.
+  Command: `chatmap`.
+- `aireview` — AI-assisted code review and pre-push validation.
+  Command: `aireview`.
+
+## Install
+
+Install the project utilities globally on macOS with `pipx`.
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/m1981/byte-brewery/main/install.sh)"
+brew install pipx python@3.13
+pipx ensurepath
+pipx install --python /opt/homebrew/bin/python3.13 'git+https://github.com/m1981/byte-brewery.git#subdirectory=packages/utils'
 ```
 
-## Chat
-https://aistudio.google.com/prompts/1YKCtiyqgswR8Ts_Q5HscT1OMdLITb6np
+After installing, open a new terminal and run:
 
+```bash
+repo-map --help
+gen-diagram --help
+```
 
-## AI review tool
-AI Tools Desing
-https://aistudio.google.com/app/prompts?state=%7B%22ids%22:%5B%2218zQsjpfKP6yt3HpTkNs0svc7Qys0k3re%22%5D,%22action%22:%22open%22,%22userId%22:%22106973610427566301788%22,%22resourceKeys%22:%7B%7D%7D&usp=sharing
+If Homebrew's newest Python fails during install, for example with
+`platform.mac_ver() returned an empty value`, keep using the explicit
+`--python /opt/homebrew/bin/python3.13` command above.
 
-Classic Design
-https://aistudio.google.com/app/prompts?state=%7B%22ids%22:%5B%221tWMnj7AWgaY3kgMs4gCkF0eEfstLYNzC%22%5D,%22action%22:%22open%22,%22userId%22:%22106973610427566301788%22,%22resourceKeys%22:%7B%7D%7D&usp=sharing
+For local development from a cloned repo:
+
+```bash
+git clone https://github.com/m1981/byte-brewery.git
+cd byte-brewery
+uv sync
+uv run repo-map --help
+uv run gen-diagram --help
+```
+
+## Examples
+
+```bash
+repo-map --root .
+repo-map --root . --show-imports
+gen-diagram . > architecture.dot
+```
