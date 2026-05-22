@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 from prompt_extractor.tagger import TagManager
 from prompt_extractor.core import build_threads, format_timeline, format_tree, parse_chunks
-from prompt_extractor.html_formatter import format_html, format_prompts_list
+from prompt_extractor.html_formatter import format_html, format_prompts_list, format_recent_prompts
 from prompt_extractor.models import MessageNode
 
 
@@ -25,7 +25,7 @@ def _load_conversation(filepath: Path) -> Optional[Tuple[str, List[MessageNode],
     return filepath.stem, parse_chunks(data), str(filepath)
 
 
-def _process_file(filepath: Path, view: str) -> str:
+def _process_file(filepath: Path, view: str, limit: Optional[int] = None) -> str:
     """Render a single file as a string in the requested view."""
     result = _load_conversation(filepath)
     if result is None:
@@ -37,6 +37,8 @@ def _process_file(filepath: Path, view: str) -> str:
         return format_html([(name, nodes)])
     if view == "prompts":
         return format_prompts_list([(name, nodes)], [filepath_str])
+    if view == "recent":
+        return format_recent_prompts([(name, nodes)], [filepath_str], limit)
     return format_timeline(nodes)
 
 
@@ -115,9 +117,9 @@ examples:
     )
     parser.add_argument(
         "--view",
-        choices=["timeline", "tree", "html", "prompts"],
+        choices=["timeline", "tree", "html", "prompts", "recent"],
         default="timeline",
-        help="Output format: timeline (default), tree, html swimlane, or prompts list.",
+        help="Output format: timeline (default), tree, html swimlane, prompts list, or recent activity.",
     )
     parser.add_argument(
         "--select",
@@ -211,11 +213,23 @@ examples:
             else:
                 print(result)
 
+        elif args.view == "recent":
+            conversations = [r for f in files if (r := _load_conversation(f)) is not None]
+            conv_data = [(name, nodes) for name, nodes, _ in conversations]
+            file_paths = [filepath for _, _, filepath in conversations]
+
+            result = format_recent_prompts(conv_data, file_paths, args.limit)
+
+            if args.output:
+                _write_output(result, args.output)
+            else:
+                print(result)
+
         else:
             if args.output:
                 args.output.mkdir(parents=True, exist_ok=True)
             for f in files:
-                result = _process_file(f, args.view)
+                result = _process_file(f, args.view, args.limit)
                 if not result:
                     continue
                 if args.output:
@@ -224,7 +238,7 @@ examples:
                     print(result)
 
     elif args.input_path.is_file():
-        result = _process_file(args.input_path, args.view)
+        result = _process_file(args.input_path, args.view, args.limit)
         if args.output:
             _write_output(result, args.output)
         else:

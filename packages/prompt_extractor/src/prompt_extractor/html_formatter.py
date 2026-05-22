@@ -848,6 +848,83 @@ def _render_chat_card(
 </div>"""
 
 
+def format_recent_prompts(
+    conversations: List[Tuple[str, List[MessageNode]]],
+    file_paths: Optional[List[str]] = None,
+    limit: Optional[int] = None
+) -> str:
+    """Render recent user prompts across all conversations in reverse chronological order.
+
+    Args:
+        conversations: List of (name, nodes) tuples
+        file_paths: Optional list of file paths for fallback timestamps
+        limit: Optional maximum number of prompts to show
+
+    Returns:
+        Markdown formatted string with recent prompts
+    """
+    all_prompts: List[Tuple[datetime, str, MessageNode, Optional[str]]] = []
+    seen_prompts = set()
+
+    # Collect all unique user prompts with their conversation context
+    for idx, (name, nodes) in enumerate(conversations):
+        user_prompts = [n for n in nodes if n.role == "user"]
+        file_path = file_paths[idx] if file_paths and idx < len(file_paths) else None
+
+        for node in user_prompts:
+            prompt_fingerprint = (node.timestamp, node.text)
+            if prompt_fingerprint not in seen_prompts:
+                seen_prompts.add(prompt_fingerprint)
+                all_prompts.append((node.timestamp, name, node, file_path))
+
+    # Sort by timestamp descending (newest first)
+    all_prompts.sort(key=lambda x: x[0], reverse=True)
+
+    # Apply limit if specified
+    if limit:
+        all_prompts = all_prompts[:limit]
+
+    # Format as markdown
+    lines = ["# Recent User Prompts\n"]
+    
+    if not all_prompts:
+        lines.append("*No prompts found.*\n")
+        return "\n".join(lines)
+
+    lines.append(f"Showing {len(all_prompts)} most recent prompt{'s' if len(all_prompts) != 1 else ''}:\n")
+
+    for timestamp, chat_name, node, file_path in all_prompts:
+        # Format timestamp
+        sentinel = datetime.min.replace(tzinfo=timezone.utc)
+        if timestamp == sentinel and file_path:
+            try:
+                file_mtime = Path(file_path).stat().st_mtime
+                timestamp = datetime.fromtimestamp(file_mtime, tz=timezone.utc)
+            except (OSError, ValueError):
+                pass
+
+        datetime_full = _format_datetime_full(timestamp)
+        datetime_relative = _format_relative_time(timestamp)
+
+        # Format prompt
+        lines.append("---\n")
+        lines.append(f"## 📝 {datetime_full} ({datetime_relative})")
+        lines.append(f"**From:** `{chat_name}`\n")
+
+        if node.image_id:
+            lines.append(f"📎 *Attached Image:* `{node.image_id}`\n")
+
+        if node.text:
+            # Use blockquote for the prompt text
+            lines.append("> " + node.text.replace("\n", "\n> "))
+        else:
+            lines.append("> *(empty prompt)*")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def format_prompts_list(
         conversations: List[Tuple[str, List[MessageNode]]],
     file_paths: Optional[List[str]] = None,
