@@ -3,9 +3,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Set
 
-from google import genai
-from google.genai import types
-
 from prompt_extractor.models import MessageNode
 
 
@@ -66,6 +63,10 @@ class TagManager:
             return {}
 
         try:
+            # Lazy import - only load when actually using the API
+            from google import genai
+            from google.genai import types
+            
             client = genai.Client(api_key=api_key)
 
             known_tags_str = ", ".join(
