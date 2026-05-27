@@ -1,102 +1,92 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/m1981/byte-brewery.git"
-# Use pipx's default bin location if available, otherwise fallback to ~/.local/bin
-INSTALL_DIR="${PIPX_BIN_DIR:-$HOME/.local/bin}"
-FILES_TO_COPY=("rsum" "byte-help" "tools.json" "lsproj")
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN_DIR="${HOME}/.local/bin"
 
 echo "🍺 Brewing byte-brewery installation..."
 
-# 1. Check for pipx
-if ! command -v pipx &> /dev/null; then
-    echo "❌ pipx is not installed."
-    echo "   MacOS: brew install pipx"
+# ── 1. Check for uv ────────────────────────────────────────────────────────
+if ! command -v uv &> /dev/null; then
+    echo "❌ uv is not installed."
+    echo "   Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
     exit 1
 fi
 
-# 2. Determine Source (Local vs Remote)
-# We check if pyproject.toml exists AND if it belongs to byte-brewery.
-IS_LOCAL_SOURCE=false
+# ── 2. Install Python packages as uv tools (replaces pipx) ─────────────────
+echo "📦 Installing Python packages as uv tools..."
 
-if [ -f "pyproject.toml" ]; then
-    # Grep for the package name to ensure we aren't in a random python project
-    if grep -q 'name = "byte-brewery"' pyproject.toml || grep -q "name = 'byte-brewery'" pyproject.toml; then
-        IS_LOCAL_SOURCE=true
+UV_PACKAGES=(
+    "packages/aireview"
+    "packages/augment_ai"
+    "packages/prompt_extractor"
+    "packages/utils"
+)
+
+for pkg in "${UV_PACKAGES[@]}"; do
+    pkg_path="$REPO_DIR/$pkg"
+    pkg_name=$(basename "$pkg")
+    echo "   → Installing $pkg_name..."
+    # --editable: local code changes take effect immediately, no reinstall needed
+    uv tool install --editable "$pkg_path" --force
+done
+
+# ── 3. Install shell scripts to ~/.local/bin ────────────────────────────────
+echo "🐚 Installing shell scripts to $BIN_DIR..."
+mkdir -p "$BIN_DIR"
+
+SHELL_SCRIPTS=("rsum" "byte-help" "lsproj")
+
+for file in "${SHELL_SCRIPTS[@]}"; do
+    src="$REPO_DIR/bin/$file"
+    if [ -f "$src" ]; then
+        cp "$src" "$BIN_DIR/"
+        chmod +x "$BIN_DIR/$file"
+        echo "   → Installed: $file"
     else
-        echo "⚠️  DEBUG: Found pyproject.toml, but it belongs to another project."
-    fi
-fi
-
-if [ "$IS_LOCAL_SOURCE" = true ]; then
-    echo "📂 DEBUG: Verified local byte-brewery source."
-    SOURCE_DIR="."
-    CLEANUP=false
-else
-    echo "🌐 DEBUG: Downloading fresh copy from GitHub..."
-    SOURCE_DIR=$(mktemp -d)
-    echo "🌐 DEBUG: Cloning to $SOURCE_DIR"
-
-    # Clone quietly (-q) but show errors if it fails
-    git clone -q "$REPO_URL" "$SOURCE_DIR"
-    CLEANUP=true
-fi
-
-# 3. Install Python Tools
-echo "📦 Installing Python package..."
-# Ensure we install dependencies defined in pyproject.toml
-pipx install "$SOURCE_DIR" --force --pip-args="--no-cache-dir"
-
-# 4. Install Shell Scripts (The Hybrid Part)
-echo "🐚 Installing shell scripts to $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
-
-# ADD "lsproj" HERE 👇
-FILES_TO_COPY=("rsum" "byte-help" "tools.json" "lsproj" "summarize.ts")
-
-for file in "${FILES_TO_COPY[@]}"; do
-    if [ -f "$SOURCE_DIR/bin/$file" ]; then
-        cp "$SOURCE_DIR/bin/$file" "$INSTALL_DIR/"
-
-        # Only make scripts executable, not the json
-        if [[ "$file" != *.json ]]; then
-            chmod +x "$INSTALL_DIR/$file"
-        fi
-        echo "   - Installed: $file"
-    else
-        echo "⚠️  Warning: bin/$file not found in source."
+        echo "   ⚠️  Warning: bin/$file not found, skipping."
     fi
 done
 
-# Install Node.js dependencies for TypeScript scripts
-if [ -f "$SOURCE_DIR/bin/package.json" ]; then
-    echo "📦 Installing Node.js dependencies for TypeScript tools..."
-    cp "$SOURCE_DIR/bin/package.json" "$INSTALL_DIR/"
-    if [ -d "$SOURCE_DIR/bin/node_modules" ]; then
-        cp -r "$SOURCE_DIR/bin/node_modules" "$INSTALL_DIR/"
-        echo "   - Installed: node_modules"
+# ── 4. Install Node.js tooling (summarize.ts etc.) ─────────────────────────
+if [ -f "$REPO_DIR/bin/package.json" ]; then
+    echo "📦 Installing Node.js dependencies..."
+    cp "$REPO_DIR/bin/package.json" "$BIN_DIR/"
+
+    if [ -d "$REPO_DIR/bin/node_modules" ]; then
+        cp -r "$REPO_DIR/bin/node_modules" "$BIN_DIR/"
+        echo "   → Copied node_modules"
+    elif command -v npm &> /dev/null; then
+        npm install --prefix "$BIN_DIR" --silent
+        echo "   → Installed node_modules via npm"
     else
-        # Install dependencies if node_modules doesn't exist
-        if command -v npm &> /dev/null; then
-            npm install --prefix "$INSTALL_DIR" --silent
-            echo "   - Installed: node_modules (via npm)"
-        fi
+        echo "   ⚠️  npm not found, skipping Node.js dependencies."
     fi
+
+    # Copy TypeScript scripts
+    for ts_file in "$REPO_DIR/bin/"*.ts; do
+        [ -f "$ts_file" ] && cp "$ts_file" "$BIN_DIR/" && echo "   → Installed: $(basename "$ts_file")"
+    done
 fi
 
+# ── 5. PATH check ───────────────────────────────────────────────────────────
+UV_TOOLS_BIN="${HOME}/.local/bin"  # uv tool installs here by default
 
-
-# 5. Cleanup (Only if we cloned)
-if [ "$CLEANUP" = true ]; then
-    rm -rf "$SOURCE_DIR"
-fi
-
-# 6. Path Validation (Crucial for macOS)
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+if [[ ":$PATH:" != *":$UV_TOOLS_BIN:"* ]]; then
     echo ""
-    echo "⚠️  WARNING: $INSTALL_DIR is not in your PATH."
-    echo "   Add this to ~/.zshrc or ~/.bash_profile:"
-    echo "   export PATH=\"$INSTALL_DIR:\$PATH\""
+    echo "⚠️  ${UV_TOOLS_BIN} is not in your PATH."
+    echo "   Add this to your ~/.zshrc:"
+    echo "   export PATH=\"${UV_TOOLS_BIN}:\$PATH\""
 fi
 
+# ── 6. Summary ──────────────────────────────────────────────────────────────
+echo ""
 echo "✅ Installation complete!"
+echo ""
+echo "🔧 Installed CLI tools:"
+echo "   Python (via uv tool): aireview, aug, aug-recap, dce, pext, chatmap, repo-map, gen-diagram"
+echo "   Shell scripts:        rsum, byte-help, lsproj"
+echo ""
+echo "💡 To update after code changes: just edit — --editable installs reflect changes immediately."
+echo "   To reinstall from scratch:    ./install.sh"
+echo "   To list installed uv tools:   uv tool list"
