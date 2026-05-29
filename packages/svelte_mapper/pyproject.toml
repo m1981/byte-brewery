@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "svelte-mapper"
+version = "1.0.0"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.12.5",
+    "networkx>=3.0",
+    "pyyaml>=6.0",
+    "pathspec>=0.12",
+]
+
+[project.scripts]
+svelte-map = "svelte_mapper.cli:main"
+
+[tool.hatchling.build.targets.wheel]
+packages = ["src/svelte_mapper"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
