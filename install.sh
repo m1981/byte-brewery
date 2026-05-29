@@ -13,7 +13,7 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-# ── 2. Install Python packages as uv tools (replaces pipx) ─────────────────
+# ── 2. Install Python packages as uv tools ──────────────────────────────────
 echo "📦 Installing Python packages as uv tools..."
 
 UV_PACKAGES=(
@@ -21,6 +21,7 @@ UV_PACKAGES=(
     "packages/augment_ai"
     "packages/prompt_extractor"
     "packages/utils"
+    "packages/svelte_mapper"
 )
 
 for pkg in "${UV_PACKAGES[@]}"; do
@@ -35,7 +36,7 @@ done
 echo "🐚 Installing shell scripts to $BIN_DIR..."
 mkdir -p "$BIN_DIR"
 
-SHELL_SCRIPTS=("rsum" "byte-help" "lsproj")
+SHELL_SCRIPTS=("rsum" "byte-help")
 
 for file in "${SHELL_SCRIPTS[@]}"; do
     src="$REPO_DIR/bin/$file"
@@ -48,7 +49,27 @@ for file in "${SHELL_SCRIPTS[@]}"; do
     fi
 done
 
-# ── 4. Install Node.js tooling (summarize.ts etc.) ─────────────────────────
+# ── 4. Install tools.json manifest (used by byte-help) ─────────────────────
+cp "$REPO_DIR/bin/tools.json" "$BIN_DIR/tools.json"
+echo "   → Installed: tools.json"
+
+# ── 5. Install standalone scripts from bin/ ─────────────────────────────────
+echo "🔧 Installing standalone scripts..."
+
+STANDALONE_SCRIPTS=("mdcat" "export-chats" "git-recent" "pysum")
+
+for file in "${STANDALONE_SCRIPTS[@]}"; do
+    src="$REPO_DIR/bin/$file"
+    if [ -f "$src" ]; then
+        cp "$src" "$BIN_DIR/"
+        chmod +x "$BIN_DIR/$file"
+        echo "   → Installed: $file"
+    else
+        echo "   ⚠️  Warning: bin/$file not found, skipping."
+    fi
+done
+
+# ── 6. Install Node.js tooling (summarize.ts etc.) ─────────────────────────
 if [ -f "$REPO_DIR/bin/package.json" ]; then
     echo "📦 Installing Node.js dependencies..."
     cp "$REPO_DIR/bin/package.json" "$BIN_DIR/"
@@ -69,24 +90,19 @@ if [ -f "$REPO_DIR/bin/package.json" ]; then
     done
 fi
 
-# ── 5. PATH check ───────────────────────────────────────────────────────────
-UV_TOOLS_BIN="${HOME}/.local/bin"  # uv tool installs here by default
-
-if [[ ":$PATH:" != *":$UV_TOOLS_BIN:"* ]]; then
+# ── 7. PATH check ───────────────────────────────────────────────────────────
+if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
     echo ""
-    echo "⚠️  ${UV_TOOLS_BIN} is not in your PATH."
+    echo "⚠️  ${BIN_DIR} is not in your PATH."
     echo "   Add this to your ~/.zshrc:"
-    echo "   export PATH=\"${UV_TOOLS_BIN}:\$PATH\""
+    echo "   export PATH=\"${BIN_DIR}:\$PATH\""
 fi
 
-# ── 6. Summary ──────────────────────────────────────────────────────────────
+# ── 8. Summary ──────────────────────────────────────────────────────────────
 echo ""
 echo "✅ Installation complete!"
 echo ""
-echo "🔧 Installed CLI tools:"
-echo "   Python (via uv tool): aireview, aug, aug-recap, dce, pext, chatmap, repo-map, gen-diagram"
-echo "   Shell scripts:        rsum, byte-help, lsproj"
-echo ""
-echo "💡 To update after code changes: just edit — --editable installs reflect changes immediately."
+echo "💡 Run 'byte-help' to see all installed tools."
+echo "   Run 'byte-help --sources' to see which package provides each tool."
+echo "   To update after code changes: just edit — --editable installs reflect changes immediately."
 echo "   To reinstall from scratch:    ./install.sh"
-echo "   To list installed uv tools:   uv tool list"

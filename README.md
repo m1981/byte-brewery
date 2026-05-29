@@ -22,7 +22,7 @@ Install the project utilities globally on macOS with `pipx`.
 ```bash
 brew install pipx python@3.13
 pipx ensurepath
-pipx install --python /opt/homebrew/bin/python3.13 'git+https://github.com/m1981/byte-brewery.git#subdirectory=packages/utils'
+Plea --python /opt/homebrew/bin/python3.13 'git+https://github.com/m1981/byte-brewery.git#subdirectory=packages/utils'
 ```
 
 After installing, open a new terminal and run:

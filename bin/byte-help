@@ -1,93 +1,358 @@
 #!/usr/bin/env python3
+"""
+byte-help — list every CLI tool installed from the byte-brewery repo.
+
+Discovery sources (merged, deduped, sorted):
+  1. uv tool list  — Python packages installed via `uv tool install`.
+     Parsed from ~/.local/share/uv/tools/*/uv-receipt.toml.
+     Only packages whose source directory lives inside the detected repo
+     root are included; third-party uv tools are silently skipped.
+  2. tools.json (shell_scripts / node_scripts) — scripts copied to
+     ~/.local/bin by install.sh (rsum, mdcat, git-recent …).
+  3. tools.json (tools dict) — human descriptions for everything.
+
+Aliases (underscore / noisy variants) defined in tools.json["aliases"]
+are hidden from the listing to keep output clean.
+"""
+from __future__ import annotations
+
+import argparse
 import json
 import os
-import sys
-import argparse
-import subprocess
+import re
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
-# ANSI Colors for better readability
-CYAN = '\033[96m'
-GREEN = '\033[92m'
-YELLOW = '\033[93m'
-RESET = '\033[0m'
-BOLD = '\033[1m'
+# ── ANSI colours ─────────────────────────────────────────────────────────────
+CYAN   = "\033[96m"
+GREEN  = "\033[92m"
+YELLOW = "\033[93m"
+DIM    = "\033[2m"
+RESET  = "\033[0m"
+BOLD   = "\033[1m"
+
+_ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 
-def print_header(tool_name, description):
-    print(f"\n{CYAN}{'=' * 80}{RESET}")
-    print(f"{GREEN}{BOLD}TOOL: {tool_name}{RESET}")
-    print(f"{YELLOW}DESC: {description}{RESET}")
-    print(f"{CYAN}{'-' * 80}{RESET}")
+def _strip_ansi(s: str) -> str:
+    return _ANSI_RE.sub("", s)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="List available tools or show detailed help for all.")
-    parser.add_argument("--detailed", "-d", action="store_true",
-                        help="Run --help on every tool listed in the manifest.")
+# ── Paths ─────────────────────────────────────────────────────────────────────
+_SCRIPT_DIR   = Path(os.path.dirname(os.path.realpath(__file__)))
+_UV_TOOLS_DIR = Path.home() / ".local" / "share" / "uv" / "tools"
+
+
+# ── tools.json loader ─────────────────────────────────────────────────────────
+
+def _load_manifest() -> dict:
+    """
+    Load tools.json — look next to the running script first (covers both the
+    source bin/ and the installed ~/.local/bin/ locations).
+    """
+    candidates = [
+        _SCRIPT_DIR / "tools.json",
+        Path.home() / ".local" / "bin" / "tools.json",
+    ]
+    for p in candidates:
+        if p.exists():
+            try:
+                return json.loads(p.read_text())
+            except json.JSONDecodeError:
+                pass
+    return {}
+
+
+# ── uv tool discovery ─────────────────────────────────────────────────────────
+
+def _parse_receipts() -> list[dict]:
+    """
+    Parse all uv-receipt.toml files.
+    Returns a list of dicts: { pkg, entries:[str], src_dirs:[Path] }
+    """
+    result: list[dict] = []
+    if not _UV_TOOLS_DIR.exists():
+        return result
+
+    for receipt_path in sorted(_UV_TOOLS_DIR.glob("*/uv-receipt.toml")):
+        try:
+            text = receipt_path.read_text()
+        except OSError:
+            continue
+
+        pkg_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', text, re.MULTILINE)
+        pkg_name  = pkg_match.group(1) if pkg_match else receipt_path.parent.name
+
+        src_dirs: list[Path] = [
+            Path(m.group(1))
+            for m in re.finditer(r'(?:directory|editable)\s*=\s*"([^"]+)"', text)
+        ]
+
+        entries: list[str] = [
+            m.group(1)
+            for m in re.finditer(
+                r'\{\s*name\s*=\s*"([^"]+)",\s*install-path\s*=\s*"[^"]+"', text
+            )
+        ]
+
+        result.append({"pkg": pkg_name, "entries": entries, "src_dirs": src_dirs})
+
+    return result
+
+
+def _detect_repo_root(receipts: list[dict]) -> Path | None:
+    """
+    Detect the byte-brewery repo root by finding the deepest common ancestor
+    of all local source directories that also contains a pyproject.toml
+    (or a packages/ subdirectory — our repo's characteristic layout).
+
+    Strategy: group src dirs by their parent's parent (the repo root candidate)
+    and pick the one that appears most often AND passes the marker check.
+    """
+    from collections import Counter
+
+    candidates: list[Path] = []
+    for info in receipts:
+        for src in info["src_dirs"]:
+            # src is typically <repo>/<packages-dir>/<pkg-name>
+            # so the repo root is src.parent.parent
+            repo_candidate = src.parent.parent
+            candidates.append(repo_candidate)
+
+    if not candidates:
+        return None
+
+    counts = Counter(candidates)
+    # Pick the most common candidate that has a pyproject.toml marker
+    for path, _ in counts.most_common():
+        if (path / "pyproject.toml").exists() or (path / "packages").exists():
+            return path
+
+    return None
+
+
+def _our_uv_entrypoints(
+    receipts: list[dict],
+    repo_root: Path | None,
+) -> dict[str, str]:
+    """
+    Return { entrypoint_name: package_name } for uv tools that belong to
+    our repo (their source dir is a subpath of repo_root).
+    """
+    entrypoints: dict[str, str] = {}
+    for info in receipts:
+        pkg      = info["pkg"]
+        src_dirs = info["src_dirs"]
+
+        if repo_root is None:
+            continue
+
+        is_ours = any(_is_subpath(src, repo_root) for src in src_dirs)
+        if not is_ours:
+            continue
+
+        for ep in info["entries"]:
+            entrypoints[ep] = pkg
+
+    return entrypoints
+
+
+def _is_subpath(child: Path, parent: Path) -> bool:
+    try:
+        child.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+# ── Tool record ───────────────────────────────────────────────────────────────
+
+class Tool:
+    __slots__ = ("name", "description", "source", "in_path")
+
+    def __init__(self, name: str, description: str, source: str, in_path: bool):
+        self.name        = name
+        self.description = description
+        self.source      = source    # "uv:<pkg>", "shell", "node", "manual"
+        self.in_path     = in_path
+
+
+# ── Discovery ─────────────────────────────────────────────────────────────────
+
+def discover_tools(manifest: dict) -> list[Tool]:
+    descriptions:  dict[str, str] = manifest.get("tools", {})
+    aliases:       set[str]       = set(manifest.get("aliases", []))
+    shell_scripts: list[str]      = manifest.get("shell_scripts", [])
+    node_scripts:  list[str]      = manifest.get("node_scripts", [])
+
+    receipts  = _parse_receipts()
+    repo_root = _detect_repo_root(receipts)
+    uv_eps    = _our_uv_entrypoints(receipts, repo_root)
+
+    seen:  set[str]   = set()
+    tools: list[Tool] = []
+
+    def _add(name: str, source: str) -> None:
+        if name in seen or name in aliases:
+            return
+        seen.add(name)
+        desc    = descriptions.get(name, "")
+        in_path = shutil.which(name) is not None
+        tools.append(Tool(name=name, description=desc, source=source, in_path=in_path))
+
+    # 1. Python tools from uv (our repo packages only)
+    for ep_name, pkg_name in sorted(uv_eps.items()):
+        _add(ep_name, f"uv:{pkg_name}")
+
+    # 2. Shell scripts from tools.json
+    for name in shell_scripts:
+        _add(name, "shell")
+
+    # 3. Node/TypeScript scripts from tools.json
+    for name in node_scripts:
+        _add(name, "node")
+
+    # 4. Any remaining manual entries in tools.json[tools] not yet seen
+    for name in descriptions:
+        _add(name, "manual")
+
+    # Sort: installed first, then alphabetical
+    tools.sort(key=lambda t: (not t.in_path, t.name.lower()))
+    return tools
+
+
+# ── Rendering ─────────────────────────────────────────────────────────────────
+
+_SOURCE_LABELS: dict[str, str] = {
+    "shell":  f"{DIM}[sh]{RESET}",
+    "node":   f"{DIM}[ts]{RESET}",
+    "manual": f"{DIM}[?]{RESET}",
+}
+
+
+def _badge(source: str) -> str:
+    if source.startswith("uv:"):
+        pkg = source[3:]
+        return f"{DIM}[py:{pkg}]{RESET}"
+    return _SOURCE_LABELS.get(source, "")
+
+
+def print_list(tools: list[Tool]) -> None:
+    print(f"\n{BOLD}Available Tools:{RESET}\n")
+
+    col_name = max((len(t.name) for t in tools), default=10) + 2
+    col_src  = 24   # visible width for badge column
+
+    print(f"  {'Name':<{col_name}}{'Source':<{col_src}}Description")
+    print(f"  {'-' * col_name}  {'-' * (col_src - 2)}  {'-' * 50}")
+
+    for t in tools:
+        raw_badge   = _badge(t.source)
+        visible_len = len(_strip_ansi(raw_badge))
+        badge_col   = raw_badge + " " * max(col_src - visible_len, 0)
+
+        name_col = f"{GREEN}{t.name:<{col_name}}{RESET}"
+        missing  = f" {YELLOW}(not in PATH){RESET}" if not t.in_path else ""
+        print(f"  {name_col}{badge_col}{t.description}{missing}")
+
+    installed = sum(1 for t in tools if t.in_path)
+    print(f"\n{DIM}{installed}/{len(tools)} tools available in PATH{RESET}")
+    print(
+        f"{YELLOW}Tip: Run 'byte-help --detailed' for full --help on every tool, "
+        f"or 'byte-help --sources' to see package breakdown.{RESET}\n"
+    )
+
+
+def print_detailed(tools: list[Tool]) -> None:
+    print(f"\n{BOLD}Detailed Help Manual{RESET}")
+
+    for t in tools:
+        sep = f"{CYAN}{'═' * 78}{RESET}"
+        print(f"\n{sep}")
+        print(f"{GREEN}{BOLD}{t.name}{RESET}  {_badge(t.source)}")
+        if t.description:
+            print(f"{YELLOW}{t.description}{RESET}")
+        print(f"{CYAN}{'-' * 78}{RESET}")
+
+        if not t.in_path:
+            print("  ⚠️  Not found in PATH — run install.sh to install.")
+            continue
+        try:
+            result = subprocess.run(
+                [t.name, "--help"],
+                text=True, capture_output=True, timeout=5,
+            )
+            output = (result.stdout or result.stderr or "").rstrip()
+            print(output if output else f"  {DIM}(no --help output){RESET}")
+        except subprocess.TimeoutExpired:
+            print("  ⚠️  Timed out.")
+        except Exception as exc:
+            print(f"  ⚠️  Error: {exc}")
+
+
+def print_sources(tools: list[Tool]) -> None:
+    receipts  = _parse_receipts()
+    repo_root = _detect_repo_root(receipts)
+
+    print(f"\n{BOLD}Tool Sources:{RESET}")
+    if repo_root:
+        print(f"{DIM}  Repo root: {repo_root}{RESET}")
+    print()
+
+    by_source: dict[str, list[str]] = {}
+    for t in tools:
+        by_source.setdefault(t.source, []).append(t.name)
+
+    for src in sorted(by_source):
+        if src.startswith("uv:"):
+            label = f"py package: {src[3:]}"
+        elif src == "shell":
+            label = "shell scripts  [sh]"
+        elif src == "node":
+            label = "node/typescript [ts]"
+        else:
+            label = f"manual [{src}]"
+        print(f"  {CYAN}{label}{RESET}")
+        for name in sorted(by_source[src]):
+            tick = f"{GREEN}✓{RESET}" if shutil.which(name) else f"{YELLOW}✗{RESET}"
+            print(f"    {tick} {name}")
+    print()
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        prog="byte-help",
+        description="List every CLI tool installed from the byte-brewery repo.",
+    )
+    parser.add_argument(
+        "--detailed", "-d",
+        action="store_true",
+        help="Run --help on every discovered tool.",
+    )
+    parser.add_argument(
+        "--sources", "-s",
+        action="store_true",
+        help="Show which repo package provides each tool.",
+    )
     args = parser.parse_args()
 
-    # Get the directory where byte-help is installed
-    script_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-    manifest_path = script_dir / "tools.json"
+    manifest = _load_manifest()
+    tools    = discover_tools(manifest)
 
-    try:
-        with open(manifest_path) as f:
-            data = json.load(f)
-            tools = data.get("tools", {})
-
-        if not args.detailed:
-            # Standard List View
-            print(f"\n{BOLD}Available Tools:{RESET}\n")
-            print(f"{'Name':<15} {'Description'}")
-            print(f"{'-' * 15} {'-' * 60}")
-            for tool, description in tools.items():
-                print(f"{GREEN}{tool:<15}{RESET} {description}")
-            print(f"\n{YELLOW}Tip: Run 'byte-help --detailed' to see usage examples for all tools.{RESET}\n")
-
-        else:
-            # Detailed View - Iterates and runs --help
-            print(f"\n{BOLD}Generating Detailed Help Manual...{RESET}")
-
-            for tool, description in tools.items():
-                print_header(tool, description)
-
-                # Check if tool exists in path
-                if shutil.which(tool) is None:
-                    print(f"❌ {tool} is not found in your PATH. Skipping.")
-                    continue
-
-                try:
-                    # Run the tool with --help
-                    # We capture stdout/stderr to prevent it from messing up our formatting if it fails
-                    result = subprocess.run(
-                        [tool, "--help"],
-                        text=True,
-                        capture_output=True,
-                        timeout=3  # Safety timeout
-                    )
-
-                    if result.returncode == 0:
-                        print(result.stdout)
-                    else:
-                        # Fallback if the tool doesn't support --help cleanly
-                        print(result.stdout)
-                        print(f"{YELLOW}[Note] Tool exited with code {result.returncode}{RESET}")
-                        if result.stderr:
-                            print(f"Error output:\n{result.stderr}")
-
-                except subprocess.TimeoutExpired:
-                    print(f"❌ Timed out trying to get help for {tool}.")
-                except Exception as e:
-                    print(f"❌ Error running {tool}: {e}")
-
-    except FileNotFoundError:
-        print(f"Error: tools.json not found at {manifest_path}")
+    if not tools:
+        print("No tools discovered.", file=sys.stderr)
         sys.exit(1)
-    except json.JSONDecodeError:
-        print("Error: tools.json is invalid")
-        sys.exit(1)
+
+    if args.sources:
+        print_sources(tools)
+    elif args.detailed:
+        print_detailed(tools)
+    else:
+        print_list(tools)
 
 
 if __name__ == "__main__":

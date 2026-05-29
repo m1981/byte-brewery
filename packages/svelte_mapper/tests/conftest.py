@@ -162,6 +162,86 @@ PAGE_SVELTE = """\
 <DataTable items={data.items} on:rowClick />
 """
 
+# ---------------------------------------------------------------------------
+# Regression fixtures — real patterns from kitchen-agent that exposed bugs
+# ---------------------------------------------------------------------------
+
+# Bug 1: named import starting with 't' was stripped by lstrip("type")
+# e.g. tableStore → ableStore
+STORE_IMPORT_STARTS_WITH_T = """\
+<script lang="ts">
+  import { tableStore } from '$lib/stores/tableStore';
+  import { themeStore } from '$lib/stores/themeStore';
+  import { tokenService } from '$lib/services/tokenService';
+</script>
+<div>{$tableStore.value}</div>
+"""
+
+# Bug 2: dispatch() called only in template inline handler (no createEventDispatcher import)
+# e.g. <tr on:click={() => dispatch('rowClick', row)}>
+DISPATCH_IN_TEMPLATE_ONLY = """\
+<script lang="ts">
+  import { onMount } from 'svelte';
+  let items = [];
+  onMount(() => { items = [1, 2, 3]; });
+</script>
+
+{#each items as item}
+  <div on:click={() => dispatch('select', item)}>{item}</div>
+{/each}
+"""
+
+# Bug 3: Svelte 5 rune-based store (*.svelte.ts) — $state / $derived, no writable()
+RUNE_NOTES_STORE_TS = """\
+import { api, type Note } from '$lib/api';
+
+function createNotesStore() {
+  let bySession = $state<Record<string, Note[]>>({});
+  let fetchStates = $state<Record<string, string>>({});
+
+  return {
+    forSession(sessionId: string): Note[] {
+      return bySession[sessionId] ?? [];
+    },
+    async load(sessionId: string) {
+      fetchStates = { ...fetchStates, [sessionId]: 'loading' };
+      const notes = await api.getNotes(sessionId);
+      bySession = { ...bySession, [sessionId]: notes };
+    },
+  };
+}
+
+export const notesStore = createNotesStore();
+"""
+
+RUNE_SESSION_STORE_TS = """\
+import { api, type SessionNode } from '$lib/api';
+
+function createSessionStore() {
+  let tree = $state<SessionNode[]>([]);
+  const flat = $derived(tree.flatMap(n => [n]));
+  let activeId = $state<string | null>(null);
+
+  return {
+    get tree() { return tree; },
+    get flat() { return flat; },
+    setActive(id: string) { activeId = id; },
+    async refresh() {
+      tree = await api.getSessionTree();
+    },
+  };
+}
+
+export const sessionStore = createSessionStore();
+"""
+
+# Bug 4: classify_file received bare filename (no path) — 'stores/' dir context lost
+# These are the path forms the scanner now passes (rel = full relative path)
+STORE_REL_PATH_SVELTE_TS   = "src/lib/stores/notes.svelte.ts"
+STORE_REL_PATH_PLAIN_TS    = "src/lib/stores/authStore.ts"
+NON_STORE_REL_PATH         = "src/lib/sidebar-resize.svelte.ts"
+NON_STORE_BARE_FILENAME    = "notes.svelte.ts"   # bare name, no dir — old broken form
+
 
 # ---------------------------------------------------------------------------
 # Fixtures: virtual filesystem via tmp_path
@@ -180,11 +260,13 @@ def svelte_project(tmp_path: Path) -> Path:
     (comp / "DataTable.svelte").write_text(DATA_TABLE_SVELTE)
     (comp / "Spinner.svelte").write_text(NO_EXPORTS_SVELTE)
 
-    # lib/stores
+    # lib/stores — mix of classic and Svelte 5 rune stores
     stores = tmp_path / "src" / "lib" / "stores"
     stores.mkdir(parents=True)
     (stores / "tableStore.ts").write_text(TABLE_STORE_TS)
     (stores / "authStore.ts").write_text(AUTH_STORE_TS)
+    (stores / "notes.svelte.ts").write_text(RUNE_NOTES_STORE_TS)
+    (stores / "sessions.svelte.ts").write_text(RUNE_SESSION_STORE_TS)
 
     # lib/types
     lib = tmp_path / "src" / "lib"
@@ -196,4 +278,36 @@ def svelte_project(tmp_path: Path) -> Path:
     (routes / "+layout.svelte").write_text(LAYOUT_SVELTE)
     (routes / "+page.svelte").write_text(PAGE_SVELTE)
 
+    return tmp_path
+
+
+@pytest.fixture
+def rune_store_project(tmp_path: Path) -> Path:
+    """
+    Minimal project that contains ONLY Svelte 5 rune stores (*.svelte.ts).
+    Used to regression-test the scanner's .svelte.ts detection path.
+    """
+    stores = tmp_path / "src" / "lib" / "stores"
+    stores.mkdir(parents=True)
+    (stores / "notes.svelte.ts").write_text(RUNE_NOTES_STORE_TS)
+    (stores / "sessions.svelte.ts").write_text(RUNE_SESSION_STORE_TS)
+
+    # A component that imports the rune store (so readers get populated)
+    comp = tmp_path / "src" / "lib" / "components"
+    comp.mkdir(parents=True)
+    (comp / "NotePopup.svelte").write_text("""\
+<script lang="ts">
+  import { notesStore } from '$lib/stores/notes.svelte';
+  import { focusTrap } from '$lib/actions/focustrap';
+</script>
+<div>{notesStore.forSession('x')}</div>
+""")
+    (comp / "SessionTree.svelte").write_text("""\
+<script lang="ts">
+  import { sessionStore } from '$lib/stores/sessions.svelte';
+</script>
+{#each sessionStore.tree as node}
+  <div>{node.id}</div>
+{/each}
+""")
     return tmp_path

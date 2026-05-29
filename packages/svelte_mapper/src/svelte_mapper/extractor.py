@@ -78,11 +78,21 @@ _RE_INTERFACE = re.compile(r'^export\s+interface\s+(?P<name>\w+)', re.MULTILINE)
 _RE_TYPE_ALIAS = re.compile(r'^export\s+type\s+(?P<name>\w+)\s*=', re.MULTILINE)
 _RE_ENUM = re.compile(r'^export\s+enum\s+(?P<name>\w+)', re.MULTILINE)
 
-# Store declarations in .ts files
+# Store declarations in .ts files — classic writable/derived/readable
 _RE_STORE_DECL = re.compile(
     r'export\s+const\s+(?P<name>\w+)\s*=\s*(?P<kind>writable|derived|readable)\s*[<(]',
     re.MULTILINE,
 )
+
+# Svelte 5 rune-based store: exported const from a factory function
+# e.g. export const notesStore = createNotesStore();
+_RE_RUNE_STORE_EXPORT = re.compile(
+    r'^export\s+const\s+(?P<name>\w+)\s*=',
+    re.MULTILINE,
+)
+
+# Detect $state / $derived usage = rune-based reactive
+_RE_RUNE_STATE = re.compile(r'\$state\s*[<(]|\$derived\s*[<(]')
 
 
 # ---------------------------------------------------------------------------
@@ -298,21 +308,49 @@ class TSExtractor:
     def parse_store(filename: str, source: str) -> StoreMap:
         """
         Extract the primary exported store from a store .ts file.
-        Uses the first matched `export const X = writable/derived/readable(…)`.
-        Falls back to filename stem as the store name.
+        Handles:
+          - Classic: export const x = writable/derived/readable(...)
+          - Svelte 5 rune-based: $state / $derived inside a factory function
+        Falls back to filename stem when nothing else matches.
         """
+        # 1. Classic Svelte store
         m = _RE_STORE_DECL.search(source)
         if m:
             name = m.group("name")
             kind = m.group("kind")
-        else:
-            name = Path(filename).stem
-            kind = "custom"
+            return StoreMap(
+                name=name,
+                file=filename,
+                kind=kind,
+                line_count=len(source.splitlines()),
+            )
 
+        # 2. Svelte 5 rune store — look for $state/$derived usage + top-level export
+        if _RE_RUNE_STATE.search(source):
+            # Find the exported singleton name (last `export const X = …`)
+            exports = _RE_RUNE_STORE_EXPORT.findall(source)
+            name = exports[-1].strip() if exports else Path(filename).stem
+            # Clean stem: remove .svelte suffix if file is *.svelte.ts
+            stem = Path(filename).stem  # e.g. "notes.svelte"
+            if stem.endswith(".svelte"):
+                stem = Path(stem).stem   # strip inner .svelte → "notes"
+            if not name or not name.replace('_','').isalnum():
+                name = stem
+            return StoreMap(
+                name=name,
+                file=filename,
+                kind="rune ($state)",
+                line_count=len(source.splitlines()),
+            )
+
+        # 3. Fallback
+        stem = Path(filename).stem
+        if stem.endswith(".svelte"):
+            stem = Path(stem).stem
         return StoreMap(
-            name=name,
+            name=stem,
             file=filename,
-            kind=kind,
+            kind="custom",
             line_count=len(source.splitlines()),
         )
 
@@ -331,15 +369,26 @@ class TSExtractor:
     @staticmethod
     def classify_file(filename: str) -> FileKind:
         """Classify a .ts file by its role in the project."""
-        name = Path(filename).name
-        stem = Path(filename).stem
+        p = Path(filename)
+        name = p.name           # e.g. "notes.svelte.ts" or "+server.ts"
+        # All path parts give directory-level context (e.g. 'stores')
+        all_parts = " ".join(p.parts).lower()
+
+        # Normalise stem: strip .ts then optionally inner .svelte
+        stem = name
+        if stem.endswith(".ts"):
+            stem = stem[:-3]                # "notes.svelte" or "+server"
+        if stem.endswith(".svelte"):
+            stem = stem[:-7]               # "notes" or "sidebar-resize"
+        stem_lower = stem.lower()
 
         if name.startswith("+server"):
             return FileKind.SERVER
         if name.startswith("+page") or name.startswith("+layout") or name.startswith("+error"):
             return FileKind.ROUTE
-        if "store" in stem.lower() or "stores" in stem.lower():
+        # Match stem OR any parent directory named store/stores
+        if "store" in stem_lower or "store" in all_parts:
             return FileKind.STORE
-        if stem.lower() in ("types", "type", "interfaces", "models", "schema"):
+        if stem_lower in ("types", "type", "interfaces", "models", "schema"):
             return FileKind.TYPES
         return FileKind.UTIL

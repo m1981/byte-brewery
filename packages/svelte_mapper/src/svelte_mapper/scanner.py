@@ -86,9 +86,11 @@ class Scanner:
                 if _is_ignored(rel, gi):
                     continue
 
+                # Detect .svelte.ts (Svelte 5 rune modules) before plain .ts
+                is_svelte_ts = fname.endswith(".svelte.ts")
                 suffix = abs_f.suffix.lower()
 
-                if suffix == ".svelte":
+                if suffix == ".svelte" and not is_svelte_ts:
                     source = _safe_read(abs_f)
                     if source is None:
                         continue
@@ -101,7 +103,8 @@ class Scanner:
                     source = _safe_read(abs_f)
                     if source is None:
                         continue
-                    kind = TSExtractor.classify_file(fname)
+                    # Pass rel (includes parent dirs) so store/types dirs are detected
+                    kind = TSExtractor.classify_file(rel)
 
                     if kind == FileKind.STORE:
                         sm = TSExtractor.parse_store(rel, source)
