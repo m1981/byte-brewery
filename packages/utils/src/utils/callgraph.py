@@ -563,6 +563,86 @@ class CallGraphAnalyser:
 
 
 # ---------------------------------------------------------------------------
+# Project environment detection + re-exec
+# ---------------------------------------------------------------------------
+
+
+def _find_project_root(start: Path) -> Path | None:
+    """Walk up from *start* to find a directory with ``pyproject.toml`` or
+    ``setup.py``.  Returns the project root or ``None``."""
+    current = start.resolve()
+    while True:
+        if (current / "pyproject.toml").exists() or (current / "setup.py").exists():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def _find_project_python(project_root: Path) -> Path | None:
+    """Return the Python interpreter inside *project_root*'s venv, or ``None``."""
+    for candidate in (
+        project_root / ".venv" / "bin" / "python",
+        project_root / ".venv" / "bin" / "python3",
+        project_root / "venv" / "bin" / "python",
+        project_root / "venv" / "bin" / "python3",
+    ):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _reexec_with_project_python(project_python: Path, script: Path) -> None:
+    """Replace the current process with the same callgraph command re-run
+    under *project_python*.
+
+    ``pycallgraph2`` and this module's source are made importable by
+    prepending their directories to ``PYTHONPATH`` before the exec, so
+    the project's Python can find them even though they live in byte-utils'
+    own venv.
+
+    This is the correct fix for Python version mismatches: C-extension
+    packages (pydantic-core, grpcio, etc.) are compiled per Python ABI and
+    cannot be loaded by a different interpreter version.  Running everything
+    under the project's own interpreter avoids the mismatch entirely.
+    """
+    import subprocess
+
+    # Directories to expose to the re-exec'd interpreter via PYTHONPATH:
+    #  1. callgraph's own src dir  →  so `from utils.callgraph import …` works
+    #  2. pycallgraph2's location  →  it lives in byte-utils' venv, not the project venv
+    extra_paths: list[str] = []
+
+    callgraph_src = Path(__file__).resolve().parent.parent  # …/packages/utils/src
+    extra_paths.append(str(callgraph_src))
+
+    try:
+        import pycallgraph2 as _pcg
+        pcg_path = str(Path(_pcg.__file__).resolve().parent.parent)
+        extra_paths.append(pcg_path)
+    except ImportError:
+        pass
+
+    env = os.environ.copy()
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = os.pathsep.join(
+        p for p in [*extra_paths, existing_pythonpath] if p
+    )
+    # Signal that we have already re-exec'd so the child does not loop.
+    env["_CALLGRAPH_REEXEC"] = "1"
+
+    cmd = [str(project_python), Path(__file__).resolve()] + sys.argv[1:]
+    print(
+        f"[callgraph] Python mismatch — re-running under project interpreter: "
+        f"{project_python}",
+        file=sys.stderr,
+    )
+    result = subprocess.run(cmd, env=env)
+    sys.exit(result.returncode)
+
+
+# ---------------------------------------------------------------------------
 # Module loader helper (used by CLI)
 # ---------------------------------------------------------------------------
 
@@ -670,6 +750,35 @@ def main() -> None:
         print(f"Error: '{script}' not found.", file=sys.stderr)
         sys.exit(1)
 
+    # ── Python version / venv mismatch guard ────────────────────────────
+    # callgraph runs inside byte-utils' own uv-tool venv.  If the target
+    # project uses a *different* Python version its C-extension packages
+    # (pydantic-core, grpcio, …) are compiled for that version's ABI and
+    # cannot be imported by our interpreter.  Detect this early and
+    # transparently re-exec the entire command under the project's own
+    # Python so everything runs in the right interpreter + venv.
+    if not os.environ.get("_CALLGRAPH_REEXEC"):
+        project_root = _find_project_root(script.parent)
+        if project_root is not None:
+            project_python = _find_project_python(project_root)
+            if project_python is not None and str(project_python) != sys.executable:
+                _reexec_with_project_python(project_python, script)
+                # _reexec_with_project_python calls sys.exit() — never reached
+    # ────────────────────────────────────────────────────────────────────
+
+    # Add the project root and script directory to sys.path.
+    # Projects that use absolute "src.*" imports (e.g. `from src.foo import bar`)
+    # expect the project root (parent of src/) on sys.path.  Projects with a
+    # flat layout expect the script's own directory.  We add both.
+    project_root_for_path = _find_project_root(script.parent)
+    if project_root_for_path is not None:
+        root_str = str(project_root_for_path)
+        if root_str not in sys.path:
+            sys.path.insert(0, root_str)
+    script_dir_str = str(script.parent)
+    if script_dir_str not in sys.path:
+        sys.path.insert(0, script_dir_str)
+
     analyser = CallGraphAnalyser(
         output=args.output,
         output_format=args.output_format,
@@ -681,8 +790,6 @@ def main() -> None:
         mermaid_path=args.mermaid_path,
     )
 
-    # Add script directory to sys.path so relative imports work
-    sys.path.insert(0, str(script.parent))
     try:
         analyser.profile(lambda: _load_and_run_module(script))
     except CallGraphError as exc:
