@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "utils"
+name = "byte-utils"
 version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
@@ -23,15 +23,15 @@ dce         = "utils.dce:main"
 pext        = "utils.pext:main"
 pysum       = "utils.pysum:main"
 repo-map    = "utils.repo_map:main"
-repo_map    = "utils.repo_map:main"
 gen-diagram = "utils.gen_diagram:main"
-gen_diagram = "utils.gen_diagram:main"
-ge-diagram  = "utils.gen_diagram:main"
-ge_diagram  = "utils.gen_diagram:main"
 lsproj      = "utils.lsproj:main"
 callgraph   = "utils.callgraph:main"
 py-diagram  = "utils.py_diagram:main"
-py_diagram  = "utils.py_diagram:main"
+
+# Distribution name is "byte-utils" but the importable package is still "utils".
+# Hatchling needs an explicit pointer because the two names differ.
+[tool.hatch.build.targets.wheel]
+packages = ["src/utils"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

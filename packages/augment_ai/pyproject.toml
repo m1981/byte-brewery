@@ -14,10 +14,8 @@ dependencies = [
 ]
 
 [project.scripts]
-aug = "augment_ai.aug_pipeline:main"
+aug       = "augment_ai.aug_pipeline:main"
 aug-recap = "augment_ai.recap:main"
-dce = "augment_ai.dce:main"
-pext = "augment_ai.pext:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

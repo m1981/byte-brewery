@@ -11,14 +11,16 @@
     "lsproj":       "Project file lister - Uses .projlist config for pattern-based file discovery",
     "repo-map":     "Compressed structural map of a Python project (classes, functions, imports)",
     "gen-diagram":  "Generate architecture diagrams from Python project structure",
+    "py-diagram":   "Token-efficient class/type diagram generator from Python source (Mermaid, DOT, PlantUML, TOKEN)",
+    "callgraph":    "Runtime Python call-graph analyser — produces PNG/SVG graph and optional Mermaid/JSON report",
     "git-recent":   "Extract recent commits with diffs for AI analysis, excluding build artifacts",
     "aireview":     "AI-powered code review and pre-push validation tool",
     "chatmap":      "Map LLM conversation branches from Google AI Studio JSON exports (timeline/tree/html views)",
     "svelte-map":   "Compact structural map of a Svelte/TS codebase for LLM agents (components, stores, import graph)",
     "summarize.ts": "TypeScript code summarizer - Removes function bodies while preserving signatures"
   },
-  "aliases": ["ge-diagram", "ge_diagram", "gen_diagram", "repo_map", "dce"],
+  "aliases": ["dce"],
   "shell_scripts":   ["mdcat", "rsum", "git-recent", "export-chats", "byte-help"],
-  "python_scripts":  ["pysum", "lsproj", "pext", "dce", "repo-map", "gen-diagram", "aireview", "chatmap", "svelte-map", "aug", "aug-recap"],
+  "python_scripts":  ["pysum", "lsproj", "pext", "repo-map", "gen-diagram", "py-diagram", "callgraph", "aireview", "chatmap", "svelte-map", "aug", "aug-recap"],
   "node_scripts":    ["summarize.ts"]
 }

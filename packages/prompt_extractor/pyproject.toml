@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "prompt_extractor"
+name = "prompt-extractor"
 version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
-    "pydantic>=2.12.5", # Assuming it uses pydantic based on your global list
+    "pydantic>=2.12.5",
 ]
 
 [project.scripts]
