@@ -8,19 +8,30 @@ version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
     "pathspec>=0.12",
+    "pycallgraph2>=1.1.3",
+    "setuptools",          # pycallgraph2 uses distutils via setuptools
 ]
 
+[project.optional-dependencies]
+# Optional: erdantic for Pydantic model ER diagrams
+erdantic = ["erdantic>=0.6"]
+# Optional: pylint for pyreverse-based class diagrams
+pyreverse = ["pylint>=3.0"]
+
 [project.scripts]
-dce        = "utils.dce:main"
-pext       = "utils.pext:main"
-pysum      = "utils.pysum:main"
-repo-map   = "utils.repo_map:main"
-repo_map   = "utils.repo_map:main"
+dce         = "utils.dce:main"
+pext        = "utils.pext:main"
+pysum       = "utils.pysum:main"
+repo-map    = "utils.repo_map:main"
+repo_map    = "utils.repo_map:main"
 gen-diagram = "utils.gen_diagram:main"
 gen_diagram = "utils.gen_diagram:main"
 ge-diagram  = "utils.gen_diagram:main"
 ge_diagram  = "utils.gen_diagram:main"
-lsproj     = "utils.lsproj:main"
+lsproj      = "utils.lsproj:main"
+callgraph   = "utils.callgraph:main"
+py-diagram  = "utils.py_diagram:main"
+py_diagram  = "utils.py_diagram:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
