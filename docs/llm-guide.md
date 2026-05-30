@@ -1,422 +1,562 @@
-# byte-brewery — LLM Agent Guide
+# LLM Context Tools — Field Guide
 
-> **Purpose of this document**: teach an LLM agent how to use every CLI tool
-> in this repo effectively — what each tool produces, when to reach for it,
-> how to chain tools together, and how to read the output.
-
----
-
-## Mental Model
-
-These tools are **code-surfacing instruments**.  Their job is to compress a
-Python codebase into representations that are small enough to fit in a context
-window yet rich enough to reason about architecture, hotspots, and structure.
-
-```
-Source files
-    │
-    ├─ repo-map      → one-liner signatures per file  (fastest overview)
-    ├─ pysum         → imports + full signatures       (wider context)
-    ├─ py-diagram    → class inheritance + fields      (type topology)
-    ├─ gen-diagram   → Graphviz DOT class diagram      (visual / tooling)
-    ├─ callgraph     → runtime call graph + timings    (behaviour, not structure)
-    ├─ lsproj        → filtered file list              (whitelist-driven scoping)
-    └─ py-diagram --format token  →  ultra-compact     (token budget critical)
-```
-
-**Rule of thumb**: start with `repo-map`, zoom in with `pysum`, then reach for
-`callgraph` only when you need runtime behaviour, not static structure.
+Tools for compressing a Python codebase into representations small enough to
+fit in a context window yet rich enough to reason about architecture, structure,
+and behaviour. This guide is ordered by when to reach for each tool, not by
+what each tool technically does.
 
 ---
 
-## Tools Reference
-
-### `repo-map` — Fastest structural overview
-
-**What it outputs**: one section per file, each function/class as a single
-line with its signature and line number.  No bodies, no imports by default.
+## Mental Model: The Zoom Ladder
 
 ```
-📄 src/chat_service.py
-  class ChatService  [line 144]
-      def handle_turn(self, session_id: str, user_message: str, ...)  [line 151]
-  def _make_title(ui_messages: list[dict])  [line 73]
+repo-map          →  project skeleton              (~400 tokens)   start here
+pysum             →  imports + signatures          (~1 200 tokens) zoom in
+py-diagram token  →  class fields + inheritance    (~600 tokens)   zoom in on types
+callgraph         →  runtime behaviour             (expensive)     only when static is not enough
 ```
 
-**When to use**:
-- First pass on an unknown codebase — fit the whole project in one read.
-- Locating which file a function lives in before reading it.
-- Checking whether a refactor changed the public surface.
+Always start at the top of the ladder and descend only as far as the task
+requires. Reading full source bodies is the last resort, not the first.
 
-**Key flags**:
+---
+
+## Decision Tree
+
+Use this before reaching for any tool:
+
+```
+Starting a new task or unfamiliar with the codebase?
+    └─► repo-map
+        Gives you the full skeleton. Stop here if your question is structural.
+
+Need to write code that calls into a module?
+    └─► pysum <file or directory>
+        Imports reveal the dependency graph. Signatures reveal the calling contract.
+
+Working with a class — inheritance, fields, interface compliance?
+    └─► py-diagram --format token
+        Richest class view per token. Fixes pysum's Pydantic/dataclass blind spot.
+
+Token budget is tight?
+    └─► py-diagram --format token   (never --format dot for LLM context)
+
+Need to scope which files matter — exclude tests, migrations, generated code?
+    └─► lsproj | pysum --pipe       (reads .projlist whitelist)
+
+Need to understand what actually runs — hotspots, call chains, timing?
+    └─► callgraph --target probe.py --include 'yourpackage.*'
+        Only valuable when pointed at a probe script. See section 4.
+
+Need a diagram for docs, PRs, or wikis?
+    └─► py-diagram --format mermaid        (paste into GitHub / Obsidian)
+    └─► gen-diagram . | dot -Tpng -o a.png (only if PNG is specifically required)
+```
+
+---
+
+## 1. `repo-map` — Always Start Here
+
+**What it does:** one section per file, each function and class as a single
+line with its signature and line number. No bodies, no imports by default.
+
+**What to look for in the output:**
+
+- A file whose line range spans hundreds of lines with many functions → God
+  object or God module, likely a refactor target
+- A class with only one or two public methods → thin facade or delegation layer
+- Module-level assignments (`= logger`, `= app`, `= client`) → statefulness,
+  singletons, global side effects at import time
+- A function name that appears across many files → shared utility or
+  potential unintended coupling
+
+**Typical usage:**
+
 ```bash
 repo-map                          # scan current directory
 repo-map --root src/              # specific subtree
-repo-map --only src/domain        # narrow to one package
-repo-map --skip tests migrations  # ignore noise dirs
-repo-map --show-imports           # add import lines (bigger, but shows deps)
+repo-map --skip tests migrations  # exclude noise directories
+repo-map --show-imports           # add import lines when dependency overview matters
 ```
 
-**Token cost**: very low.  A 20-file project fits in ~300 tokens.
+**When to stop here:** if your question is structural — "where does X live?",
+"which file owns this class?", "what is the public surface of module Y?" —
+`repo-map` answers it without spending tokens on bodies or imports. Move to
+`pysum` only when you need type signatures or dependency information.
 
 ---
 
-### `pysum` — Signatures + imports (richer than repo-map)
+## 2. `pysum` — Imports + Full Typed Signatures
 
-**What it outputs**: per-file Markdown code blocks with all imports and full
-typed signatures.  No function bodies.
+**What it does:** per-file Markdown code blocks with all imports and full
+typed signatures. No function bodies.
 
-```markdown
-## chat_service.py
-\`\`\`python
-import json, uuid, structlog
-from agent import process_chat_turn
+**The import block is the high-value section.** Imports are the fastest way
+to read a module's dependency graph without parsing code. Look for:
 
-class ChatService
-    def handle_turn(self, session_id: str, ...) -> tuple[str, list[dict]]
-def _make_title(ui_messages: list[dict]) -> str
-\`\`\`
-```
+- A module importing from many other internal modules → high coupling; change
+  risk radiates outward
+- A lower-layer module (repository, storage) importing from a higher-layer
+  module (exporter, renderer) → layer inversion, SRP violation
+- Repeated identical imports across many files → candidate for a shared
+  utility or injection point
+- A very long single import line listing many names from one module → tight
+  coupling to that module's internals
 
-**When to use**:
-- You need to know *which packages* a module imports (dependency audit).
-- You want full type signatures, not just names.
-- Feeding to an LLM that will write code calling into this module.
+**Known blind spot:** `pysum` shows only method signatures, not field
+definitions. Classes built with Pydantic `BaseModel`, `dataclasses`, or
+`attrs` will appear as empty `pass` bodies. Always follow with
+`py-diagram --format token` when the file contains schema or model classes.
 
-**Key flags**:
-```bash
-pysum                             # scan current dir
-pysum src/                        # scan subdirectory
-pysum > structure.md              # save for later
-lsproj | pysum --pipe             # scope to .projlist whitelist first
-find . -name '*.py' -not -path '*/tests/*' | pysum --pipe
-```
-
-**Token cost**: low–medium.  Larger than `repo-map` due to imports.
-
----
-
-### `py-diagram` — Class topology (inheritance, fields, methods)
-
-**What it outputs**: class hierarchy with inheritance, typed fields, and
-method signatures in your chosen format.
-
-**Formats**:
-
-| Format | Use case |
-|---|---|
-| `mermaid` | Paste into GitHub / Obsidian for rendering |
-| `token` | Smallest text form — best for LLM context window |
-| `dot` | Feed to Graphviz `dot -Tpng` |
-| `plantuml` | Feed to PlantUML server |
-
-**Token format** (most useful for LLMs):
-```
-[MODULE] repositories
-[CLASS] SQLiteSessionRepository [module=repositories]
-    FIELDS: db_path:Path
-    METHODS: save_session(session_id:str, ...)->None, load_session(...)->tuple
-[CLASS] SessionRepository(Protocol) [module=repositories]
-    METHODS: save_session(...), load_session(...)
-```
-
-**When to use**:
-- You need to understand inheritance chains before editing a class.
-- Checking whether an interface (Protocol) is fully implemented.
-- Producing a diagram for documentation.
-
-**Key flags**:
-```bash
-py-diagram                            # mermaid, scan cwd
-py-diagram --format token             # smallest output for LLM prompts
-py-diagram --format token > arch.txt  # save for reuse
-py-diagram --source src/models.py     # single file
-py-diagram --skip tests migrations    # exclude noise
-py-diagram --max-classes 20           # cap large projects
-```
-
-**Token cost**: low (`token` format), medium (`mermaid`).
-
----
-
-### `gen-diagram` — Graphviz DOT class diagram
-
-**What it outputs**: a `.dot` file (Graphviz language) describing classes,
-methods, and their relationships.  Pipe to `dot -Tpng` or paste into an
-online viewer.
-
-**When to use**:
-- Generating a visual diagram for a PR description or wiki.
-- When you need Graphviz-specific features (clusters, styling).
-- Tooling pipelines that consume DOT format.
+**Typical usage:**
 
 ```bash
-gen-diagram .                         # print DOT to stdout
-gen-diagram . > architecture.dot
-gen-diagram . | dot -Tpng -o arch.png
-gen-diagram --skip tests .
-```
-
-**Token cost**: medium–high.  DOT syntax is verbose; prefer `py-diagram
---format token` for LLM consumption.
-
----
-
-### `callgraph` — Runtime call graph (behaviour, not structure)
-
-**What it outputs**: three optional artefacts from an **actual execution** of
-a Python script:
-1. **PNG/SVG image** — visual call graph (needs Graphviz `dot` binary)
-2. **JSON report** — every function called, with call count, total time, and
-   caller list, sorted by call frequency
-3. **Mermaid flowchart** — text call graph, no Graphviz needed
-
-**JSON schema**:
-```json
-{
-  "call_graph": [
-    {
-      "name": "SQLiteConnection.get_connection",
-      "call_count": 36,
-      "time_total": 0.042,
-      "callers": ["SQLiteSessionRepository.save_session", "load_session"]
-    }
-  ]
-}
-```
-Records are sorted by `call_count` descending.
-
-**When to use**:
-- Finding hotspots: which functions are called most often?
-- Understanding data flow: what calls what at runtime?
-- Performance investigation: what is slow (`time_total`)?
-- Validating that a refactor didn't change call patterns.
-
-**Key flags**:
-```bash
-callgraph --target src/main.py
-callgraph --target src/main.py --json report.json --mermaid graph.md
-callgraph --target src/main.py --include 'mypackage.*'   # focus on your code only
-callgraph --target src/main.py --exclude 'test*'
-callgraph --target src/main.py --max-depth 5             # avoid deep stdlib noise
-callgraph --target src/main.py --format svg              # if png is too big
-```
-
-**Important**: `callgraph` **actually runs the script**.  If `main.py` starts
-a server or blocks, it will hang.  Prefer targeting a probe/init script or
-use `--max-depth` to limit scope.
-
-**Python version**: `callgraph` auto-detects the target project's `.venv` and
-re-runs itself under the project's own Python interpreter.  No manual
-`PYTHONPATH` setup needed.
-
-**Token cost for JSON**: high (hundreds of records).  Filter before feeding to LLM:
-```bash
-# Top 10 hotspots only
-python3 -c "
-import json, sys
-d = json.load(open('report.json'))
-top = d['call_graph'][:10]
-print(json.dumps(top, indent=2))
-"
-
-# Only app-level code (exclude stdlib noise)
-python3 -c "
-import json
-d = json.load(open('report.json'))
-NOISE = {'importlib', 'threading', 'abc', '_', 'ModuleSpec', 'contextlib'}
-app = [r for r in d['call_graph'] if not any(r['name'].startswith(n) for n in NOISE)]
-print(json.dumps(app[:20], indent=2))
-"
+pysum src/                              # full source tree
+pysum src/some_module.py                # single file before touching it
+lsproj | pysum --pipe                   # scope to .projlist whitelist
+find src/ -name '*.py' \
+  -not -path '*/tests/*' | pysum --pipe # ad-hoc scope without .projlist
 ```
 
 ---
 
-### `lsproj` — Whitelist-driven file scoping
+## 3. `py-diagram --format token` — Class Topology, Best Per Token
 
-**What it outputs**: a newline-separated list of file paths matching the
-`.projlist` whitelist and `.gitignore` exclusions in the current directory.
+**What it does:** class hierarchy with inheritance chains, typed fields, and
+method signatures in the most compact text form. Four output formats are
+available; `token` is the correct choice for LLM context in nearly every case.
 
-**`.projlist` syntax**:
+**What to look for in the output:**
+
+_Interface / Protocol compliance:_
+
 ```
-*.py                   # match by filename anywhere
-src/**/*.py            # recursive glob
-!tests/__init__.py     # negation — exclude even if whitelisted
-# comment              # ignored
+[CLASS] UserRepository(Protocol)
+    METHODS: find_by_id(...), save(...), delete(...)
+
+[CLASS] PostgresUserRepository
+    METHODS: find_by_id(...), save(...)       ← delete() is missing
 ```
 
-**When to use**:
-- Scoping other tools to exactly the files that matter.
-- Avoiding test files, migrations, generated code when summarising.
+A side-by-side method list makes gaps immediately visible without reading
+source. Run this before and after any refactor that touches an abstract
+interface.
+
+_Field shapes on data models — fixes pysum's blind spot:_
+
+```
+[CLASS] CreateOrderRequest(BaseModel)
+    FIELDS: customer_id:str, items:list[OrderItem], discount:float | None
+```
+
+Pydantic models, dataclasses, and attrs classes expose their fields here
+but not in `pysum`.
+
+_Composition relationships:_
+
+```
+[RELATIONSHIPS]
+  OrderResponse --composes--> OrderItem (items)
+  InvoiceResponse --composes--> OrderResponse (order)
+```
+
+Composition edges reveal which response objects nest which sub-objects —
+useful when tracing serialisation chains.
+
+**Known limitation — structural typing:** Python Protocol is satisfied by
+structural match, not explicit inheritance. A class that implements a Protocol
+without declaring `(SomeProtocol)` in its definition will not have an
+inheritance arrow in the diagram. Verify compliance by comparing method lists
+manually.
+
+**Format selection:**
+
+| Goal                        | Format                              |
+| --------------------------- | ----------------------------------- |
+| LLM context window          | `token`                             |
+| GitHub PR / Obsidian / docs | `mermaid`                           |
+| Graphviz PNG pipeline       | `dot`                               |
+| Never use for LLM           | `dot` (verbose, low signal density) |
+
+**Typical usage:**
 
 ```bash
-lsproj                            # list files per .projlist
-lsproj | pysum --pipe             # summarise only whitelisted files
-lsproj | xargs wc -l              # line count of project files
-lsproj -e '*.md'                  # ad-hoc extra exclusion
+py-diagram --format token                          # whole project
+py-diagram --format token --source src/models.py   # single file
+py-diagram --format token --skip tests migrations  # exclude noise
+py-diagram --format token > arch.txt               # save for reuse across turns
+py-diagram --format mermaid > docs/architecture.md # for human-readable docs
 ```
 
 ---
 
-### `pext` — Extract prompts from ChatGPT/LLM chat exports
+## 4. `callgraph` — Runtime Behaviour, Only With a Probe Script
 
-**What it outputs**: human prompts extracted from a JSON chat export, in
-text, JSON, or CSV format.
+**What it does:** traces an actual execution and produces a JSON report of
+every function called, with call count, total time, and caller list, sorted
+by call frequency.
 
-```bash
-pext chats.json                        # print all human prompts as text
-pext chats.json --format json          # structured JSON
-pext chats.json --format csv --timestamps
-pext chats.json --output prompts.txt
+**The cardinal rule:** `callgraph` must be pointed at a script that
+exercises the code path you care about. Pointing it at a server entry point
+(`main.py`, `app.py`, `manage.py`) captures only module-load time — the
+output will be hundreds of stdlib import records and no traces of business
+logic.
+
+**How to write a probe script:**
+
+A probe script is a small, self-contained Python file that:
+
+1. Sets up the minimum required state (in-memory store, mocked external calls)
+2. Calls the function or code path you want to trace
+3. Exits cleanly
+
+```python
+# probe.py — adapt package names and classes to the target codebase
+import os
+os.environ.setdefault("EXTERNAL_API_KEY", "fake-key")  # prevent real API calls
+
+from unittest.mock import patch
+from mypackage.repository import InMemoryRepository
+from mypackage.service import OrderService
+
+repo = InMemoryRepository()
+service = OrderService(repo)
+
+# Mock I/O or network calls that would block or fail
+with patch("mypackage.notifications.send_email"):
+    service.place_order(customer_id="c1", items=[{"sku": "A", "qty": 2}])
+    service.cancel_order(order_id="o1")
 ```
 
----
-
-### `chatmap` — Map Google AI Studio conversation exports
-
-**What it outputs**: structured views of AI Studio JSON exports — timelines,
-trees, HTML swimlanes, or plain prompt lists.
+**Running callgraph against the probe:**
 
 ```bash
-chatmap export.json                          # timeline view (default)
-chatmap export.json --view tree              # branching conversation tree
-chatmap export.json --view html -o out.html  # full HTML report
-chatmap export.json --view prompts           # just the prompts
-chatmap export.json --view recent            # most recent activity
-chatmap exports/   --view html -o all.html   # whole directory → one file
-```
-
----
-
-### `aireview` — AI-powered pre-push code review
-
-**What it does**: runs an AI code review on git changes before a push.
-Reads `.aireview.yml` for configuration.
-
-```bash
-aireview           # review staged/recent changes
-```
-
----
-
-## Effective Chaining Patterns
-
-### Pattern 1: "What does this project do?" (cold start)
-```bash
-repo-map --root src/
-```
-Feed the output directly.  Single call, low tokens, answers structure questions.
-
----
-
-### Pattern 2: "I need to modify class X" (surgical zoom)
-```bash
-# Step 1: locate the file
-repo-map --root src/ | grep -A5 "ClassName"
-
-# Step 2: get full signatures + imports for that file
-pysum src/that_file.py
-
-# Step 3: read the actual source
-cat src/that_file.py
-```
-
----
-
-### Pattern 3: "Is this interface fully implemented?" (Protocol check)
-```bash
-py-diagram --format token --source src/repositories.py
-```
-The token format shows Protocol methods and concrete class methods side by
-side — gaps are immediately visible.
-
----
-
-### Pattern 4: "Where are the performance hotspots?" (runtime analysis)
-```bash
-# 1. Run callgraph against a lightweight entry point
-callgraph --target src/probe.py \
-          --include 'src.*' \
+callgraph --target probe.py \
+          --include 'mypackage.*' \
           --json report.json \
           --mermaid hotspots.md
+```
 
-# 2. Extract the top 15 app-level calls for LLM analysis
+**Filtering the JSON output** — raw output contains hundreds of stdlib records:
+
+```bash
 python3 -c "
 import json
 d = json.load(open('report.json'))
-noise = {'importlib','threading','_','ModuleSpec','contextlib','inspect','abc'}
-app = [r for r in d['call_graph']
-       if not any(r['name'].startswith(n) for n in noise)]
-print(json.dumps({'hotspots': app[:15]}, indent=2))
+# Replace 'mypackage' with the actual top-level package name
+app = [r for r in d['call_graph'] if r['name'].startswith('mypackage.')]
+top = sorted(app, key=lambda r: r['call_count'], reverse=True)
+print(json.dumps(top[:20], indent=2))
 "
 ```
 
+**What the output tells you:**
+
+- `call_count` — which functions are on the critical path; primary target for
+  optimisation
+- `time_total` — where wall-clock time is actually spent; may differ sharply
+  from call_count (one slow I/O call outweighs a thousand fast dict lookups)
+- `callers` — who calls this function; reveals fan-in and coupling
+
+**When callgraph is worth the effort:**
+
+- Investigating a performance regression — `time_total` isolates the slow layer
+- Validating a refactor preserved call patterns — run before and after, diff
+  the filtered JSON
+- Understanding a multi-step workflow where static reading loses the thread
+  (middleware chains, plugin dispatch, recursive processing)
+- Confirming a code path believed to be dead is never actually called
+
+**When to skip callgraph:**
+
+- The question is structural ("what are the fields?", "what does this import?")
+  — static tools answer faster and cheaper
+- External dependencies cannot be easily mocked — the probe is harder to write
+  than reading the source
+- The project has no `.venv` or requires complex environment setup to import
+
 ---
 
-### Pattern 5: "Summarise only meaningful files" (token budget tight)
+## 5. `lsproj` — Scoping Gate
+
+**What it does:** emits a filtered file list based on the `.projlist`
+whitelist and `.gitignore` exclusions in the current directory. Designed to
+be piped into other tools.
+
+**Why this matters:** most projects contain files you never want in an LLM
+context — test fixtures, database migrations, generated protobuf stubs,
+vendored dependencies, build artefacts. Without scoping, `pysum` or `repo-map`
+run on a full repository will include all of this noise.
+
+**`.projlist` syntax:**
+
+```
+src/**/*.py        # recursive glob
+*.py               # match by filename anywhere in the tree
+!tests/fixtures/   # negation — exclude even if whitelisted
+# comment          # ignored
+```
+
+**Typical usage:**
+
 ```bash
-# 1. Scope with lsproj (reads .projlist whitelist)
+lsproj                              # verify what is currently in scope
+lsproj | pysum --pipe               # summarise only whitelisted files
+lsproj | xargs wc -l                # line count of in-scope files
+lsproj -e '*.md'                    # ad-hoc extra exclusion for this run
+```
+
+**When `.projlist` does not exist:** fall back to explicit `find` scoping:
+
+```bash
+find src/ -name '*.py' \
+  -not -path '*/migrations/*' \
+  -not -path '*/tests/*' | pysum --pipe
+```
+
+**Note on non-Python files:** `lsproj` will list any file matching the
+whitelist (`.ts`, `.yaml`, `.svelte`, etc.) but `pysum` and `py-diagram` are
+Python-only tools and silently skip non-Python files. Use `lsproj` output as
+a reference, but pipe only `.py` files into Python-specific tools.
+
+---
+
+## 6. Tools to Use Rarely or Skip
+
+### `gen-diagram` — Graphviz DOT output
+
+Produces verbose DOT syntax. A 20-class project generates ~200 lines at
+~1 600 tokens — the same information that `py-diagram --format token`
+delivers in ~600 tokens. Never feed DOT output to an LLM.
+
+Use only when you need a rendered PNG for human-facing documentation:
+
+```bash
+gen-diagram . --skip tests | dot -Tpng -o docs/architecture.png
+```
+
+### `py-diagram --format mermaid`
+
+Carries the same information as `--format token` at approximately 1.5×
+the token cost due to Mermaid syntax overhead. Reserve for output that
+a human will read (GitHub PRs, Obsidian notes, wiki pages).
+
+### `callgraph` without a probe script
+
+Running `callgraph` against a server entry point captures only module-load
+traces. The output is dominated by stdlib import machinery (`importlib`,
+`FileFinder`, `SourceFileLoader`) with `call_count: 1` for every application
+class. No business logic is traced. Costs 15 000+ tokens if fed unfiltered.
+
+---
+
+## Recipes for Common Tasks
+
+### Cold start — understanding an unknown codebase
+
+```bash
+repo-map --skip tests migrations
+# Identify: largest files, class counts, public surface.
+# Zoom in on the most interesting module:
+pysum src/the_module.py
+```
+
+### Before modifying a class
+
+```bash
+# 1. Locate the file
+repo-map | grep -A3 "ClassName"
+
+# 2. Read imports and signatures
+pysum src/that_file.py
+
+# 3. If the class uses Pydantic / dataclass / attrs
+py-diagram --format token --source src/that_file.py
+```
+
+### Verifying an interface is fully implemented
+
+```bash
+py-diagram --format token --source src/interfaces.py
+# Compare Protocol method list against concrete class method list.
+# Any method present in Protocol but absent in the concrete class is a gap.
+```
+
+### Dependency audit before a refactor
+
+```bash
+pysum src/the_module_to_change.py    # what does it depend on? (fan-out)
+grep -r "from src.the_module" src/   # what depends on it?    (fan-in)
+```
+
+### Understanding data shapes in schema-heavy code
+
+```bash
+py-diagram --format token --source src/schemas.py
+# pysum shows these classes as empty — py-diagram shows all typed fields.
+```
+
+### Investigating a performance problem
+
+```bash
+# 1. Write probe.py exercising the slow path (see section 4)
+callgraph --target probe.py --include 'mypackage.*' --json report.json
+
+# 2. Find the slowest functions
+python3 -c "
+import json
+d = json.load(open('report.json'))
+app = [r for r in d['call_graph'] if r['name'].startswith('mypackage.')]
+slow = sorted(app, key=lambda r: r['time_total'], reverse=True)
+print(json.dumps(slow[:10], indent=2))
+"
+```
+
+### Generating architecture documentation
+
+```bash
+# Mermaid — paste into GitHub or Obsidian
+py-diagram --format mermaid --skip tests > docs/architecture.md
+
+# PNG — for wikis or presentations
+gen-diagram . --skip tests | dot -Tpng -o docs/architecture.png
+```
+
+---
+
+## 7. Token-Efficient Usage for LLM Agents
+
+This section is specifically for an LLM agent operating under a context
+budget. Follow these rules to extract maximum signal per token spent.
+
+### Rule 1: Never open a file before running repo-map
+
+Reading a source file costs 5–50× more tokens than the equivalent `repo-map`
+entry. Always establish location and shape first:
+
+```bash
+repo-map --skip tests migrations    # ~400 tokens for a 20-file project
+```
+
+Only open a specific file after `repo-map` confirms it contains what you need.
+
+### Rule 2: Use py-diagram token instead of pysum for class-heavy files
+
+`pysum` on a file full of Pydantic models or dataclasses returns empty class
+bodies — wasted tokens. `py-diagram --format token` on the same file returns
+all fields and method signatures. When in doubt about which to use:
+
+- File contains mostly functions → `pysum`
+- File contains mostly classes with fields → `py-diagram --format token`
+- Mixed → `py-diagram --format token` (it covers both)
+
+### Rule 3: Scope before summarising
+
+Running `pysum` or `repo-map` on an unscoped directory includes tests,
+migrations, and vendored code. These consume tokens without adding signal.
+Always scope first:
+
+```bash
+# Preferred — use whitelist if it exists
 lsproj | pysum --pipe
 
-# 2. Or scope manually
-find src/ -name '*.py' -not -path '*/migrations/*' | pysum --pipe
+# Fallback — explicit exclusion
+find src/ -name '*.py' -not -path '*/tests/*' | pysum --pipe
 ```
 
----
+### Rule 4: Save structural context across turns
 
-### Pattern 6: "Generate architecture docs" (diagram pipeline)
+When a task spans multiple turns, write the structural summary to a file on
+the first turn and reference it on subsequent turns rather than re-running
+the tools:
+
 ```bash
-# Mermaid (paste into GitHub PR / Obsidian)
-py-diagram --format mermaid > docs/architecture.md
+# Turn 1 — pay the cost once
+repo-map --skip tests > .context/map.txt
+py-diagram --format token --skip tests >> .context/map.txt
 
-# PNG via Graphviz
-gen-diagram . | dot -Tpng -o docs/architecture.png
-
-# Token-compact for LLM context
-py-diagram --format token > docs/architecture.txt
+# Turn 2+ — read the saved file, cost is just the file read
 ```
+
+### Rule 5: Filter callgraph output before reading
+
+The raw `report.json` from `callgraph` is ~2 000 lines and 16 000 tokens.
+Never read it directly. Always filter to the application package before
+consuming:
+
+```bash
+python3 -c "
+import json
+d = json.load(open('report.json'))
+app = [r for r in d['call_graph'] if r['name'].startswith('mypackage.')]
+top = sorted(app, key=lambda r: r['call_count'], reverse=True)
+print(json.dumps(top[:15], indent=2))
+"
+# Result: ~400 tokens instead of 16 000
+```
+
+### Rule 6: Zoom in surgically, not broadly
+
+Avoid running `pysum src/` when you only need one module. The cost scales
+linearly with files included:
+
+```bash
+# Too broad when you only need one class
+pysum src/
+
+# Surgical — costs ~5× less
+pysum src/the_specific_module.py
+```
+
+### Rule 7: Combine repo-map + py-diagram token as the default context pair
+
+When a task requires understanding both structure and types, these two tools
+together give near-complete project knowledge at the lowest combined token
+cost:
+
+```bash
+repo-map --skip tests migrations    # ~400 tokens  — location + structure
+py-diagram --format token \
+  --skip tests migrations           # ~600 tokens  — types + fields + interfaces
+# Total: ~1 000 tokens
+# Equivalent to one medium source file read
+```
+
+Reach for `pysum` only when you need the import graph specifically — otherwise
+the `repo-map` + `py-diagram` pair is more complete at lower cost.
+
+### Token cost escalation order
+
+Stop at the first level that answers the question:
+
+```
+1. repo-map                              ~400 tokens   structural questions
+2. py-diagram --format token             ~600 tokens   type/field questions
+3. pysum <single file>                   ~200 tokens   imports of one file
+4. pysum src/                          ~1 200 tokens   full dependency graph
+5. read <single file>                  ~500–5 000      last resort, specific logic
+6. callgraph (filtered, top 15)          ~400 tokens   runtime questions only
+```
+
+Never skip to level 5 (reading source) when levels 1–3 have not been
+exhausted. The combination of `repo-map` + `py-diagram` at levels 1–2
+answers the majority of architecture and refactoring questions.
 
 ---
 
-## Anti-patterns to Avoid
+## Token Budget Reference
 
-| Anti-pattern | Why it fails | Better approach |
-|---|---|---|
-| `cat src/**/*.py \| llm ...` | Blows token budget, buries signal in bodies | `pysum` or `repo-map` first |
-| `callgraph --target src/main.py` when main starts a server | Hangs indefinitely | Write a lightweight `probe.py` entry point |
-| Feeding full `report.json` (659 records) to LLM | Mostly stdlib noise | Filter to top 15 app-level records |
-| `py-diagram --format dot` for LLM context | DOT is verbose | Use `--format token` |
-| Skipping `lsproj` and scanning everything | Includes tests, migrations, generated code | Configure `.projlist` once, pipe always |
-| Running `gen-diagram` and expecting image output | Outputs DOT text | Pipe to `dot -Tpng -o out.png` |
+| Tool + flags                               | Small project (~20 files) | Token estimate |
+| ------------------------------------------ | ------------------------- | -------------- |
+| `repo-map`                                 | ~60 lines                 | ~400           |
+| `pysum`                                    | ~150 lines                | ~1 200         |
+| `py-diagram --format token`                | ~80 lines                 | ~600           |
+| `py-diagram --format mermaid`              | ~120 lines                | ~900           |
+| `gen-diagram`                              | ~200 lines                | ~1 600         |
+| `callgraph --json` filtered to app package | ~50 lines                 | ~400           |
+| `callgraph --json` unfiltered              | ~2 000 lines              | ~16 000        |
 
----
-
-## Output Size Reference
-
-| Tool + flags | Typical output | Token estimate |
-|---|---|---|
-| `repo-map` (20 files) | ~60 lines | ~400 |
-| `pysum` (20 files) | ~150 lines | ~1 200 |
-| `py-diagram --format token` | ~80 lines | ~600 |
-| `py-diagram --format mermaid` | ~120 lines | ~900 |
-| `callgraph --json` (full, 600 records) | ~2 000 lines | ~16 000 |
-| `callgraph --json` (top 15 filtered) | ~50 lines | ~400 |
-| `gen-diagram` (20 classes) | ~200 lines | ~1 600 |
-
----
-
-## Quick Reference Card
-
-```
-TOOL          INPUT           OUTPUT              BEST FOR
-──────────────────────────────────────────────────────────────────────
-repo-map      .py files       signatures/file     cold start, locate files
-pysum         .py files       imports+sigs/file   understand a module
-py-diagram    .py files       class topology      inheritance, Protocol impl
-gen-diagram   .py files       Graphviz DOT        visual diagrams, tooling
-callgraph     .py script      call graph artefacts runtime hotspots, flow
-lsproj        .projlist       file list           scoping other tools
-pext          chat JSON       prompts list        extract LLM conversation
-chatmap       AI Studio JSON  timeline/tree/HTML  navigate conversation history
-aireview      git diff        AI review           pre-push code quality
-```
+**Rule of thumb:** `repo-map` + `py-diagram --format token` together cost
+roughly the same as `pysum` alone, but deliver more — signatures _and_
+typed fields. Default to this pair unless you specifically need the import
+graph, which only `pysum` provides.
