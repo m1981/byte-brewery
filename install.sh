@@ -14,6 +14,8 @@ if ! command -v uv &> /dev/null; then
 fi
 
 # ── 2. Install Python packages as uv tools ──────────────────────────────────
+# Each package gets its own isolated virtualenv managed by uv.
+# --editable means edits to source files take effect immediately without reinstall.
 echo "📦 Installing Python packages as uv tools..."
 
 UV_PACKAGES=(
@@ -28,11 +30,11 @@ for pkg in "${UV_PACKAGES[@]}"; do
     pkg_path="$REPO_DIR/$pkg"
     pkg_name=$(basename "$pkg")
     echo "   → Installing $pkg_name..."
-    # --editable: local code changes take effect immediately, no reinstall needed
     uv tool install --editable "$pkg_path" --force
 done
 
 # ── 3. Install shell scripts to ~/.local/bin ────────────────────────────────
+# Pure bash scripts that need no Python environment.
 echo "🐚 Installing shell scripts to $BIN_DIR..."
 mkdir -p "$BIN_DIR"
 
@@ -54,9 +56,12 @@ cp "$REPO_DIR/bin/tools.json" "$BIN_DIR/tools.json"
 echo "   → Installed: tools.json"
 
 # ── 5. Install standalone scripts from bin/ ─────────────────────────────────
+# Scripts that have no package home yet (e.g. thin wrappers, shell utilities).
+# NOTE: pysum and lsproj are NOT here — they are installed via uv tool (Step 2)
+#       as proper entry points in packages/utils.
 echo "🔧 Installing standalone scripts..."
 
-STANDALONE_SCRIPTS=("mdcat" "export-chats" "git-recent" "pysum")
+STANDALONE_SCRIPTS=("mdcat" "export-chats" "git-recent")
 
 for file in "${STANDALONE_SCRIPTS[@]}"; do
     src="$REPO_DIR/bin/$file"

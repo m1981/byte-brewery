@@ -1,1 +1,40 @@
+# .projlist — whitelist for lsproj
+# Syntax:
+#   *.py              match by filename anywhere in the tree
+#   src/**/*.py       recursive glob (pathspec / GitWildMatch)
+#   !pattern          negation — exclude even if matched above
+#   # comment         ignored
+
+# ── Source files ────────────────────────────────────────────────────────────
+packages/**/*.py
 *.py
+
+# ── Project configuration ────────────────────────────────────────────────────
+pyproject.toml
+packages/*/pyproject.toml
+
+# ── Docs & specs ────────────────────────────────────────────────────────────
+*.md
+packages/*/docs/*.md
+packages/*/spec*.md
+
+# ── Shell & Node entry points ────────────────────────────────────────────────
+bin/*.sh
+bin/*.ts
+install.sh
+
+# ── Key config files ────────────────────────────────────────────────────────
+bin/tools.json
+.projlist
+.gitignore
+
+# ── Negations — always exclude ───────────────────────────────────────────────
+!**/__pycache__/**
+!**/*.pyc
+!**/*.pyo
+!**/dist/**
+!**/build/**
+!**/*.egg-info/**
+!**/.pytest_cache/**
+!**/node_modules/**
+!**/uv.lock

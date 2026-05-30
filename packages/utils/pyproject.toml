@@ -11,15 +11,16 @@ dependencies = [
 ]
 
 [project.scripts]
-dce = "utils.dce:main"
-pext = "utils.pext:main"
-repo-map = "utils.repo_map:main"
-repo_map = "utils.repo_map:main"
+dce        = "utils.dce:main"
+pext       = "utils.pext:main"
+pysum      = "utils.pysum:main"
+repo-map   = "utils.repo_map:main"
+repo_map   = "utils.repo_map:main"
 gen-diagram = "utils.gen_diagram:main"
 gen_diagram = "utils.gen_diagram:main"
-ge-diagram = "utils.gen_diagram:main"
-ge_diagram = "utils.gen_diagram:main"
-lsproj = "utils.lsproj:main"
+ge-diagram  = "utils.gen_diagram:main"
+ge_diagram  = "utils.gen_diagram:main"
+lsproj     = "utils.lsproj:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

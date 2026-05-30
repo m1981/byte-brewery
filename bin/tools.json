@@ -1,23 +1,24 @@
 {
   "tools": {
-    "mdcat":       "Formats source files into markdown for GPT chat",
-    "pext":        "Extracts User prompts from ChatGPT chats (in json)",
-    "aug":         "Augment AI Pipeline - Process chat exports through extraction, analysis, and schema generation",
-    "aug-recap":   "Extract essence from AugmentedAI plugin chats",
-    "dce":         "Docker Compose Executor - interactive wrapper for docker-compose commands",
-    "export-chats":"Export chats from json chats file",
-    "rsum":        "React Summary - Analyzes React component and test files to generate structured summaries",
-    "pysum":       "Python project structure generator - Creates Markdown documentation from Python files",
-    "lsproj":      "Project file lister - Uses .projlist config for pattern-based file discovery",
-    "repo-map":    "Compressed structural map of a Python project (classes, functions, imports)",
-    "gen-diagram": "Generate architecture diagrams from Python project structure",
-    "git-recent":  "Extract recent commits with diffs for AI analysis, excluding build artifacts",
-    "aireview":    "AI-powered code review and pre-push validation tool",
-    "chatmap":     "Map LLM conversation branches from Google AI Studio JSON exports (timeline/tree/html views)",
-    "svelte-map":  "Compact structural map of a Svelte/TS codebase for LLM agents (components, stores, import graph)",
-    "summarize.ts":"TypeScript code summarizer - Removes function bodies while preserving signatures"
+    "mdcat":        "Formats source files into markdown for GPT chat",
+    "pext":         "Extracts User prompts from ChatGPT chats (in json)",
+    "aug":          "Augment AI Pipeline - Process chat exports through extraction, analysis, and schema generation",
+    "aug-recap":    "Extract essence from AugmentedAI plugin chats",
+    "dce":          "Docker Compose Executor - interactive wrapper for docker-compose commands",
+    "export-chats": "Export chats from json chats file",
+    "rsum":         "React Summary - Analyzes React component and test files to generate structured summaries",
+    "pysum":        "Python project structure generator - Creates Markdown documentation from Python files",
+    "lsproj":       "Project file lister - Uses .projlist config for pattern-based file discovery",
+    "repo-map":     "Compressed structural map of a Python project (classes, functions, imports)",
+    "gen-diagram":  "Generate architecture diagrams from Python project structure",
+    "git-recent":   "Extract recent commits with diffs for AI analysis, excluding build artifacts",
+    "aireview":     "AI-powered code review and pre-push validation tool",
+    "chatmap":      "Map LLM conversation branches from Google AI Studio JSON exports (timeline/tree/html views)",
+    "svelte-map":   "Compact structural map of a Svelte/TS codebase for LLM agents (components, stores, import graph)",
+    "summarize.ts": "TypeScript code summarizer - Removes function bodies while preserving signatures"
   },
   "aliases": ["ge-diagram", "ge_diagram", "gen_diagram", "repo_map", "dce"],
-  "shell_scripts": ["mdcat", "rsum", "git-recent", "export-chats", "pysum", "byte-help"],
-  "node_scripts":  ["summarize.ts"]
+  "shell_scripts":   ["mdcat", "rsum", "git-recent", "export-chats", "byte-help"],
+  "python_scripts":  ["pysum", "lsproj", "pext", "dce", "repo-map", "gen-diagram", "aireview", "chatmap", "svelte-map", "aug", "aug-recap"],
+  "node_scripts":    ["summarize.ts"]
 }
