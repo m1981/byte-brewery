@@ -28,7 +28,6 @@ except ImportError:
 
 
 DEFAULT_SKIP = [
-    "tests",
     "data",
     ".venv",
     ".git",
