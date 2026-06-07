@@ -106,6 +106,7 @@ class FieldInfo:
     name: str
     type_hint: str = ""
     default: str = ""
+    lineno: int | None = None
 
 
 @dataclass
@@ -117,6 +118,7 @@ class MethodInfo:
     is_async: bool = False
     is_classmethod: bool = False
     is_staticmethod: bool = False
+    lineno: int | None = None
 
 
 @dataclass
@@ -130,13 +132,14 @@ class ClassInfo:
     is_dataclass: bool = False
     is_abstract: bool = False
     decorators: list[str] = field(default_factory=list)
+    lineno: int | None = None
 
     def token_repr(self, *, include_dunder: bool = False) -> str:
         """Return a compact, LLM-optimised string for this class.
 
         Format::
 
-            [CLASS] Dog(Animal) [module=animals]
+            [CLASS] Dog(Animal) [module=animals] [line 42]
               FIELDS: breed:str
               METHODS: fetch(item:str)->bool
         """
@@ -146,7 +149,8 @@ class ClassInfo:
             tag = " @dataclass"
         if self.is_abstract:
             tag += " @abstract"
-        header = f"[CLASS] {self.name}{base_str} [module={self.module}]{tag}"
+        lineno_str = f" [line {self.lineno}]" if self.lineno else ""
+        header = f"[CLASS] {self.name}{base_str} [module={self.module}]{tag}{lineno_str}"
 
         parts = [header]
 
@@ -170,10 +174,31 @@ class ClassInfo:
                     for n, t in m.params
                 )
                 ret = f"->{m.return_type}" if m.return_type else ""
-                method_strs.append(f"{m.name}({param_str}){ret}")
+                lineno = f" [line {m.lineno}]" if m.lineno else ""
+                method_strs.append(f"{m.name}({param_str}){ret}{lineno}")
             parts.append(f"  METHODS: {', '.join(method_strs)}")
 
         return "\n".join(parts)
+
+
+@dataclass
+class FunctionInfo:
+    """A top-level (module-level) function."""
+    name: str
+    module: str
+    params: list[tuple[str, str]] = field(default_factory=list)
+    return_type: str = ""
+    is_async: bool = False
+    lineno: int | None = None
+
+
+@dataclass
+class ImportInfo:
+    """A top-level import statement."""
+    module: str
+    names: list[str]  # imported names
+    source: str  # the 'from X' or 'import X' source
+    lineno: int | None = None
 
 
 @dataclass
@@ -206,10 +231,20 @@ class DiagramResult:
     diagram: str
     classes: list[ClassInfo]
     relationships: list[RelationshipInfo]
+    functions: list[FunctionInfo] = field(default_factory=list)
+    imports: list[ImportInfo] = field(default_factory=list)
 
     @property
     def class_count(self) -> int:
         return len(self.classes)
+
+    @property
+    def function_count(self) -> int:
+        return len(self.functions)
+
+    @property
+    def import_count(self) -> int:
+        return len(self.imports)
 
     @property
     def relationship_count(self) -> int:
@@ -224,15 +259,6 @@ _DEFAULT_SKIP_DIRS: list[str] = [
     ".git", ".venv", "venv", "__pycache__", "node_modules",
     ".mypy_cache", ".pytest_cache", ".ruff_cache", "build", "dist",
 ]
-
-_BUILTIN_TYPE_NAMES: frozenset[str] = frozenset({
-    "str", "int", "float", "bool", "bytes", "list", "dict", "set",
-    "tuple", "None", "Any", "Optional", "List", "Dict", "Set",
-    "Tuple", "Union", "Callable", "Type", "ClassVar", "Final",
-    "Sequence", "Mapping", "Iterator", "Generator", "Iterable",
-    "object", "Exception", "BaseException",
-})
-
 
 # ---------------------------------------------------------------------------
 # AST helpers
@@ -343,6 +369,96 @@ class ASTClassExtractor:
 
         return all_classes
 
+    def extract_functions_from_source(
+        self,
+        source: str,
+        *,
+        module_name: str = "",
+    ) -> list[FunctionInfo]:
+        """Parse *source* and return all top-level FunctionInfo objects."""
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return []
+        return self._extract_functions(tree, module_name=module_name)
+
+    def extract_functions_from_directory(
+        self,
+        root: Path,
+        *,
+        skip_dirs: list[str] | None = None,
+    ) -> list[FunctionInfo]:
+        """Walk *root* and collect top-level FunctionInfo from all .py files."""
+        effective_skip = set(_DEFAULT_SKIP_DIRS + (skip_dirs or []))
+        all_functions: list[FunctionInfo] = []
+
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = sorted(
+                d for d in dirnames if d not in effective_skip
+            )
+            for filename in sorted(filenames):
+                if not filename.endswith(".py"):
+                    continue
+                file_path = Path(dirpath) / filename
+                rel = file_path.relative_to(root)
+                parts = list(rel.with_suffix("").parts)
+                module_name = ".".join(parts)
+                try:
+                    source = file_path.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                functions = self.extract_functions_from_source(
+                    source, module_name=module_name,
+                )
+                all_functions.extend(functions)
+
+        return all_functions
+
+    def extract_imports_from_source(
+        self,
+        source: str,
+        *,
+        module_name: str = "",
+    ) -> list[ImportInfo]:
+        """Parse *source* and return all top-level ImportInfo objects."""
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return []
+        return self._extract_imports(tree, module_name=module_name)
+
+    def extract_imports_from_directory(
+        self,
+        root: Path,
+        *,
+        skip_dirs: list[str] | None = None,
+    ) -> list[ImportInfo]:
+        """Walk *root* and collect top-level ImportInfo from all .py files."""
+        effective_skip = set(_DEFAULT_SKIP_DIRS + (skip_dirs or []))
+        all_imports: list[ImportInfo] = []
+
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = sorted(
+                d for d in dirnames if d not in effective_skip
+            )
+            for filename in sorted(filenames):
+                if not filename.endswith(".py"):
+                    continue
+                file_path = Path(dirpath) / filename
+                rel = file_path.relative_to(root)
+                parts = list(rel.with_suffix("").parts)
+                module_name = ".".join(parts)
+                try:
+                    source = file_path.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                imports = self.extract_imports_from_source(
+                    source, module_name=module_name,
+                )
+                all_imports.extend(imports)
+
+        return all_imports
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
@@ -402,6 +518,7 @@ class ASTClassExtractor:
             is_dataclass=is_dataclass,
             is_abstract=is_abstract,
             decorators=decorators,
+            lineno=node.lineno,
         )
 
     def _extract_methods(
@@ -449,6 +566,7 @@ class ASTClassExtractor:
                 is_async=isinstance(child, ast.AsyncFunctionDef),
                 is_classmethod=is_classmethod,
                 is_staticmethod=is_staticmethod,
+                lineno=child.lineno,
             ))
         return methods
 
@@ -464,7 +582,7 @@ class ASTClassExtractor:
                 seen.add(name)
                 type_hint = _unparse_annotation(child.annotation)
                 default = _unparse_annotation(child.value) if child.value else ""
-                fields.append(FieldInfo(name=name, type_hint=type_hint, default=default))
+                fields.append(FieldInfo(name=name, type_hint=type_hint, default=default, lineno=child.lineno))
             # class-level plain assignments: name = value
             elif isinstance(child, ast.Assign):
                 for target in child.targets:
@@ -473,6 +591,70 @@ class ASTClassExtractor:
                             seen.add(target.id)
                             fields.append(FieldInfo(name=target.id, type_hint=""))
         return fields
+
+    def _extract_functions(
+        self,
+        tree: ast.Module,
+        *,
+        module_name: str,
+    ) -> list[FunctionInfo]:
+        """Extract only top-level functions (not methods inside classes)."""
+        functions: list[FunctionInfo] = []
+        for node in ast.iter_child_nodes(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            params: list[tuple[str, str]] = []
+            for arg in node.args.args:
+                if arg.arg in ("self", "cls"):
+                    continue
+                type_hint = _unparse_annotation(arg.annotation)
+                params.append((arg.arg, type_hint))
+            if node.args.vararg and node.args.vararg.arg not in ("self", "cls"):
+                t = _unparse_annotation(node.args.vararg.annotation)
+                params.append((f"*{node.args.vararg.arg}", t))
+            if node.args.kwarg and node.args.kwarg.arg not in ("self", "cls"):
+                t = _unparse_annotation(node.args.kwarg.annotation)
+                params.append((f"**{node.args.kwarg.arg}", t))
+            return_type = _unparse_annotation(node.returns)
+            functions.append(FunctionInfo(
+                name=node.name,
+                module=module_name,
+                params=params,
+                return_type=return_type,
+                is_async=isinstance(node, ast.AsyncFunctionDef),
+                lineno=node.lineno,
+            ))
+        return functions
+
+    def _extract_imports(
+        self,
+        tree: ast.Module,
+        *,
+        module_name: str,
+    ) -> list[ImportInfo]:
+        """Extract only top-level import statements."""
+        imports: list[ImportInfo] = []
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+                source = f"import {', '.join(names)}"
+                imports.append(ImportInfo(
+                    module=module_name,
+                    names=names,
+                    source=source,
+                    lineno=node.lineno,
+                ))
+            elif isinstance(node, ast.ImportFrom):
+                mod = node.module or ""
+                names = [alias.name for alias in node.names]
+                source = f"from {mod} import {', '.join(names)}"
+                imports.append(ImportInfo(
+                    module=module_name,
+                    names=names,
+                    source=source,
+                    lineno=node.lineno,
+                ))
+        return imports
 
 
 # ---------------------------------------------------------------------------
@@ -539,6 +721,9 @@ class DiagramRenderer(ABC):
         classes: list[ClassInfo],
         relationships: list[RelationshipInfo],
         config: DiagramConfig,
+        *,
+        functions: list[FunctionInfo] | None = None,
+        imports: list[ImportInfo] | None = None,
     ) -> str:
         """Return the complete diagram as a string."""
 
@@ -560,6 +745,9 @@ class MermaidRenderer(DiagramRenderer):
         classes: list[ClassInfo],
         relationships: list[RelationshipInfo],
         config: DiagramConfig,
+        *,
+        functions: list[FunctionInfo] | None = None,
+        imports: list[ImportInfo] | None = None,
     ) -> str:
         lines = ["classDiagram"]
 
@@ -570,6 +758,26 @@ class MermaidRenderer(DiagramRenderer):
 
         for rel in relationships:
             lines.append(self._render_relationship(rel))
+
+        if functions:
+            lines.append("")
+            # Group functions by module
+            modules: dict[str, list[FunctionInfo]] = {}
+            for fn in functions:
+                modules.setdefault(fn.module, []).append(fn)
+            for module_name, module_funcs in modules.items():
+                safe_name = module_name.replace(".", "_")
+                lines.append(f'    class {safe_name}_module {{')
+                lines.append(f'        <<module>>')
+                for fn in module_funcs:
+                    param_str = ", ".join(
+                        f"{t} {n}" if t else n
+                        for n, t in fn.params
+                    )
+                    ret = f" {fn.return_type}" if fn.return_type else ""
+                    prefix = "async " if fn.is_async else ""
+                    lines.append(f'        +{prefix}{fn.name}({param_str}){ret}')
+                lines.append('    }')
 
         return "\n".join(lines)
 
@@ -588,10 +796,10 @@ class MermaidRenderer(DiagramRenderer):
         else:
             lines.append(f'    class {cls.name} {{')
 
-        # Fields
+        # Fields — UML style: + type fieldName
         for fld in cls.fields:
-            type_str = f"{fld.type_hint} " if fld.type_hint else ""
-            lines.append(f'        +{type_str}{fld.name}')
+            type_str = f" {fld.type_hint}" if fld.type_hint else ""
+            lines.append(f'        +{type_str} {fld.name}')
 
         # Methods
         for method in cls.methods:
@@ -637,6 +845,9 @@ class DotRenderer(DiagramRenderer):
         classes: list[ClassInfo],
         relationships: list[RelationshipInfo],
         config: DiagramConfig,
+        *,
+        functions: list[FunctionInfo] | None = None,
+        imports: list[ImportInfo] | None = None,
     ) -> str:
         lines = [
             "digraph ClassDiagram {",
@@ -653,6 +864,29 @@ class DotRenderer(DiagramRenderer):
 
         for rel in relationships:
             lines.append(self._render_edge(rel))
+
+        if functions:
+            lines.append("")
+            lines.append('    subgraph cluster_functions {')
+            lines.append('        label="Functions";')
+            lines.append('        style=dashed;')
+            modules: dict[str, list[FunctionInfo]] = {}
+            for fn in functions:
+                modules.setdefault(fn.module, []).append(fn)
+            for module_name, module_funcs in modules.items():
+                safe_name = module_name.replace(".", "_")
+                func_lines = []
+                for fn in module_funcs:
+                    param_str = ", ".join(
+                        f"{n}: {t}" if t else n
+                        for n, t in fn.params
+                    )
+                    ret = f": {fn.return_type}" if fn.return_type else ""
+                    prefix = "async " if fn.is_async else ""
+                    func_lines.append(f"+ {prefix}{fn.name}({param_str}){ret}")
+                label = r"\l".join(func_lines) + r"\l"
+                lines.append(f'        "{safe_name}_funcs" [label="{label}" shape=box];')
+            lines.append('    }')
 
         lines.append("}")
         return "\n".join(lines)
@@ -728,6 +962,9 @@ class PlantUMLRenderer(DiagramRenderer):
         classes: list[ClassInfo],
         relationships: list[RelationshipInfo],
         config: DiagramConfig,
+        *,
+        functions: list[FunctionInfo] | None = None,
+        imports: list[ImportInfo] | None = None,
     ) -> str:
         lines = ["@startuml", ""]
 
@@ -737,6 +974,24 @@ class PlantUMLRenderer(DiagramRenderer):
 
         for rel in relationships:
             lines.append(self._render_relationship(rel))
+
+        if functions:
+            lines.append("")
+            modules: dict[str, list[FunctionInfo]] = {}
+            for fn in functions:
+                modules.setdefault(fn.module, []).append(fn)
+            for module_name, module_funcs in modules.items():
+                safe_name = module_name.replace(".", "_")
+                lines.append(f'package "{module_name}" {{')
+                for fn in module_funcs:
+                    param_str = ", ".join(
+                        f"{n}: {t}" if t else n
+                        for n, t in fn.params
+                    )
+                    ret = f": {fn.return_type}" if fn.return_type else ""
+                    prefix = "async " if fn.is_async else ""
+                    lines.append(f'    +{prefix}{fn.name}({param_str}){ret}')
+                lines.append('}')
 
         lines.append("")
         lines.append("@enduml")
@@ -818,21 +1073,66 @@ class TokenSerializer(DiagramRenderer):
         classes: list[ClassInfo],
         relationships: list[RelationshipInfo],
         config: DiagramConfig,
+        *,
+        functions: list[FunctionInfo] | None = None,
+        imports: list[ImportInfo] | None = None,
     ) -> str:
         lines: list[str] = []
+
+        # Group imports by module
+        import_modules: dict[str, list[ImportInfo]] = {}
+        if imports:
+            for imp in imports:
+                import_modules.setdefault(imp.module, []).append(imp)
 
         # Group classes by module
         modules: dict[str, list[ClassInfo]] = {}
         for cls in classes:
             modules.setdefault(cls.module, []).append(cls)
 
-        for module_name, module_classes in modules.items():
+        # Group functions by module
+        func_modules: dict[str, list[FunctionInfo]] = {}
+        if functions:
+            for fn in functions:
+                func_modules.setdefault(fn.module, []).append(fn)
+
+        # Collect all modules in order
+        all_modules = list(dict.fromkeys(list(modules.keys()) + list(func_modules.keys()) + list(import_modules.keys())))
+
+        # Detect duplicate class names for disambiguation
+        name_counts: dict[str, int] = {}
+        for cls in classes:
+            name_counts[cls.name] = name_counts.get(cls.name, 0) + 1
+        duplicate_names = {name for name, count in name_counts.items() if count > 1}
+
+        for module_name in all_modules:
             lines.append(f"[MODULE] {module_name}")
-            for cls in module_classes:
+            module_imports = import_modules.get(module_name, [])
+            if module_imports:
+                for imp in module_imports:
+                    lines.append(f"  [IMPORT] {imp.source}")
+            for cls in modules.get(module_name, []):
+                repr_text = cls.token_repr(include_dunder=config.include_dunder)
+                if cls.name in duplicate_names:
+                    # Disambiguate by replacing [CLASS] Name with [CLASS] module.Name
+                    qualified = f"{cls.module}.{cls.name}"
+                    repr_text = repr_text.replace(f"[CLASS] {cls.name}", f"[CLASS] {qualified}", 1)
                 lines.append(
-                    cls.token_repr(include_dunder=config.include_dunder)
+                    repr_text
                     .replace("\n", "\n  ")  # indent under [MODULE]
                 )
+            module_funcs = func_modules.get(module_name, [])
+            if module_funcs:
+                lines.append("  [FUNCTIONS]")
+                for fn in module_funcs:
+                    param_str = ", ".join(
+                        f"{n}:{t}" if t else n
+                        for n, t in fn.params
+                    )
+                    ret = f"->{fn.return_type}" if fn.return_type else ""
+                    async_tag = "async " if fn.is_async else ""
+                    lineno = f" [line {fn.lineno}]" if fn.lineno else ""
+                    lines.append(f"    {async_tag}{fn.name}({param_str}){ret}{lineno}")
             lines.append("")
 
         if relationships:
@@ -847,59 +1147,6 @@ class TokenSerializer(DiagramRenderer):
 # ---------------------------------------------------------------------------
 # ErdanticAdapter
 # ---------------------------------------------------------------------------
-
-_PYDANTIC_BASES: frozenset[str] = frozenset({
-    "BaseModel", "BaseSettings", "GenericModel",
-    "pydantic.BaseModel", "pydantic.BaseSettings",
-})
-
-
-class ErdanticAdapter:
-    """Optional integration with the ``erdantic`` library for Pydantic ER diagrams.
-
-    Degrades gracefully when ``erdantic`` is not installed — all methods
-    return ``None`` or empty lists rather than raising.
-    """
-
-    def is_available(self) -> bool:
-        """Return True if ``erdantic`` can be imported."""
-        try:
-            import importlib
-            importlib.import_module("erdantic")
-            return True
-        except ImportError:
-            return False
-
-    def filter_pydantic_classes(self, classes: list[ClassInfo]) -> list[ClassInfo]:
-        """Return only classes that appear to be Pydantic BaseModel subclasses."""
-        return [
-            cls for cls in classes
-            if any(b in _PYDANTIC_BASES for b in cls.bases)
-        ]
-
-    def render_to_file(
-        self,
-        classes: list[ClassInfo],
-        output_path: Path,
-    ) -> Path | None:
-        """Use erdantic to render a Pydantic model ER diagram.
-
-        Returns the output path on success, or ``None`` if erdantic is
-        unavailable or rendering fails.
-        """
-        if not self.is_available():
-            return None
-        try:
-            import erdantic  # type: ignore[import]
-            # erdantic works on actual class objects, not ClassInfo dicts.
-            # When called with an empty list in tests (or when real classes
-            # are not importable), we create a minimal diagram.
-            diagram = erdantic.create(*classes)  # type: ignore[arg-type]
-            diagram.draw(str(output_path))
-            return output_path
-        except Exception:
-            return None
-
 
 # ---------------------------------------------------------------------------
 # PyDiagramFacade
@@ -954,7 +1201,13 @@ class PyDiagramFacade:
             include_private=self._config.include_private,
             include_dunder=self._config.include_dunder,
         )
-        return self._build_result(classes)
+        functions = self._extractor.extract_functions_from_source(
+            source, module_name=module_name,
+        )
+        imports = self._extractor.extract_imports_from_source(
+            source, module_name=module_name,
+        )
+        return self._build_result(classes, functions=functions, imports=imports)
 
     def analyse_directory(self, root: Path) -> DiagramResult:
         """Extract, relate, and render from all .py files under *root*."""
@@ -964,7 +1217,13 @@ class PyDiagramFacade:
             include_private=self._config.include_private,
             include_dunder=self._config.include_dunder,
         )
-        return self._build_result(classes)
+        functions = self._extractor.extract_functions_from_directory(
+            root, skip_dirs=self._config.skip_dirs,
+        )
+        imports = self._extractor.extract_imports_from_directory(
+            root, skip_dirs=self._config.skip_dirs,
+        )
+        return self._build_result(classes, functions=functions, imports=imports)
 
     def analyse_file(self, path: Path) -> DiagramResult:
         """Extract, relate, and render from a single .py file."""
@@ -973,7 +1232,18 @@ class PyDiagramFacade:
             include_private=self._config.include_private,
             include_dunder=self._config.include_dunder,
         )
-        return self._build_result(classes)
+        try:
+            source = path.read_text(encoding="utf-8")
+        except OSError:
+            source = ""
+        module_name = path.stem
+        functions = self._extractor.extract_functions_from_source(
+            source, module_name=module_name,
+        )
+        imports = self._extractor.extract_imports_from_source(
+            source, module_name=module_name,
+        )
+        return self._build_result(classes, functions=functions, imports=imports)
 
     def write(self, result: DiagramResult) -> None:
         """Write *result.diagram* to the configured output path, or stdout."""
@@ -988,17 +1258,21 @@ class PyDiagramFacade:
     # Internals
     # ------------------------------------------------------------------
 
-    def _build_result(self, classes: list[ClassInfo]) -> DiagramResult:
+    def _build_result(self, classes: list[ClassInfo], *, functions: list[FunctionInfo] | None = None, imports: list[ImportInfo] | None = None) -> DiagramResult:
         # Apply max_classes limit (take first N by occurrence order)
         if self._config.max_classes is not None:
             classes = classes[: self._config.max_classes]
 
+        functions = functions or []
+        imports = imports or []
         relationships = self._engine.extract(classes)
-        diagram = self._renderer.render(classes, relationships, self._config)
+        diagram = self._renderer.render(classes, relationships, self._config, functions=functions, imports=imports)
         return DiagramResult(
             diagram=diagram,
             classes=classes,
             relationships=relationships,
+            functions=functions,
+            imports=imports,
         )
 
 

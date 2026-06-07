@@ -31,7 +31,6 @@ import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -42,8 +41,8 @@ from utils.py_diagram import (
     DiagramFormat,
     DiagramResult,
     DotRenderer,
-    ErdanticAdapter,
     FieldInfo,
+    FunctionInfo,
     MermaidRenderer,
     MethodInfo,
     PlantUMLRenderer,
@@ -110,6 +109,22 @@ PYDANTIC_SOURCE = textwrap.dedent("""\
         name: str
         members: List[User]
 """)
+
+
+FUNCTIONAL_SOURCE = textwrap.dedent(
+    'import json\n'
+    'from pathlib import Path\n'
+    '\n'
+    'def read_config(path: Path) -> dict:\n'
+    '    return json.loads(path.read_text())\n'
+    '\n'
+    'async def fetch_data(url: str, timeout: int = 30) -> dict:\n'
+    '    ...\n'
+    '\n'
+    'class Service:\n'
+    '    def run(self) -> None: ...\n'
+)
+
 
 
 def _make_animal_class() -> ClassInfo:
@@ -248,6 +263,14 @@ class TestClassInfo:
         a = _make_animal_class()
         b = ClassInfo(name="Cat", module="animals", bases=[], methods=[], fields=[])
         assert a != b
+
+    def test_lineno_default_none(self):
+        cls = ClassInfo(name="Foo", module="m")
+        assert cls.lineno is None
+
+    def test_lineno_stored(self):
+        cls = ClassInfo(name="Foo", module="m", lineno=42)
+        assert cls.lineno == 42
 
 
 # ===========================================================================
@@ -523,6 +546,29 @@ class TestASTClassExtractor:
         method_names = {m.name for m in classes[0].methods}
         assert "fetch" in method_names
 
+    def test_class_lineno_extracted(self):
+        source = textwrap.dedent("""\
+            # line 1
+            # line 2
+            class Foo:
+                pass
+        """)
+        extractor = ASTClassExtractor()
+        classes = extractor.extract_from_source(source, module_name="m")
+        assert classes[0].lineno == 3
+
+    def test_method_lineno_extracted(self):
+        source = textwrap.dedent("""\
+            class Foo:
+                def bar(self) -> None: ...
+                def baz(self) -> None: ...
+        """)
+        extractor = ASTClassExtractor()
+        classes = extractor.extract_from_source(source, module_name="m")
+        methods = {m.name: m for m in classes[0].methods}
+        assert methods["bar"].lineno == 2
+        assert methods["baz"].lineno == 3
+
     def test_complex_type_hints_extracted(self):
         source = textwrap.dedent("""\
             from typing import Optional, List, Dict
@@ -535,6 +581,67 @@ class TestASTClassExtractor:
         by_name = {c.name: c for c in classes}
         fields = {f.name: f for f in by_name["Repo"].fields}
         assert "Dict" in fields["items"].type_hint or "dict" in fields["items"].type_hint.lower()
+
+    def test_extracts_top_level_functions(self):
+        extractor = ASTClassExtractor()
+        functions = extractor.extract_functions_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        func_names = {f.name for f in functions}
+        assert "read_config" in func_names
+        assert "fetch_data" in func_names
+
+    def test_function_params_extracted(self):
+        extractor = ASTClassExtractor()
+        functions = extractor.extract_functions_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        by_name = {f.name: f for f in functions}
+        params = dict(by_name["read_config"].params)
+        assert "path" in params
+        assert params["path"] == "Path"
+
+    def test_function_return_type_extracted(self):
+        extractor = ASTClassExtractor()
+        functions = extractor.extract_functions_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        by_name = {f.name: f for f in functions}
+        assert by_name["read_config"].return_type == "dict"
+
+    def test_async_function_detected(self):
+        extractor = ASTClassExtractor()
+        functions = extractor.extract_functions_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        by_name = {f.name: f for f in functions}
+        assert by_name["fetch_data"].is_async is True
+
+    def test_function_lineno_extracted(self):
+        extractor = ASTClassExtractor()
+        functions = extractor.extract_functions_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        by_name = {f.name: f for f in functions}
+        assert by_name["read_config"].lineno == 4
+
+    def test_class_methods_not_in_functions(self):
+        extractor = ASTClassExtractor()
+        functions = extractor.extract_functions_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        func_names = {f.name for f in functions}
+        assert "run" not in func_names  # run() is a method on Service, not top-level
+
+    def test_extracts_imports(self):
+        extractor = ASTClassExtractor()
+        imports = extractor.extract_imports_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        sources = {i.source for i in imports}
+        assert any("json" in s for s in sources)
+        assert any("Path" in s for s in sources)
+
+    def test_import_names_extracted(self):
+        extractor = ASTClassExtractor()
+        imports = extractor.extract_imports_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        by_source = {i.source: i for i in imports}
+        import_sources = list(by_source.keys())
+        json_import = [i for i in imports if "json" in i.names]
+        assert len(json_import) == 1
+        assert json_import[0].names == ["json"]
+
+    def test_import_lineno_extracted(self):
+        extractor = ASTClassExtractor()
+        imports = extractor.extract_imports_from_source(FUNCTIONAL_SOURCE, module_name="util")
+        json_import = [i for i in imports if "json" in i.names]
+        assert json_import[0].lineno == 1
 
 
 # ===========================================================================
@@ -654,6 +761,21 @@ class TestMermaidRenderer:
     def test_field_type_shown(self):
         out = self._render([_make_animal_class()])
         assert "str" in out  # name: str
+
+    def test_field_format_is_uml_style(self):
+        """Fields should render as '+ type fieldName' per UML convention,
+        not '+type fieldName' (type glued to visibility marker)."""
+        out = self._render([_make_animal_class()])
+        # Correct: "+ str name" or "+name" — type separated from +
+        # Wrong:   "+str name" — type glued to +
+        for line in out.splitlines():
+            stripped = line.strip()
+            if "name" in stripped and "str" in stripped:
+                # Must NOT start with "+str" (type glued to +)
+                assert not stripped.startswith("+str"), (
+                    f"Mermaid field should be '+ type field', not '+type field': {stripped}"
+                )
+                break
 
     def test_output_is_string(self):
         out = self._render([_make_animal_class()])
@@ -829,47 +951,23 @@ class TestTokenSerializer:
         out = self._serialize([_make_animal_class()])
         assert "animals" in out  # module name
 
+    def test_lineno_shown_when_present(self):
+        cls = ClassInfo(
+            name="Animal", module="animals", lineno=42,
+            methods=[MethodInfo(name="speak", params=[], return_type="str", lineno=43)],
+            fields=[FieldInfo(name="name", type_hint="str")],
+        )
+        out = self._serialize([cls])
+        assert "line 42" in out
+        assert "line 43" in out
 
-# ===========================================================================
-# 10. ErdanticAdapter
-# ===========================================================================
-
-class TestErdanticAdapter:
-    def test_available_returns_bool(self):
-        adapter = ErdanticAdapter()
-        assert isinstance(adapter.is_available(), bool)
-
-    def test_render_returns_none_when_unavailable(self, tmp_path):
-        adapter = ErdanticAdapter()
-        with patch.object(adapter, "is_available", return_value=False):
-            result = adapter.render_to_file([], tmp_path / "out.svg")
-        assert result is None
-
-    def test_render_called_with_models(self, tmp_path):
-        """When erdantic is available, it should be called with model classes."""
-        adapter = ErdanticAdapter()
-        mock_erdantic = MagicMock()
-        with patch.dict("sys.modules", {"erdantic": mock_erdantic}):
-            with patch.object(adapter, "is_available", return_value=True):
-                # Just check it doesn't crash with empty list
-                adapter.render_to_file([], tmp_path / "out.svg")
-
-    def test_extract_pydantic_classes_from_source(self):
-        """Adapter can identify Pydantic BaseModel subclasses from ClassInfo list."""
-        extractor = ASTClassExtractor()
-        classes = extractor.extract_from_source(PYDANTIC_SOURCE, module_name="models")
-        adapter = ErdanticAdapter()
-        pydantic_classes = adapter.filter_pydantic_classes(classes)
-        names = {c.name for c in pydantic_classes}
-        assert "User" in names
-        assert "Address" in names
-        assert "Team" in names
-
-    def test_filter_excludes_non_pydantic(self):
-        classes = [_make_animal_class()]  # No BaseModel base
-        adapter = ErdanticAdapter()
-        pydantic_classes = adapter.filter_pydantic_classes(classes)
-        assert len(pydantic_classes) == 0
+    def test_duplicate_class_names_disambiguated(self):
+        """When two classes share the same name, token output must include module prefix."""
+        cls1 = ClassInfo(name="ToolCall", module="agent.tool_executor", lineno=42)
+        cls2 = ClassInfo(name="ToolCall", module="providers.normalizer", lineno=40)
+        out = self._serialize([cls1, cls2])
+        # At least one should have a module prefix to disambiguate
+        assert "agent.tool_executor.ToolCall" in out or "providers.normalizer.ToolCall" in out
 
 
 # ===========================================================================
@@ -1137,3 +1235,36 @@ class TestIntegration:
         result = facade.analyse_source(SIMPLE_SOURCE, module_name="animals")
         assert result.class_count == 4
         assert "classDiagram" in result.diagram
+
+    def test_functions_extracted_in_result(self):
+        cfg = DiagramConfig(output_format=DiagramFormat.TOKEN)
+        facade = PyDiagramFacade(cfg)
+        result = facade.analyse_source(FUNCTIONAL_SOURCE, module_name="util")
+        assert "read_config" in result.diagram
+        assert "fetch_data" in result.diagram
+        assert result.function_count == 2
+
+    def test_token_format_shows_functions(self):
+        cfg = DiagramConfig(output_format=DiagramFormat.TOKEN)
+        facade = PyDiagramFacade(cfg)
+        result = facade.analyse_source(FUNCTIONAL_SOURCE, module_name="util")
+        assert "[FUNCTIONS]" in result.diagram
+        assert "read_config" in result.diagram
+
+    def test_mermaid_format_shows_functions(self):
+        cfg = DiagramConfig(output_format=DiagramFormat.MERMAID)
+        facade = PyDiagramFacade(cfg)
+        result = facade.analyse_source(FUNCTIONAL_SOURCE, module_name="util")
+        assert "read_config" in result.diagram
+
+    def test_dot_format_shows_functions(self):
+        cfg = DiagramConfig(output_format=DiagramFormat.DOT)
+        facade = PyDiagramFacade(cfg)
+        result = facade.analyse_source(FUNCTIONAL_SOURCE, module_name="util")
+        assert "read_config" in result.diagram
+
+    def test_plantuml_format_shows_functions(self):
+        cfg = DiagramConfig(output_format=DiagramFormat.PLANTUML)
+        facade = PyDiagramFacade(cfg)
+        result = facade.analyse_source(FUNCTIONAL_SOURCE, module_name="util")
+        assert "read_config" in result.diagram
