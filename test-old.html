@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User Prompts List</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f7fafc;
+    color: #1a202c;
+    padding: 30px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+h1 {
+    margin-bottom: 30px;
+    font-size: 1.8rem;
+    color: #2d3748;
+    letter-spacing: -0.02em;
+}
+
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ── Chat Card ── */
+.chat-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 16px 20px;
+}
+
+.chat-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    word-break: break-word;
+}
+
+.chat-datetime {
+    font-size: 0.85rem;
+    opacity: 0.95;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.datetime-main {
+    font-weight: 500;
+}
+
+.datetime-relative {
+    opacity: 0.85;
+    font-style: italic;
+}
+
+.chat-body {
+    padding: 16px 20px;
+}
+
+.prompts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Prompt Item ── */
+.prompt-item {
+    background: #f7fafc;
+    border-left: 4px solid #4299e1;
+    border-radius: 6px;
+    padding: 12px 14px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.prompt-item:hover {
+    background: #edf2f7;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.prompt-number {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4299e1;
+    background: #e6f2ff;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.prompt-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #2d3748;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding-right: 50px;
+}
+
+.attachment-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #718096;
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: #e2e8f0;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.no-prompts {
+    color: #718096;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+/* ── Search & Tags ── */
+.search-container {
+    margin-bottom: 24px;
+}
+.search-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.search-input:focus {
+    border-color: #667eea;
+}
+.tags-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #edf2f7;
+}
+.tag-pill {
+    background: #edf2f7;
+    color: #4a5568;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* ── Global Tag Cloud ── */
+.global-tags-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+.global-tag-pill {
+    background: #fff;
+    border: 1px solid #cbd5e0;
+    color: #4a5568;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.global-tag-pill:hover {
+    background: #edf2f7;
+    border-color: #a0aec0;
+    transform: translateY(-1px);
+}
+.global-tag-pill.active {
+    background: #4299e1;
+    color: #fff;
+    border-color: #3182ce;
+    box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
+}
+</style>
+</head>
+<body>
+<h1>📝 User Prompts from All Chats</h1>
+<div class="search-container">
+    <input type="text" id="tag-search" class="search-input" placeholder="Search prompts or filter by tags...">
+</div>
+
+<div class="global-tags-cloud">
+<div class="global-tag-pill" data-tag="#5stack">##5stack</div>
+<div class="global-tag-pill" data-tag="#agenticdevelopment">##agenticdevelopment</div>
+<div class="global-tag-pill" data-tag="#agi">##agi</div>
+<div class="global-tag-pill" data-tag="#agiledevelopment">##agiledevelopment</div>
+<div class="global-tag-pill" data-tag="#apiimplementation">##apiimplementation</div>
+<div class="global-tag-pill" data-tag="#architecturedecision">##architecturedecision</div>
+<div class="global-tag-pill" data-tag="#audiohardware">##audiohardware</div>
+<div class="global-tag-pill" data-tag="#cadcam">##cadcam</div>
+<div class="global-tag-pill" data-tag="#cnc">##cnc</div>
+<div class="global-tag-pill" data-tag="#componenttesting">##componenttesting</div>
+<div class="global-tag-pill" data-tag="#curriculumdesign">##curriculumdesign</div>
+<div class="global-tag-pill" data-tag="#customdesign">##customdesign</div>
+<div class="global-tag-pill" data-tag="#datamodeling">##datamodeling</div>
+<div class="global-tag-pill" data-tag="#frontend">##frontend</div>
+<div class="global-tag-pill" data-tag="#hpl">##hpl</div>
+<div class="global-tag-pill" data-tag="#imagegeneration">##imagegeneration</div>
+<div class="global-tag-pill" data-tag="#jsonschema">##jsonschema</div>
+<div class="global-tag-pill" data-tag="#kotlin">##kotlin</div>
+<div class="global-tag-pill" data-tag="#llm">##llm</div>
+<div class="global-tag-pill" data-tag="#localbusiness">##localbusiness</div>
+<div class="global-tag-pill" data-tag="#marketingstrategy">##marketingstrategy</div>
+<div class="global-tag-pill" data-tag="#materialscience">##materialscience</div>
+<div class="global-tag-pill" data-tag="#mcu">##mcu</div>
+<div class="global-tag-pill" data-tag="#networkingl2l3">##networkingl2l3</div>
+<div class="global-tag-pill" data-tag="#pchardware">##pchardware</div>
+<div class="global-tag-pill" data-tag="#promptmanagement">##promptmanagement</div>
+<div class="global-tag-pill" data-tag="#python">##python</div>
+<div class="global-tag-pill" data-tag="#rag">##rag</div>
+<div class="global-tag-pill" data-tag="#reflex">##reflex</div>
+<div class="global-tag-pill" data-tag="#scaling">##scaling</div>
+<div class="global-tag-pill" data-tag="#softwarespecification">##softwarespecification</div>
+<div class="global-tag-pill" data-tag="#soundengineering">##soundengineering</div>
+<div class="global-tag-pill" data-tag="#spatialanalysis">##spatialanalysis</div>
+<div class="global-tag-pill" data-tag="#styling">##styling</div>
+<div class="global-tag-pill" data-tag="#sveltekit">##sveltekit</div>
+<div class="global-tag-pill" data-tag="#typescript">##typescript</div>
+<div class="global-tag-pill" data-tag="[architecture]">#[architecture]</div>
+<div class="global-tag-pill" data-tag="[artificialintelligence]">#[artificialintelligence]</div>
+<div class="global-tag-pill" data-tag="[business]">#[business]</div>
+<div class="global-tag-pill" data-tag="[cadcam]">#[cadcam]</div>
+<div class="global-tag-pill" data-tag="[electronics]">#[electronics]</div>
+<div class="global-tag-pill" data-tag="[interiordesign]">#[interiordesign]</div>
+<div class="global-tag-pill" data-tag="[networking]">#[networking]</div>
+<div class="global-tag-pill" data-tag="[softwaredevelopment]">#[softwaredevelopment]</div>
+<div class="global-tag-pill" data-tag="[webdevelopment]">#[webdevelopment]</div>
+</div>
+
+<div class="chat-list">
+<div class="chat-card" data-tags="[electronics] #mcu #5stack">
+    <div class="chat-header">
+        <div class="chat-title">5Stack - Grand Father (16 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Sunday 1st February 04:08</span>
+            <span class="datetime-relative">(3 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Act as expert of electric mcu boards
+Do you recognize these</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">please list all fearured components of the boards and how in genral they segment the market and differentiate value proposition</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">You know other dev bords with both CPU, NPU on the market please share wide range</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">I would like to make a project like GPT audio chat bot for my kids. It would need a press button to listen question and then process voice (google or openai)  and send it to (Gemini orOpenAI) as text and do the the back loop to let kids listen the answer. I&#x27;ve seen such toys on the internet. it nees...</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">i neeed your last analysis of AtomS3R-CAM 
+Oraz przegląd platform wymienionych
+AtomS3R-CAM, bazujący na układzie ESP32-S3, oferujący 8 MB pamięci Flash i 8 MB PSRAM, zintegrowany z kamerą GC0308 (0,3 MPx) oraz czujnikiem 9-osiowym IMU (BMI270 + BMM150). Moduł podczerwieni IR umożliwia sterowanie urz...</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">i like stack5
+help me naviga this page. where to find info how to develop for this particular model
+
+https://docs.m5stack.com/en/core/AtomS3R-CAM%20AI%20Chatbot
+
+SOLUTION
+STORE
+SOFTWARE
+DOCUMENT
+EXPLORE
+ABOUT US
+FAQ
+
+English
+Product Guide
+
+Product Name / SKU
+
+Search
+
+Product Guide
+This section inclu...</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">whats the difference between them 
+
+Specyfikacja techniczna M5StickS3
+Mikrokontroler: ESP32-S3-PICO-1-N8R8, dual-core Xtensa LX7, do 240 MHz
+Pamięć Flash: 8 MB
+PSRAM: 8 MB
+Wyświetlacz: 1,14&#x27;&#x27; LCD 135 x 240 px, ST7789P3
+Komunikacja bezprzewodowa: WiFi 2,4 GHz
+Kodek audio: ES8311, 24-bit, I2S
+Mikrofon...</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">Act as embedded software developer who knows ins and out of development for ESP deve boards like M5StickS3
+I&#x27;m python developer and C++ developer for simple arduino boards.
+I found that development process is more complicated do such ESP boards like M5StickS3. 
+Please provide systematic and top to b...</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">Please search this repo and find OpenAI useful source code example
+https://github.com/m5stack/M5GFX</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">Please analyze this repo and tell whe where to find those functions
+
+  oai_init_audio_capture();
+  oai_init_audio_decoder();
+  oai_wifi();
+  oai_webrtc();</div></div>
+<div class="prompt-item"><div class="prompt-number">#12</div>
+<div class="prompt-text">Act as embedded software developer and explain me why the ecosystem of libraries, toolchains  few things to let me picture ecosystem of libraries for embedding hardware.</div></div>
+<div class="prompt-item"><div class="prompt-number">#13</div>
+<div class="prompt-text">Please analyze those screen shots from pages and tell me from your learnings have seen them and explain:
+* Where are they placed in these mentioned mental model and layered stack 
+*  What they do and what they don&#x27;t do. 
+
+https://block-designer.m5stack.com/
+https://uiflow2.m5stack.com/</div></div>
+<div class="prompt-item"><div class="prompt-number">#14</div>
+<div class="prompt-text">can you please based on our whole discussion provide list of all terms used and group them into categories</div></div>
+<div class="prompt-item"><div class="prompt-number">#15</div>
+<div class="prompt-text">Analyze all screenshots and provide plan marketing material (single page) to highlight all features and properties along with images</div></div>
+<div class="prompt-item"><div class="prompt-number">#16</div>
+<div class="prompt-text">generate poster based on above description</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Electronics]</span>
+<span class="tag-pill">##MCU</span>
+<span class="tag-pill">##5Stack</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[webdevelopment] [artificialintelligence] #llm #typescript">
+    <div class="chat-header">
+        <div class="chat-title">APP_ Info Genius Review (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 9th January 02:55</span>
+            <span class="datetime-relative">(4 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade React developer. Please analyze &quot;grep&quot; from my ChatGPT like app and create me mermaid dependency chart of core  types....</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please analyze structure and dependencies and provide me architecture overview diagrams</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Here is the thing. I want you to act as React developer and compare this other app architecture and code principles and tell me how easy to meintatin  and follow it it
+
+File: ./index.tsx...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##TypeScript</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #softwarespecification #architecturedecision #datamodeling">
+    <div class="chat-header">
+        <div class="chat-title">Analyzing Data Model and Architecture (11 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Tuesday 6th January 05:13</span>
+            <span class="datetime-relative">(4 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade developer experienced in GUI strealit apps related to taks management like GTD. Your role is to help me work on development.
+Please analyze my specification and check is it consistent and explain me how do you understand usage and scope of my app ?
+
+
+File: doc/spec/02-data-mo...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">based on above criticism please act as commercial grade python developer and suggest update in order you choose best.
+
+File: interfaces.py...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">...</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">id
+  Input should be a valid string [type=string_type, input_value=704, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+Traceback (most recent call last):
+  File &quot;/Users/michal/PycharmProjects/task_classifier_rd/dataset_io.py&quot;, line 52, in load
+    pr...</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Nope, please add debug logs to isolate the problem</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">...</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">...</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">I end up having this. Please explain how do you understna each change one by one...</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">Please analyze code and explain how do enrichment works with detials?</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">Please analzyze request and response and tell me why AI does not suggest properly tags for each &quot;deimension&quot; I we specified in...</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">can you create mermaid diagram for above tagging logic similar we have in triage prompt?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##SoftwareSpecification</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##DataModeling</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #architecturedecision">
+    <div class="chat-header">
+        <div class="chat-title">App Architecture_ MVVM, State, Command (4 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 6th February 05:38</span>
+            <span class="datetime-relative">(3 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade developer
+Please analyze of my exam preparation app.
+Please analyze collaboration and patterns used and make me mermaid diagram</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Act as markdown and streamlit expert and tell me can you make my demo screen look like...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">TypeError: TextStep.__init__() got an unexpected keyword argument &#x27;body&#x27;</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">are you able to helpm me introduce theme for may app so I can set font and size?...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##ArchitectureDecision</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[business] #marketingstrategy #localbusiness">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Branch of Branch of Fidget Fun! Micro-Store Blueprint (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 19th February 22:44</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as my Business advisor who have experience in building local business that are thight to local communities. I found that some brands position them selves as small family grown hastle or young adults hustles for example hand made proructs, organic cosmetics, jewelry etc. What is  the marketing kn...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">I love it. Continue. 
+I like  weekly updated assortment (hero curated 3d toys/fidgets)  from two reasons capacity of single printer and scarcity effect. 
+The business is by two boys 10 and 12yo and their uncle.  We hab</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Business]</span>
+<span class="tag-pill">##MarketingStrategy</span>
+<span class="tag-pill">##LocalBusiness</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[business] #marketingstrategy #localbusiness">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Branch of Fidget Fun! Micro-Store Blueprint (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 21st February 14:24</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">I love it. Continue. 
+I like  weekly updated assortment (hero curated 3d toys/fidgets)  from two reasons capacity of single printer and scarcity effect. 
+The business is by two boys 10 and 12yo and their uncle.  We might collect reservations for specific colors and fulfill after a while to batch mul...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">I need to capture the whole idea without problems/solutions yet. Please provide me markdown note of my ideas expanded of your understanding</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Act as software specification and plese based on your understanding 
+iterate over phase 1 and 2 until you decide it is enough and provide markdown output for file 01-usecases.md
+
+# The Comprehensive Blueprint for Writing Effective Use Cases
+**Based on Alistair Cockburn’s *Writing Effective Use Cases...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Business]</span>
+<span class="tag-pill">##MarketingStrategy</span>
+<span class="tag-pill">##LocalBusiness</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[business] #marketingstrategy #localbusiness">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Fidget Fun! Micro-Store Blueprint (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 21st February 21:32</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">please analyze that mitogation for mentioned probles are really solved</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Small shift ease tell about 3d printed wall clock have you seen opinions on 3d forums? is it worth bothering?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Business]</span>
+<span class="tag-pill">##MarketingStrategy</span>
+<span class="tag-pill">##LocalBusiness</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[electronics] #audiohardware #soundengineering">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Headphones and DACs for Electronic Music (5 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Tuesday 17th February 04:15</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as audiophile who love to listening electronic music on headphones. 
+You are fan of 
+Experimental / Avant-garde
+Electroacoustic
+Analog electronic music
+Media art / Sound art
+
+You know what makes great components working together to deliver quality. Can you elaborate more about what makes differe...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">I need you to compose for me more setups for the &quot;Texture&quot; Rig (For Electroacoustic &amp; Musique Concrète)
+I have lower budget than you think. Have you heard good reviews/opinions of some less expensive dacs, tubes, headphones for For Electroacoustic &amp; Musique Concrète?</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Będę tobie podsyłał analizę jednego audiofila który zrobił dużo review sprzętu.
+Na początek mamy analizę DAC&#x27;ów ifi. zobacz proszę co możesz z niej wyłuskać dla nas. Ich cena to ok 900zł - 1000 zł</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Is this confirming suite for me ?
+
+iFi Zen DAC 3 to nieoczekiwany gość. Tym bardziej, że w 2023 roku zmienił się dystrybutor marki iFi Audio na Polskę. Od tamtej pory mój kontakt z ich produktami się niestety urwał. A szkoda, bo miło wspominam sporo ich modeli.
+
+
+Na szczęście dzięki ogromnej uprzejm...</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">zobacz sczegółowe analizy  analize słuchawek i zobacz czy pasują do naszej muzyki i ifi Zen DAC 3?
+HD 650 - 1600zł
+HD 660S - 2000zł
+Audio-Technica ATH-R70X - 1300 zł
+
+
+Recenzja słuchawek Sennheiser HD 660S
+2021-01-102025-01-12Słuchawki pełnowymiarowe14
+Sennheiser HD 660S to zupełna nowość w tej rodz...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Electronics]</span>
+<span class="tag-pill">##AudioHardware</span>
+<span class="tag-pill">##SoundEngineering</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #llm #agi #scaling">
+    <div class="chat-header">
+        <div class="chat-title">AI Revelations_ Scaling, AGI, Software Engineering (4 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 28th February 22:41</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Please analyze this discussion about AI/LLM and tell me key revelations and key points</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">how about this discussion?</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">what is your opinion on this matter?</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">how about this disccusion, what interesting is there?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##AGI</span>
+<span class="tag-pill">##Scaling</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #agi #llm">
+    <div class="chat-header">
+        <div class="chat-title">AI_s Cybersecurity, Job, and Societal Impact (1 prompt)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 5th March 09:10</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">we have year 2026. please analyze this transcript an tell me the key points and provide youur opinion</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##AGI</span>
+<span class="tag-pill">##LLM</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[webdevelopment] #typescript #styling #frontend">
+    <div class="chat-header">
+        <div class="chat-title">2026 TS Styling Technologies (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 5th March 12:00</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">We have year 2026. Act as modern web developer in TypeScript world. Could you please list me all proven styling/UI technologies with their main motivations and selling points</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">We work in team of four devs in SvelteKit v5. We don&#x27;t care about global user accessibility. We write B2B apps that need to works both on desktop and mobile browsers including Mac ecosystem. 
+We need somethin LLM models understand and can picture it easily.  I need a easy to copy paste and maintain</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Do you know Tailwind v5 and it DaisyUI v5 and what are about them ?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##TypeScript</span>
+<span class="tag-pill">##Styling</span>
+<span class="tag-pill">##Frontend</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #typescript #sveltekit #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of ChatGPT App_ Gaps Identified_ (22 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 5th March 13:51</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade TypeScript developer and SvelteKit v5 expert. Please analyze my ChatGP like app specifications and tell me do you understand my app and find any gaps or inconsistencies if any</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please proceed and update spec</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Act as experienced developer and tell me do you have enough details without loose part and gaps?</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">We have year 2026 and you&#x27;ve see many chatGPT like implementations. How others deals with above 4 areas and please provide your judgment and pros and cons analysis</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Have you read how aistudio.google.com or anthropic or openAI are implementing all four above?</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">There are a lot more moving part then I thought ;( I need you to act as specification engineer and KISS, YAGNI follower and think how to capture our specification to be crisp and clear</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">use above to update our specification md files from first message</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Please shift your focus. If found my old specification  of me previous attempt to build GPT Chat in SvelteKit with multiple chat management features. 1) Please analyze it from different angles and tell me how do you understand all functionalities and motivations for them?
+2) Please help me understan...</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">We have to capture every priceless bit of requirements and motivation to a spec file. Please first think what chapters/files do we need to capture the details in the next chats from now on.</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">Please provide 01-product-vision-and-requirements.md and include simple one-level folders feature to collect chats inside</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">btw. please explain what are those means and how other implementation solve this problem in a clean and efficient way?
+1) Message Branching
+2) Regeneration Trees</div></div>
+<div class="prompt-item"><div class="prompt-number">#12</div>
+<div class="prompt-text">I&#x27;ve seen a simple yet effective solution. Please analyze it  and criticize it constructively from technical perspective. If sound please add to V1 and update 01 document.
+First approach: Cloning.
+1. Each user and ai message have action buttons (Copy message, Copy Markdown, Clone up to here) 
+2. Use...</div></div>
+<div class="prompt-item"><div class="prompt-number">#13</div>
+<div class="prompt-text">Please based on our updated 01 spec provide detailed and coherent 
+02-architecture-and-data-model.md</div></div>
+<div class="prompt-item"><div class="prompt-number">#14</div>
+<div class="prompt-text">To effectively guide implementation of a software project, I would need spec covering these key areas:
+
+1. Domain Understanding
+Domain glossary/ubiquitous language definitions
+Business rules and constraints
+Domain model with entity relationships
+Core business processes and workflows
+
+2. Architecture...</div></div>
+<div class="prompt-item"><div class="prompt-number">#15</div>
+<div class="prompt-text">continue
+3. Functional Requirements
+User stories with acceptance criteria
+Feature specifications with priority levels
+Use case scenarios with expected outcomes
+Business logic descriptions
+4. Technical Specifications
+API contracts (endpoints, request/response formats)
+Database schema design
+Authentic...</div></div>
+<div class="prompt-item"><div class="prompt-number">#16</div>
+<div class="prompt-text">Ok, so please  analyze our all spec files and ensure they are valid and have no discrepancies  and inconsistencies</div></div>
+<div class="prompt-item"><div class="prompt-number">#17</div>
+<div class="prompt-text">Please check does thi files contains any usefull inspiration we should reuse</div></div>
+<div class="prompt-item"><div class="prompt-number">#18</div>
+<div class="prompt-text">please</div></div>
+<div class="prompt-item"><div class="prompt-number">#19</div>
+<div class="prompt-text">Act as a product owner and leading software developer. When you look on above spec can you tell me how teams approach to split such development into multiple users/stage that are isolated from each other?</div></div>
+<div class="prompt-item"><div class="prompt-number">#20</div>
+<div class="prompt-text">Please provide The &quot;Day Zero&quot; Requirement (Contract-First)</div></div>
+<div class="prompt-item"><div class="prompt-number">#21</div>
+<div class="prompt-text">Please analyze my other chat like app features specification and tell me which of them are missing in our above spec?...</div></div>
+<div class="prompt-item"><div class="prompt-number">#22</div>
+<div class="prompt-text">yes please</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##TypeScript</span>
+<span class="tag-pill">##SvelteKit</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #agiledevelopment #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Agile Specs for Small Teams (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 6th March 08:20</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">please act as commercial grade software specification engineer and leading developer who loves agile development. Could you please list me reference principles form books, manifests, articles that about creating effective specification for small/medium size software by team of 4 devs?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">I&#x27;m going to show you specification files one by one to make a refactor/reorganization. Please first tell what is good and what need to be changed</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Here they are.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">please do</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Act as commercial grade TypeScript developer. Please analyze above and original spec and check for missing technical details, loose statements, gaps,</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Please suggest solution for 1 using remark/rehype and remember we will use SvelteKit v5. At the end please provide mermaid seqeunce diagram</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##AgileDevelopment</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #agiledevelopment #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Branch of REF_ Books - Agile Specs for Small Teams (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 6th March 09:16</span>
+            <span class="datetime-relative">(2 months ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">We have year 2026. How the companies organize their spec and dev workflows. Do we have enough knowledge in the books we can read about or this is some kind of secret sauce / art?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please tell me which books are the bedrock</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">How about Writing Effective Use Cases by Cockburn how they ageing in year 2026. It the concept still valuble more than User Stories?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##AgileDevelopment</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #llm #imagegeneration #spatialanalysis">
+    <div class="chat-header">
+        <div class="chat-title">Apartment Kitchen View From Sofa (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Tuesday 17th March 22:19</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Analzye this top view of apartment and localize kitchen and tv area. Considering kitchen appliances in europe and all wall dimentions please generate im image of the kitchen looking from sofa</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Please check how sofa wall i parallel to the kitchen on the top view and what is wrong on above image?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##ImageGeneration</span>
+<span class="tag-pill">##SpatialAnalysis</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] [architecture] #spatialanalysis">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Apartment Floor Plan Analysis (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Tuesday 17th March 22:33</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">We are in europe. Act as interior designer and architects. Please tell what do you see on the picture. Please name all entities</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Please identify all icons visible in Pokój z aneksem kuchennym. Name all kitchen appliances icons and estimate size. Find all windows, and main entry doors.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">please base on above generate view from couch looking on the kitchen row. Remember about location of all entities</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Please criticsize above image. Check for windows locations, and main entry dors</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">based on above criticism gneraate accurate image</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">#[Architecture]</span>
+<span class="tag-pill">##SpatialAnalysis</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #hpl #materialscience">
+    <div class="chat-header">
+        <div class="chat-title">Blaty Kompaktowe HPL - Budowa (5 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 19th March 11:45</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź stolarze i  profesjonalnym specjalistą od montażu blatów kuchennych z laminatów kompatkowych. JAkie zansz rodzaje i budowy laminatów?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Wyłuskaj z dokumentu wszystkie wskazówki, know how które będą mi przydatne przy wykańczaniu kuchni pod wymiar. Nie będę robił przestrzeni publicznych ani wielkowymiarowych</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">jak byś zwizualizowała w postaci infografiki punkt 1</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">kontynuij i wygeneruj obraz na podstawie powyższego opisu</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">kontynuuj i wygeneruj obraz dla PANEL 2 (ŚRODKOWY): DYLATACJA OBWODOWA (LUZ)</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##HPL</span>
+<span class="tag-pill">##MaterialScience</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #hpl #materialscience">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Blaty Kompaktowe HPL - Budowa (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 19th March 11:53</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Jak byś zwizualizowała w postaci infografiki punkt 1 wraz ze wszystkimi liczbami</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">kontynuuj. jakby zaprojektowała dla 2. Obróbka i narzędzia (Stolarska praktyka)</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##HPL</span>
+<span class="tag-pill">##MaterialScience</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #hpl #materialscience">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Copy of Blaty Kompaktowe HPL - Budowa (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 20th March 22:24</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">PRzenalziuj metody montażu płyty grzewczych w tym typie płyt Egger&#x27;a. Bądz uważna na oobazki i uważaj bo są tam też obrazki zlewów</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">taraz wyłuskaj z PDF informacje o montażu zlewu i trawersów</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">wyłuskaj z powyższej wiadomości o montażu zlewu esencje tak żeby nie stracić żadnej ważnej informacji. Wypisz w formacie makrdown i pogrób wszystkie ważne encje, numery, nazwy, pojęcia, ważne zwroty</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##HPL</span>
+<span class="tag-pill">##MaterialScience</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #jsonschema #datamodeling">
+    <div class="chat-header">
+        <div class="chat-title">Branch of JSON Schema Analysis and Creation (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 19th March 13:37</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as JSON syntax expert could you please analyze this structure and make a schema for it...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Act as commercial grade python developer who adhere principles of clean code and TDD expert 
+How would you do that?
+Help me develop module to extract user prompt from whole conversations (&quot;role&quot;: &quot;user&quot;,&quot;
+I need to have cli with path to file and module should export prompts in markdown text in forma...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">I have more requirements. I need to see where chat was branched of if was...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##JSONSchema</span>
+<span class="tag-pill">##DataModeling</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #softwarespecification #python">
+    <div class="chat-header">
+        <div class="chat-title">Analyze, Reverse-Engineer, Map App (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 19th March 21:26</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade python developer and please help me develop my conversation branch mapping app.
+Please first analyze my code and reference files and reverse engineer spec.</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">continue based on above analysis. Plan implementation in best order. Update model, algos and spec. generate  me mermaid sequence diagram . No code yet!!!</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">DO you have idea how you woule visualize it?</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">We need changes. I don&#x27;t need &quot;Model Thought&quot; at all. I need to timeline also. Please rethink it is possible to show history of conversations chronological way in same you or we need some cli siwtch. Please jump into user shoes and tell me how do understnad it</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Please present the other view outpur</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">base on full conversation please provide me spec markdown  file with all latest informations.</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##SoftwareSpecification</span>
+<span class="tag-pill">##Python</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] [webdevelopment] #llm #promptmanagement">
+    <div class="chat-header">
+        <div class="chat-title">AI Studio Branch Visualizer (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 20th March 10:15</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade web designer and developer please analyze my new app idea motivation and tell me how do you understand it (do not provide any code!)
+
+
+Motivation
+Google AI Studio lets you export conversations as JSON files. When you edit a previous prompt you create a branch — a new version...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Understanding above motivation act as data model engineer and web designer  and tell me how would you design such chat app to fill the gaps</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Act as git data model expert and tell me does git model would be usefull inspiration. Be sceptical</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##PromptManagement</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] [webdevelopment] #llm #promptmanagement">
+    <div class="chat-header">
+        <div class="chat-title">Branch of AI Studio Branch Visualizer (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 20th March 10:20</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Understanding above motivation act as data model engineer and web designer and tell me how would you design Googla AI studio data model 
+from scratch. Please rethink how git data model and know-how could be stolen to not reinvent the wheel.</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please check is this assessment reveals some food for thought
+
+While Git offers some brilliant concepts, adopting its actual architecture would likely over-engineer your app and create unnecessary complexity. Here is a skeptical breakdown of where the Git model helps, and where it completely fails f...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##PromptManagement</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] [webdevelopment] #llm #promptmanagement">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Copy of Branch of AI Studio Branch Visualizer (8 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 20th March 10:29</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Please check is this assessment reveals some food for thought and present data model and mermaid ERP diagram.
+Remember that I want to build AI studio app clone from scratch not only &quot;read-only visualizer&quot; where assessment comes from
+
+## Assessment for read only JSON chat visualizer&quot;
+While Git offers...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please look how AI studio structure looks like and what can be stolen as well look how they handle artifacts attached to chat. (They store both chat JSON files and artifacts in GDrive folder)...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Please look how my other chat app schema looks like and how we would extend/refactor it using above discussed &quot;multiverse fo chats&quot;...</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Please check how folder works and and embeddings in our latest versions. Please jump into user boot. User wants to navigate through universe  search trough / make highlights / notes etc</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Please provide final version of schema</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">I need you to generate spec.md file. Please analyze whole conversation from top to bottom and provide me specification prose. Start from user motivation and got technical motivation capturing all maneuvers we&#x27;ve made and nuances</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">Act as TDD professional and provide me comprehensive edge scenrarios to validate our data model</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Please analyze schema and user scenarios and based on you experience check do you discover any more cases?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##PromptManagement</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #materialscience #cadcam #cnc">
+    <div class="chat-header">
+        <div class="chat-title">Blum vs GTV vs ATM - Qbrick, Spis części, Początki meblarstwa przemysłowego_ (18 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 21st March 10:53</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Jest rok 2026. Bądź specjalistą branży meblarskiej. Znasz się historii meblarstwa przemysłowego i technologiach wytwarzania płyt, blatów, oklein i technologii z nim związanej. 
+
+
+Jakie byly początki i motywacje technologiczne</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Potrzebuję zrozumieć więcej się. Czym się różnią MDF, HDF, HPL
+Wyjasnuj mi jak wyglada historia wykanczania płyt i ich kolorowania. Widzę różne terminy jak termopresing, laser, itp. Zacznij od początku historycznie i jakie były motywacje.</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">jak szukać centrów cnc które mają laser do oklejania?</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Jakie maszyny używa się do oklejania bezspoinowego za pomocą lasera?</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">A co to za maszyny Ott torando, pacific, antlantic?</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">A jakie znasz okleiniarki z fugą zerową lub &quot;opcztyczną fugą zerową&quot; dla małych firm która zajmuje mało miejsca?</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">Bądz specjalistą od produktów ręcznych do oklejania. Czy są na rynku produkty które są w stanie zrobić fugę optycznie zerową?</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Weź mi wypisz najważniejsze informacje o okleiniarkach jako wstep do nowej dyskucji ale jako luźny katalog sprzetu a nie rekomendacje. Chcę użyć tego jako wstęp do nowego czata</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">Przeanalizuj moja ściagę technologiczną i sprawdź jej poprawność i kompletność. (używaj firm/nazw produktów/lini produktów tam gdzie pasuje...</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">wypisz mi uzupełniony pełną wersję w html</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">Czy możesz pomyśleć ile będę potrzebował sztuk na jedną szafkę jeżeli będę używał:
+
+Szafka z trzema szufladami
+* Szuflady blum?
+* Jakie wkręty i ile?
+* Lamello Cabineo ile?
+* Uchwyty/okucia  ile?
+
+Szafka z drzwiczkami i dwoma półkami
+* Ile czego
+
+...</div></div>
+<div class="prompt-item"><div class="prompt-number">#12</div>
+<div class="prompt-text">Sprawdź powyższą listę i powiedz które drobnostek:
+1) podpórek, prowadników, wkrętów, złącz itp. nie przychodzi w zestawami Blum.
+2) jakie drobnostki muszę kupić osobno</div></div>
+<div class="prompt-item"><div class="prompt-number">#13</div>
+<div class="prompt-text">Wygeneruj proszę przykładową listę szafek dolnych i górnych pod sufit w tym zabudowana lodówka, zmywarka, okap do zabudowy a potem na podstawie tych szafek wymień i policz proszę listę wszystkich części i drobnostek tak jak powyżej</div></div>
+<div class="prompt-item"><div class="prompt-number">#14</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#15</div>
+<div class="prompt-text">Planuję sobie kupić skrzynki Qbrick system Pro z szufladami i przegródkami żeby schować tam małe wkręty, uchwyty. 
+Ile typów przegródek potrzebuję i o jakiej pojemności w litrach na twoje doświadczenie?</div></div>
+<div class="prompt-item"><div class="prompt-number">#16</div>
+<div class="prompt-text">czy do tej skrzyni zmieszczę wszystkie  szuflady blum bez frontów?</div></div>
+<div class="prompt-item"><div class="prompt-number">#17</div>
+<div class="prompt-text">Jako znawca techniczny powiedz mi czym się różnią te systemy szuflad od Blum&#x27;a
+GRABOX
+MERIVOBOX
+TANDEMBOX
+METABOX
+Dotknij inspiracji
+System szuflad, który spełnia
+najwyższe wymagania w zakresie
+designu i indywidualizacji.
+Jedna platforma, wiele
+możliwości
+Prosty i wyrazisty
+Wyróżnikiem TANDEMBOX ant...</div></div>
+<div class="prompt-item"><div class="prompt-number">#18</div>
+<div class="prompt-text">A znasz rozwiązania szufladowe firm GTV i ATM. Jakich one używają technologii posuwu i jakie do nich pasują płyty?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##MaterialScience</span>
+<span class="tag-pill">##CADCAM</span>
+<span class="tag-pill">##CNC</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #softwarespecification #architecturedecision #rag">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Hybrid Approach Analysis_ Pros and Cons (4 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Tuesday 24th March 21:43</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial web developer and software architect of small and medium for Chat management and RAG systems. You have 20 years of experience in specifying an easy to maintain and extend code.
+Please analyze this hybrid approach and tell me what is your opinion and what are pros and cons
+
+
+## 1. I...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Have you seen in your learnings &quot;zoom levels&quot; approach to specification?</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">We have so many approaches to specification so I&#x27;m very overwhelmed  :( What to choose and when ?</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">If we successfully extracted bes 10% then Please then read our conversation from beginning and create me &quot;generic project&quot; guideline/ blueprint for SMB teams I would like to use is for any king of web app not essentially RAG!</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##SoftwareSpecification</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##RAG</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] [webdevelopment] #reflex #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Branch of Unified School Monitoring Dashboard (16 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Wednesday 25th March 17:51</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade web developer and specification expert. Please understand my requirements to build and app.
+I have 4 school kids and each kid have school account for monitoring garages and school news. We have two providers Librus and Vulcan.
+I have need to create single monitoring system pl...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Act as commercial grade developer and tell me how are we going to structure app? 
+1)  do we need some data model if we just scraping?
+2) do we need DTO&#x27;s
+Skupmy się najpierw na ocenach
+
+To jest przykładowy zestaw danych po parsowaniu HTML (grades page)...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">sprawdź w jaki sposób traktujemy poprawy ocen?</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">rodzielmy</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Are we going to use CQRS to simplfy testing or this will be overhead?</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Great. Before we jum into implementation and testing phase I need to make KISS but crisp and clear spec. Please tell me which chapters we should cover to let other LLM model to have complete information
+
+
+## 1. Domain Understanding
+- Domain glossary/ubiquitous language definitions
+- Business rules a...</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">continue and provide Chapter 1 and 2 having in my usecases proposition. Remember what we still use scraping and no DB is involved
+
+FREQ
+# Unified School Monitoring Platform - Specification
+
+## Section 1: Domain Understanding &amp; Glossary
+**Context:** A locally hosted, unified dashboard built with the...</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Please analyze above DTO&#x27;s and check are we able to perform filtering and sorting based on that?</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">I&#x27;m noob. Please tell me don&#x27;t DTO&#x27;s need any relationship to display recent grades for specific subject ?</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">przedstaw zaktualizowany rodziały 1 i 2</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#12</div>
+<div class="prompt-text">ad 3) przeczytaj FREQ z naszej rozmowy i  jeżeli masz jeszcze coś do dodania to podaj.
+
+ad 4) zaprojektuj UI w oparciu o poniższe wzorcowe projekty</div></div>
+<div class="prompt-item"><div class="prompt-number">#13</div>
+<div class="prompt-text">Act as experienced software tester. You know testing strategies and test types. How would you plan automated testing pyramid for our app?</div></div>
+<div class="prompt-item"><div class="prompt-number">#14</div>
+<div class="prompt-text">How LLM should apply agile and TDD</div></div>
+<div class="prompt-item"><div class="prompt-number">#15</div>
+<div class="prompt-text">Please current implementation made by LLM
+validate static diagrams and criticize or accept
+then analyze flow diagram one by one and do the same
+
+# School Hub - Architecture Diagrams Guide
+
+This document explains the architecture, API structure, and key flows of the School Hub application using the M...</div></div>
+<div class="prompt-item"><div class="prompt-number">#16</div>
+<div class="prompt-text">Please criticize this main prompt to my LLM is it open to interpretation of very tight and clear?
+
+SYSTEM PROMPT:
+
+Act as commercial grade python 3.10+ developer and Reflex expert who adheres clean code and agile principles.
+
+* You are a precise and focused engineer so you remember to return to this...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##Reflex</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] [webdevelopment] #reflex #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Branch of Unified School Monitoring Dashboard(1) (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 26th March 21:24</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Please provide architecture mermaid diagram and present class diagram to visualize interfaces and colaboration</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please analyze this initial code base and tell me about architecture and API ?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##Reflex</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[electronics] [softwaredevelopment] #pchardware #componenttesting">
+    <div class="chat-header">
+        <div class="chat-title">Branch of HDD vs (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 27th March 15:25</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">We have year 2026. Act as PC computers specialist. You know how to assembly own PC station using components. 
+I have bought custom PC and want to test it. It has HDD drive ready to install or USB to boot and test components before I will buy SSD and start installing Win11?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">how to burn Hiren’s  corectly on regular USB stick on MacOS?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Electronics]</span>
+<span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##PCHardware</span>
+<span class="tag-pill">##ComponentTesting</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[cadcam] [interiordesign] #datamodeling #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Corpus Folder Structure Explained_ (1 prompt)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Sunday 29th March 18:30</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade .Net software developer. You are working in 3D/Cad industry. You are familiar with data structures and syntaxes to describe interior design project.
+
+Are you familiar with such format/syntax?...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[CADCAM]</span>
+<span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##DataModeling</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] [cadcam] #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Corpus Folder Structure Explained_(1) (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Sunday 29th March 18:30</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as 3D software developer and Lignumsoft Corpus.
+Have you seen folder structure of this app?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please analyze this files and try to extract all app/modules the app contains and technologies used</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Act as commercial grade developer and expert in reverse engineering and binaries scraping. 
+What are techniques we can use to understand the main app windows and form structure to make a documentation Corpus2026.exe?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">#[CADCAM]</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #cadcam #customdesign #materialscience">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Copy of Copy of Projektowanie i Produkcja Kuchni Na Wymiar (1 prompt)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Monday 30th March 16:15</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź specjalistą od projektowania CAD zwłaszcza kuchni na wymiar. Znasz się procesie obróbki CNC, materiałach i technologiach.
+Wymień podstawowe pojęcia i proces projektowania oraz produkcji</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##CADCAM</span>
+<span class="tag-pill">##CustomDesign</span>
+<span class="tag-pill">##MaterialScience</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #architecturedecision #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">B of MAIN-2_ ReflexChat (32 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Monday 30th March 22:36</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade software architect. Please tell me what is screaming architecture and how does it influnce project structure when using SOLID ?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Please analyze my ChatGpt like app mockup with advance features like searching through all chat messages across app. App allows to create notes from context menu by selecting text from chat messages and searching notes too.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">How would you revise above architecture If I want to build hobby project only for myself and I&#x27;m going to use Reflext framework. I will have 1000 chats and around 500MB artifacts.</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Please analyze and criticize my implementation
+
+ **ChatGPT-like RAG application** with:
+1. **Advanced semantic search** (ChromaDB → Voyage AI migration path)
+2. **Note-taking &amp; highlights** (new feature)
+3. **Reusing** your proven components (parsers, chunking, tagging, domain models)
+4. **Async API...</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">You have seen plenty to quality chat like apps. Please suggest core design for me</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">How to start build this app? What next do we need to define make it more execution ready?</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Before we go into details tell me do we need CQRS and how we could make intergration tests possible without GUI or with minimal playwright?</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">yes plase</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">Please provide all discovered and applied decisions in form of ADR&#x27;s to adrs.md files</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">Please write  the Use Case and the FastAPI Streaming endpoint</div></div>
+<div class="prompt-item"><div class="prompt-number">#12</div>
+<div class="prompt-text">Please provide Anthropic and OpenAI and Gemini adapters</div></div>
+<div class="prompt-item"><div class="prompt-number">#13</div>
+<div class="prompt-text">btw. how other implementations for python implementa adapter for AI models (like ai sdk)?</div></div>
+<div class="prompt-item"><div class="prompt-number">#14</div>
+<div class="prompt-text">How about handling attachments and setting parameter like thinking will work in our adapter and in LiteLLM?</div></div>
+<div class="prompt-item"><div class="prompt-number">#15</div>
+<div class="prompt-text">I&#x27;m going to Adapters. Please provide ADR(s) with corner egde cases</div></div>
+<div class="prompt-item"><div class="prompt-number">#16</div>
+<div class="prompt-text">Please provide class diagrams and then provide sequence diagrams to visualize use cases</div></div>
+<div class="prompt-item"><div class="prompt-number">#17</div>
+<div class="prompt-text">Act as commercial grade software specification specialist. You have expertise in creating lean and sufficient specification for both humans and LLM agentic models with progressive disclosure to protect entropy and keeping human in the loop. You know DDD / BDD / specification by examples / use cases...</div></div>
+<div class="prompt-item"><div class="prompt-number">#18</div>
+<div class="prompt-text">Please provide your constructive criticism for my proposal of doc folder structure. Please check it from different angles
+
+1.  **Level 0 (Start):** `/docs/00-START-HERE.md` (Read first for domain vocabulary).
+2.  **Product Specs:** `/docs/1-product-specs/` (Read for BDD scenarios and Acceptance Crit...</div></div>
+<div class="prompt-item"><div class="prompt-number">#19</div>
+<div class="prompt-text">Please revise my whole &quot;system&quot; prompt and provide your criticism and update it.
+
+
+Act as a commercial-grade Senior Developer and System Architect who adheres to clean code, Agile/TDD principles, and strict separation of concerns.
+
+**CORE DIRECTIVES:**
+*   **No Fluff:** Do not produce any summaries...</div></div>
+<div class="prompt-item"><div class="prompt-number">#20</div>
+<div class="prompt-text">How about source folder structure. How does it impact LLM agent search tools?
+
+
+
+#### The &quot;Domain-Screaming&quot; Structure (SOLID-aligned)...</div></div>
+<div class="prompt-item"><div class="prompt-number">#21</div>
+<div class="prompt-text">Act for a moment as experienced softwate architect and software engineering expert. Is it possible to have above folder structure for most of the SaaS like (client server, db) applications?</div></div>
+<div class="prompt-item"><div class="prompt-number">#22</div>
+<div class="prompt-text">Have you seen such DB Shared data layer and no foreign key applications?
+0) Define harder in case of IUserFacade in example using python, fastApi, Reflex framework. 
+1) How Does this impact LLM models
+to understand codebase?
+2) How does this impact maintanence?</div></div>
+<div class="prompt-item"><div class="prompt-number">#23</div>
+<div class="prompt-text">How would you discuss such case?
+
+## ADR 005: Strict Separation of Domain Models and ORM Models
+**Status:** Accepted
+
+### Context
+SQLAlchemy models are tied to database sessions. Passing SQLAlchemy objects directly into Use Cases or LLM Adapters can cause `LazyInitializationError`s if the async even...</div></div>
+<div class="prompt-item"><div class="prompt-number">#24</div>
+<div class="prompt-text">which files you need to see to make a full analysis ?
+
+# Project Structure
+
+## main.py...</div></div>
+<div class="prompt-item"><div class="prompt-number">#25</div>
+<div class="prompt-text">You have mentioned in our previous turn about (below). 
+Please tell me how did it go?
+
+1) &quot; It breaks Reflex&#x27;s Superpower&quot; ?
+
+2) &quot;... writing double the state-management code just to get data to show up on the screen.&quot;?
+
+3) &quot;The &quot;Boilerplate Tax&quot; on LLM Agents&quot;?
+
+4) SQLModel are we using it?</div></div>
+<div class="prompt-item"><div class="prompt-number">#26</div>
+<div class="prompt-text">Could you please print me mermaid diagrams to visualize how do we brake framework and how do we achieve this purity?</div></div>
+<div class="prompt-item"><div class="prompt-number">#27</div>
+<div class="prompt-text">Act as software architect and tell me 
+1) did I chose the wrong tool for the job (Reflex)?
+2) What type and size of apps Reflex is able to handle it&#x27;s way to not become maintenance nightmare?
+2) Did such tax is always paid when we want to have this kind of separation (no matter the framework)?
+3) Ar...</div></div>
+<div class="prompt-item"><div class="prompt-number">#28</div>
+<div class="prompt-text">Since I&#x27;m pythonic please tell me what Blazer framework is and how does it suites for this job ?</div></div>
+<div class="prompt-item"><div class="prompt-number">#29</div>
+<div class="prompt-text">Got it. You suggested previously:
+&quot;Move your src/features/ folder directly into the Reflex project, and have your rx.State call SendMessageUseCase.execute() directly as a standard async Python function, bypassing HTTP entirely.&quot;
+
+Are we still able to take most of the Reflex and Vertical/Screaming an...</div></div>
+<div class="prompt-item"><div class="prompt-number">#30</div>
+<div class="prompt-text">Just debating since I&#x27;m noob. Two questions?
+1) Is it SQLalchemy or SQLModel is more suited for the job?
+2) Can you picture this compromise &quot;deal&quot; using mermaid diagram? This is fascinating that we have compromise not all or nothing?</div></div>
+<div class="prompt-item"><div class="prompt-number">#31</div>
+<div class="prompt-text">Please then based on your accumulated analysis, rejects / modify my previous ARD&#x27;s and add new ones if any</div></div>
+<div class="prompt-item"><div class="prompt-number">#32</div>
+<div class="prompt-text">concentrate how &quot;compromised deal&quot; architecture should looks like and how my classes API are going to change. Do not provide implementation (just classes and interfaces) You have full &quot;Project Structure&quot; in our conversation. Please tell if any files have to be removed!</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[softwaredevelopment] #architecturedecision #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Branch of B of MAIN-2_ ReflexChat (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 9th April 22:21</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">I&#x27;m noob in Reflex framework. Can you list all its feautures/constructs and elaborate how do we utiles each in our app?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">how about session?</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">I lost track :( Please read whole discussion and for each conversation turn provide me information about:
+USER: 
+a) what user meant in particular context.
+b) how would you label user prompt: reflective, specific, precise, of topic, directing, pulling, pushing, etc. Use up to 20 labels max!
+
+MODEL:...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[SoftwareDevelopment]</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #llm #rag #promptmanagement">
+    <div class="chat-header">
+        <div class="chat-title">BASE_ Modern RAG Techniques (2 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 2nd April 16:02</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">We have year 2026. Act as commercial grade LLM expert who understand capabilities and limitations of SOTA models like Sontet,Opus 4.5+, Gemini 3, GPT 5.
+You are also professional RAG designer and developer. Please tell me what are the fundamentals and techniques used in modern RAG systems. Use searc...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">So what are other technologies/entities used other then embeddings, consine similarity, BM25, vector databases I remember from 2023?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##RAG</span>
+<span class="tag-pill">##PromptManagement</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #llm #rag #promptmanagement">
+    <div class="chat-header">
+        <div class="chat-title">BASE_ Tech Guide for Modern RAG (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 4th April 11:58</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">what is https://ai.pydantic.dev and where does it fit in the big picture?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Act as professional python developer of small RAG projects with multiple views and GUI reach features. 
+You are Reflex python framework expert.
+Please analyze this and tell me what it does and what is advantage of using it alongside PydanticAI ? Do I have to use it or move straight to Reflex when cr...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Please list me LlamaIndex purpose and functionalities in details.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Please analyze what GetZep is in both open source version and their SaaS service and explain its functionalities and capabilities in details.
+Tell me when I would need Zep in new project?</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Please list all terms, technologies we used in our conversation</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Please analyze this and tell me whare is on big picture and what are capabilites, functionalities in detials
+https://n8n.io/</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##RAG</span>
+<span class="tag-pill">##PromptManagement</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #rag #llm #architecturedecision">
+    <div class="chat-header">
+        <div class="chat-title">ADR Grouping and Architecture Decisions (1 prompt)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 2nd April 20:38</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grader python developer and SOLID architecture. You are LLM expert and Streamlit developer scientist.
+Please group my ADR&#x27;s in categories of concern (keep them as is!!)
+I need to seprate makrdown file for each category. keep names concise.
+
+
+## ADR 001: Adoption of the &quot;YAGNI&quot; Loca...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##RAG</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##ArchitectureDecision</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #cadcam #cnc #customdesign">
+    <div class="chat-header">
+        <div class="chat-title">BASE VERTICAL_ Kuchnie SOP (5 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 3rd April 20:02</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź profesjonalnym stolarzem i projektantem mebli z płyty MDF. Znasz się technologiach i procesie cięcia i okleinowanie i nawiercania w centrach CNC. Zajmujesz się projektowaniem i montażem kuchni na wymiar. Mierzysz pomieszczenie kuchenne u klienta dalmierzem na różnych wysokościach a następnie w...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Czy w oparciu o powyższe możesz sobie przypomnieć jeszcze więcej porad i rozwiązań które pomogą mi uniknąć niespodzianek lub kosztownych błędów.</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Czy te sugestie są realne? Czy wnoszą coś do naszej dyskusji?
+
+### ETAP 1: POMIAR I INWENTARYZACJA (U klienta)
+*Cel: Przenieść rzeczywistość do komputera i uniknąć &quot;Mitu Prostych Ścian&quot;.*
+
+1.  **Sprzęt:** Poziomica laserowa (krzyżowa 360°), dalmierz laserowy, kątownik.
+2.  **Złota zasada pomiaru:**...</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Potrzebuję stworzyć sobie systematyczny poradnik know-how dla wszystkich etapów z których się składa efekt końcowy czyli poprawnie zmontowana kuchnia.
+Zacznijmy od tego jakie byś wymienił etapy?</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Etapy pięknie przechodzą z jednego do drugiego i trochę mi się to kojarzy z metodologią &quot;waterfall&quot; w inżynierii oprogramowania. 
+Zastanawiam się na poradniku który pokazałby process wertykalnie. Czyli np. jeżeli klient chce szafki narożnej konkretnego rozmiaru to wpływa to na cały projekt i szereg...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##CADCAM</span>
+<span class="tag-pill">##CNC</span>
+<span class="tag-pill">##CustomDesign</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #cadcam #cnc #customdesign">
+    <div class="chat-header">
+        <div class="chat-title">BASE_ Możliwości programu Corpus (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 3rd April 22:07</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">poproszę zabudowę lodówki</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Przeanalizuj ten transkrypt i wypisz jakie nowe lub potwierdzone wskazówki wnosi i jakiej sekundzie
+
+[00:15] [Muzyka]
+[00:29] Buenos dias
+[00:30] zad widzowie czas na kolejny przełomowy
+[00:33] moment zajmujemy się wykańczaniem
+[00:37] wnętrza robimy tutaj temat kuchni w
+[00:40] ostatnim odcinku chy...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">tak</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">jak będzie wyglądać pełna wersja: Wertykalna Analiza Przypadku: Lodówka w Zabudowie</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Bądź na chwilę ekspertem od projektowanie procesów i znawcą metodologii które zapewniają powtarzalność projektowania i wytwarzania/budowania. Jakie znasz procesy które mogły by pomóc utrzymać mój biznes powtarzalnym jakościowo przez wszystkie etapy ?</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Jest rok 2025. Chciałbym sprawdzić wygenerowane wykroje i schematy nawiertów pod kątem kompletności i zgodności z założeniami i regułami powyżej. Co sądzisz o tym?
+Bądź na chwilę profesjonalnym programistą python i ekspertem od system LLM
+Czy jest sens przetwarzać dotychczasowe reguły jako skrypt py...</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##CADCAM</span>
+<span class="tag-pill">##CNC</span>
+<span class="tag-pill">##CustomDesign</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[webdevelopment] #reflex #apiimplementation #architecturedecision">
+    <div class="chat-header">
+        <div class="chat-title">API Implementation Analysis (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 4th April 19:38</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade python developer and software architect. Your framework of choice is Reflex. You follow clean architecture, DDD, screaming architecture and SOLID principles.
+
+Please analyze my initial version project API and tell me what I have already implemented step by step.
+
+
+# Project S...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Please analyze those ADR and check if all are respected in design and implementation. If don&#x27;t see code provided ask DO NOT GUESS!</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Fix Domain Entities (ADR 008 &amp; 009)</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">please continue</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Fix the Frontend (ADR 014)</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">please provide last puzzle</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##Reflex</span>
+<span class="tag-pill">##APIImplementation</span>
+<span class="tag-pill">##ArchitectureDecision</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[webdevelopment] #reflex #apiimplementation #architecturedecision">
+    <div class="chat-header">
+        <div class="chat-title">Branch of API Implementation Analysis (10 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Saturday 4th April 20:37</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Traceback (most recent call last):
+  File &quot;/Users/michal/PycharmProjects/mychat-reflex/.venv/lib/python3.14/site-packages/reflex/utils/prerequisites.py&quot;, line 349, in compile_or_validate_app
+    get_compiled_app(
+    ~~~~~~~~~~~~~~~~^
+        check_if_schema_up_to_date=check_if_schema_up_to_date,...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">return main_page()
+  File &quot;/Users/michal/PycharmProjects/mychat-reflex/mychat_reflex/pages/main.py&quot;, line 17, in main_page
+    sidebar(),
+    ~~~~~~~^^
+  File &quot;/Users/michal/PycharmProjects/mychat-reflex/mychat_reflex/components/sidebar.py&quot;, line 114, in sidebar
+    action_buttons(),
+    ~~~~~~~~~~~...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Please provide me mermaid sequence diagram for use case where I start new chat and submit my prompt.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">why phase 3 is not starting, please analyze code and check what could go wrong. You add some Reflex logging along the path</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Im running locally and got
+**Connection Error:** HTTP 404: Not Found</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">michal@mac mychat-reflex % python -m src.main
+zsh: command not found: python
+michal@mac mychat-reflex % uv run python -m src.main
+/Users/michal/PycharmProjects/mychat-reflex/.venv/bin/python3: No module named src.main
+michal@mac mychat-reflex % uv run src.main   
+error: Failed to spawn: `src.main`...</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">michal@mac mychat-reflex % uv run uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
+error: Failed to spawn: `uvicorn`
+  Caused by: No such file or directory (os error 2)...</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Please analzye current code base from our conversation and provide  fully implemented the Database Repository and Dependency Injection container</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">File &quot;/Users/michal/PycharmProjects/mychat-reflex/src/main.py&quot;, line 7, in &lt;module&gt;
+    from src.features.chat.presentation.routes import router as chat_router
+  File &quot;/Users/michal/PycharmProjects/mychat-reflex/src/features/chat/presentation/routes.py&quot;, line 7, in &lt;module&gt;
+    from src.core.di impo...</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">User
+11:05 PM 04 Apr 2026
+
+hello
+
+11:05 PM 04 Apr 2026
+
+**Connection Error:** HTTP 404: Not Found</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##Reflex</span>
+<span class="tag-pill">##APIImplementation</span>
+<span class="tag-pill">##ArchitectureDecision</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #llm #agenticdevelopment">
+    <div class="chat-header">
+        <div class="chat-title">Agentic Development_ SOTA Models &amp; Guidelines (1 prompt)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Wednesday 8th April 20:21</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as LLM expert who understand weakness and strong sides LLM models
+Please find authoritative sources to explain me what are latest development guidelines for agentic development (Claude, Gemini, Codex, etc.)</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##LLM</span>
+<span class="tag-pill">##AgenticDevelopment</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[architecture] #architecturedecision #customdesign #materialscience">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Branch of Copy of Domek Blaszany_ Dobra Podstawa, Ryzyko Wiatru (7 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 10th April 14:22</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź specjalista budowlańcem znasz się na sztuce budowlanej i normach. widziałaś też tricki i dobre praktyki.
+Jestem amatorem.
+
+Chcę postawić domek blaszany 3.6m na 3.2m przy podstawie. Domek waży 70kg
+W środku będę trzymał kosiarkę i narzędzia ogrodowe.
+Chcę zrobić korytko i wsypać mieszankę 0-31 i...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Znalazłem taki artykuł i potrzebuję twojej pomocy w zrozumieniu 
+Dlaczego obrzeża decydują o wyglądzie i trwałości ogrodu
+Na dobrze zaprojektowanej posesji każda strefa ma swój porządek. Obrzeża domykają kompozycję: oddzielają trawnik od rabat i ścieżek, blokują migrowanie kruszyw, hamują przerastan...</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">(empty prompt)</div>
+<div class="attachment-count">📎 1 attachment</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">zrób mi proszę krótką i zwięzłą checklistę z kolejnością prac i wszystkimi wymiarami i odstepami itp.</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">generate infographics fo above</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">wyszło mi że będę potrzebował 400 litrów objętości  betonu pod obrzeża.
+Jakie proporcje i ile worków betonu mam kupić?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Architecture]</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##CustomDesign</span>
+<span class="tag-pill">##MaterialScience</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[architecture] #architecturedecision #customdesign #materialscience">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Copy of Domek Blaszany_ Dobra Podstawa, Ryzyko Wiatru (3 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Friday 10th April 14:42</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">czy pod tym suchym betonem ma już być mieszanka czy grunt rodzimy?</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">zrób mi proszę krótką i związłą ściagę z kolejnością prac i wszystkimi wymiarami i odstepami itp.</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">generate infographics for above process with all dimensions and angles as a cheetseet</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Architecture]</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##CustomDesign</span>
+<span class="tag-pill">##MaterialScience</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[webdevelopment] #architecturedecision #curriculumdesign">
+    <div class="chat-header">
+        <div class="chat-title">ARCH_ Plan Praktyk (5 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Sunday 12th April 22:25</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź inżynierem oprogramowania i profesjonalnym DevOpsem. przeanalizuj poniższy plan praktyk i powiedz mi na jakie obszary tematyczne się dzieli i jak rozumiesz ten plan praktyk dla uczniów w wieku 16 lat.
+
+https://www.zs1.wroc.pl/wp-content/uploads/2021/09/Praktyka-zawodowa.docx.pdf</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">czy widzisz kolumny Podstawowe i ponadpodstawowe. Jeżeli tak to wypisz jak wyglądają podstawowoe wymagania i jak by musiał wyglądać plan praktyk na 20 dni (5h dziennie)</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">Będę podsyłał karty egzaminacyjne od najstarszych historycznie. Każda karta zawier od 7 do 10 zadań.
+Chcę zobaczyć jaki jest sumaryczny zakres zadań jakie mogą się trafić na egzaminie.
+Po każdym przeanalizowanej karcie wypisz mi co różnicę wzdgledem tego co już widziałaś.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">wypisz SUMARYCZNY ZAKRES ZADAŃ wraz z komendami i szczegółami jak są</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Musimy oszczędzać LLM contex. Nie wypisuj już pełnego sumarycznego zakresy tylko co to co się zmieniła względem poprzedniego arkusza.</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##CurriculumDesign</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[webdevelopment] #architecturedecision #curriculumdesign">
+    <div class="chat-header">
+        <div class="chat-title">Blueprint HTML of MAIN_ Plan Praktyk (9 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Monday 13th April 19:47</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Chcę przeanalizować historyczne karty egzaminacyjne tak żeby zgromadzić szeroki zakres zadań do ćwiczenia.
+Będę podsyłał Tobie karty egzaminacyjne od najstarszych historycznie. 
+Wypisz jakie jest sumaryczny zakres zadań dla pierwszej karty a po każdej kolejnej wypisz mi TYLKO to co doszło lub się zm...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Kointunuuj. Lubię te podsumowania dla instruktora :)</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">To koniec. Przeanalizuj wszystkie wyłuskane zadania i powiedz jak się kształtują filary wiedzy. Jakich tematów/zagadnień jest najwięcej a jakich mniej itd.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Będę mógł tylko zrobić zajęcia zdalnie więc pomoż mi przygotować spójny program na tygodnie 2-5. Maksymalnie 4 godziny dziennie. Wiem że to mało :(</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">W jaki sposób na egzaminie użytkownicy sprawdzają czy udało się zablokować zmianę tapety?</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Ok ale robią to na jednej maszynie czy na dwóch (WIndows server i Windows 10/11 )?</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">Bądź na chwilę profesjonalnym szkoleniowcem z Microsoft. Jesteś specjalistą od pracy i administracji Windows Server 22 i Windows 10/11.
+Jako szkoleniowiec i ekspert widziałeś częste problemy uczniów oraz znasz wiele wskazówek wskazówki (np. Odświeżanie zasad - gpupdate)  które pomagają w czasie egza...</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Podoba mi się treść i lubię Najczęstsze błędy i Złote Rady.
+Zobacz na mój konspekt HTML i pierwsze dwa laboratoria i :
+1) powiedz czy jest zrozumiały i kompletny z tym co pisałeś powyżej?
+2) Wpleć Najczęstsze błędy i Złote Rady
+3) Sprawdź z instrukcjami egzaminacyjny i napisz uczniom jak mają sprawd...</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">Bądź na chwilę specjalistą od tworzenia treści edukacyjnych i szkoleniowych na bazie powyższych treści wypisz mi &quot;blueprint&quot; naszej struktury, narracji, formy, cechy itp. żeby w przyszłości LLM mógł to odtworzyć dla innych ćwiczeń</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[WebDevelopment]</span>
+<span class="tag-pill">##ArchitectureDecision</span>
+<span class="tag-pill">##CurriculumDesign</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[networking] #curriculumdesign #networkingl2l3">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Cwiczenia L2_L3 (15 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Tuesday 14th April 20:32</span>
+            <span class="datetime-relative">(1 month ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź specjalistą od sieci komputerowych. Jesteś też nauczycielem który pracuje z młodymi uczniami (16, 17lat).
+Znasz metody nauczania które pozwalają zrozumieć poszczególne zagadnienia w przystępny sposób. 
+
+Powiedz mi jaką kolejność poznawanie wiedzy przyjmują autorzy książek i szkoleń żeby przyswo...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Wygenruj ilustrację analogi modelu osi z Kroku 1 powyższego czata</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">spradż spójność i konsekwencje znawezniczą i analogi w roadmapie w naszej historii konswersacji i przedstaw poprawioną wersję</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Bądź profesjonalnym projektantem stron internetowych. Potrzebuję prostą stronę html dla uczniów do nauki z powyższym tekstem.
+Tutuł &quot;Filar 1: L2/L3&quot;
+JAk byś to zaprojektował?</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">jest super, sprawdż tylko czy analogie i treść są spójne z wersją tekstową z poprzedniego czata &quot;Oto poprawiona, w 100% spójna roadmapa do nauki &quot;Filaru 1: L2/L3&quot;:&quot;</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Zrób mi podstronę do tego tekstu gdzie uczniowie będą ćwiczyć w Cisco Packet Tracer
+
+
+
+### 📚 Standardowa ścieżka nauki (Od zera do L3)
+
+1.  **Topologia i Warstwa 1/2 (LAN Basics):** Czym jest switch, czym jest adres MAC, jak komputery rozmawiają w tej samej sieci (ARP).
+2.  **Adresacja IPv4 (Warstwa...</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">Czy jesteś w stanie dodać schematy topologi żeby im to zwizualizować. Czy jest jakiś prosty sposob w html?</div></div>
+<div class="prompt-item"><div class="prompt-number">#8</div>
+<div class="prompt-text">Bądz specjalista od GitHub pages. Jak mogę to wrzucić na Github żeby dać studentom|</div></div>
+<div class="prompt-item"><div class="prompt-number">#9</div>
+<div class="prompt-text">Wrzuciłem ale nie ma nawigacji z index to ćwiczenia. Bądz pragmatycznym web developerem i przejrzyj nasze dwa ostatnie dopracowane html analogie i cwiczenie i powiedz jakbyś to zrobiła  tak żebyśmy mogli dodawać nowe ćwiczenia łatwo i recznie dodawać linki do kolenych cwiczeń</div></div>
+<div class="prompt-item"><div class="prompt-number">#10</div>
+<div class="prompt-text">PRzeczytaj jako sieciowiec zadania i zobacz czy routingu powinien być jakiś wniosek</div></div>
+<div class="prompt-item"><div class="prompt-number">#11</div>
+<div class="prompt-text">przeczytaj całość i sprawdź czy brzmi to po polsku</div></div>
+<div class="prompt-item"><div class="prompt-number">#12</div>
+<div class="prompt-text">Potrzebuje kolejne ćwiczenia dla chłopaków. Zrobili te zadania 1h :) Więc trzeba trochę ich przycisnąć ;) Co byś zaproponowała jako logiczną kolejność?</div></div>
+<div class="prompt-item"><div class="prompt-number">#13</div>
+<div class="prompt-text">Potrzebuję kolejny materiał na 2h co proponujesz?</div></div>
+<div class="prompt-item"><div class="prompt-number">#14</div>
+<div class="prompt-text">Potrzebuję te same ćwiczenia ale bez CLI tylko GUI w packet tracer</div></div>
+<div class="prompt-item"><div class="prompt-number">#15</div>
+<div class="prompt-text">Potrzebuję następny logicznie materiał .</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[Networking]</span>
+<span class="tag-pill">##CurriculumDesign</span>
+<span class="tag-pill">##NetworkingL2L3</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[artificialintelligence] #agenticdevelopment #kotlin #softwarespecification">
+    <div class="chat-header">
+        <div class="chat-title">Backend - Sweep AI agent (6 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Wednesday 29th April 19:58</span>
+            <span class="datetime-relative">(2 weeks ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Act as commercial grade Kotlin developer and please analyze my Jetbrains AI Agent Plugin.
+Please help make documentation of the project based on extracted signatures and imports  (attached)
+Create comprehensive documentaion to sweep-agent.md
+* describe architecture, collaborations, components respon...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Guys behind the project have stop maintaining it few days ago! They published plugin and encourage to use it freely. 
+Based on signature I&#x27;ve sent you which files you need to see what we need to update to make LLM model connection working?
+Plugin have used BYOK model but asked for login which I want...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">print me cat command to help me gather files and send you</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Pleaase act as Python developer and check it this look like full backend and give me instruction which files you need to see</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Please explaine paths/urls/env we need to change to make it work locally (both FE, BE)
+Please provide sequence diagrams how our local plugin and local server version will work</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Act as developer and tell me what would be needed to make local working Agent GUI in Reflex framework instead of Jetbrains plugin?</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[ArtificialIntelligence]</span>
+<span class="tag-pill">##AgenticDevelopment</span>
+<span class="tag-pill">##Kotlin</span>
+<span class="tag-pill">##SoftwareSpecification</span></div>
+    </div>
+</div>
+<div class="chat-card" data-tags="[interiordesign] #cnc #hpl #customdesign">
+    <div class="chat-header">
+        <div class="chat-title">Branch of Copy of Pragmatyczne podejście do meblarstwa_ (7 prompts)</div>
+        <div class="chat-datetime">
+            <span class="datetime-main">Thursday 7th May 18:41</span>
+            <span class="datetime-relative">(1 week ago)</span>
+        </div>
+    </div>
+    <div class="chat-body">
+        <div class="prompts-list">
+<div class="prompt-item"><div class="prompt-number">#1</div>
+<div class="prompt-text">Bądź stolarzem i certyfikowanym montażystą blatów i zabudowy ADG. Zansz się na
+sztuce stolarskiej i budowlano-remontowej.
+Jako technolog i inżynier  znasz rodzaje i budowę płyt MDF, techniki okleinowania. Znasz budowę i słabe strony blatów HPL.
+Jako stolarz i specjalista w branży meblarskiej znasz t...</div></div>
+<div class="prompt-item"><div class="prompt-number">#2</div>
+<div class="prompt-text">Jako expert przenalizuj proszę mój zgróbny SOP punkt po punkcie i przedstaw poprawiona wersję 
+
+
+### ETAP 1: STRATEGIA, POMIAR I PROJEKT (Zabezpieczenie tyłów)
+*Tutaj zarabiasz pieniądze. Błąd tutaj to darmowa praca na montażu.*
+
+*   **Zasada 3 punktów:** Mierzysz wnękę dół-środek-góra. Zapisujesz n...</div></div>
+<div class="prompt-item"><div class="prompt-number">#3</div>
+<div class="prompt-text">JAko ekpert rposisz proszę ETAP 1 na mniejsze spójne etapy według twojej wiedzy i doświadczenia.</div></div>
+<div class="prompt-item"><div class="prompt-number">#4</div>
+<div class="prompt-text">Poproszę o checklistę do ETAP 1.1</div></div>
+<div class="prompt-item"><div class="prompt-number">#5</div>
+<div class="prompt-text">Potrzebuję miejsca żeby wpisywać wartości lub komentarze.</div></div>
+<div class="prompt-item"><div class="prompt-number">#6</div>
+<div class="prompt-text">Bądź architektem budowlanym i specjalistą od rysunków pomiarowych i poprawnego wymiarowania. wygeneruj obrazy podglądowe do pomiarów sekcji B?</div></div>
+<div class="prompt-item"><div class="prompt-number">#7</div>
+<div class="prompt-text">generuj obrazy 1-3</div></div>
+        </div>
+        <div class="tags-container"><span class="tag-pill">#[InteriorDesign]</span>
+<span class="tag-pill">##CNC</span>
+<span class="tag-pill">##HPL</span>
+<span class="tag-pill">##CustomDesign</span></div>
+    </div>
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('tag-search');
+    const cards = document.querySelectorAll('.chat-card');
+    const globalTags = document.querySelectorAll('.global-tag-pill');
+
+    // Keep track of which tags are currently clicked/active
+    let activeTags = new Set();
+
+    function filterCards() {
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+
+        cards.forEach(card => {
+            const cardTagsStr = card.getAttribute('data-tags') || "";
+            const cardTagsArray = cardTagsStr.split(' ').filter(t => t);
+
+            // 1. Check if it matches the text search bar
+            const matchesText = query === "" || cardTagsStr.includes(query) || card.innerText.toLowerCase().includes(query);
+
+            // 2. Check if it has ALL the active tags clicked in the cloud
+            let matchesPills = true;
+            if (activeTags.size > 0) {
+                for (let tag of activeTags) {
+                    if (!cardTagsArray.includes(tag)) {
+                        matchesPills = false;
+                        break;
+                    }
+                }
+            }
+
+            // Show card only if it passes both filters
+            if (matchesText && matchesPills) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Listen for typing in the search bar
+    if (searchInput) {
+        searchInput.addEventListener('input', filterCards);
+    }
+
+    // Listen for clicks on the tag cloud
+    globalTags.forEach(pill => {
+        pill.addEventListener('click', () => {
+            const tag = pill.getAttribute('data-tag');
+
+            // Toggle active state
+            if (activeTags.has(tag)) {
+                activeTags.delete(tag);
+                pill.classList.remove('active');
+            } else {
+                activeTags.add(tag);
+                pill.classList.add('active');
+            }
+
+            filterCards();
+        });
+    });
+});
+</script>
+</body>
+</html>
