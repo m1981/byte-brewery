@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, Union
 
-# DES-VCS-037. The -title1/-title2 syntax of BC4 on macOS still has to be checked by hand.
+# DES-VCS-037. The -title1/-title2 syntax of BC4 on macOS was checked by hand (OBS-VCS-008).
 BEYOND_COMPARE = (
     "/Applications/Beyond Compare.app/Contents/MacOS/bcomp",
     "{left}",

@@ -6,31 +6,31 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 
 | REQ | DES | AT | VER | Testy | Moduły |
 |---|---|---|---|---|---|
-| REQ-VCS-001 | DES-VCS-019 | AT-VCS-001, AT-VCS-018, AT-VCS-022 | VER-VCS-005, VER-VCS-008, VER-VCS-010 | — | — |
+| REQ-VCS-001 | DES-VCS-019 | AT-VCS-001, AT-VCS-018, AT-VCS-022 | VER-VCS-005, VER-VCS-008, VER-VCS-010 | test_at_vcs_001_chosen_repositories_survive_a_restart, test_at_vcs_018_only_first_level_repositories_are_listed, test_at_vcs_022_folders_that_are_not_repositories_are_hidden, test_des_vcs_019_corrupt_file_is_reported_not_silently_reset, test_des_vcs_019_defaults_when_no_settings_file_exists, test_des_vcs_019_missing_keys_fall_back_to_defaults, test_des_vcs_019_rootdir_keeps_tilde_and_expands_on_use, test_des_vcs_019_values_of_the_wrong_type_are_reported, test_uc_vcs_01_failed_save_keeps_the_previous_settings, test_uc_vcs_01_missing_rootdir_is_reported_with_its_path | vcs_lite/core/settings.py |
 | REQ-VCS-002 | DES-VCS-018, DES-VCS-023 | — | VER-VCS-012 | test_req_vcs_002_branch_upstream_and_ahead_behind_headers, test_uc_vcs_02_detached_head_has_no_branch | vcs_lite/core/status.py |
 | REQ-VCS-003 | DES-VCS-005, DES-VCS-006, DES-VCS-024 | AT-VCS-003, AT-VCS-004, AT-VCS-005 | VER-VCS-001 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/status.py |
 | REQ-VCS-004 | DES-VCS-005 | AT-VCS-006 | VER-VCS-001 | test_req_vcs_004_ignored_files_are_not_reported, test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/status.py |
-| REQ-VCS-005 | DES-VCS-011, DES-VCS-012, DES-VCS-024 | AT-VCS-008, AT-VCS-009, AT-VCS-029 | VER-VCS-002 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | — |
+| REQ-VCS-005 | DES-VCS-011, DES-VCS-012, DES-VCS-024 | AT-VCS-008, AT-VCS-009, AT-VCS-029 | VER-VCS-002 | test_at_vcs_008_stage_records_the_whole_file, test_at_vcs_009_unstaging_a_rename_restores_both_paths, test_des_vcs_012_unstage_in_a_repo_without_commits, test_req_vcs_005_stage_adds_an_unversioned_file, test_req_vcs_005_stage_records_a_deletion, test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/repo.py |
 | REQ-VCS-006 (zastąpione) | — | — | — | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | — |
 | REQ-VCS-007 | DES-VCS-008 | AT-VCS-007 | VER-VCS-001 | — | — |
-| REQ-VCS-008 | DES-VCS-001 | — | VER-VCS-001 | — | — |
-| REQ-VCS-009 | DES-VCS-013, DES-VCS-026 | AT-VCS-010, AT-VCS-011 | VER-VCS-003 | — | — |
-| REQ-VCS-010 | DES-VCS-001, DES-VCS-013 | AT-VCS-012 | VER-VCS-003 | — | — |
-| REQ-VCS-011 | DES-VCS-014 | AT-VCS-013 | VER-VCS-004 | — | — |
-| REQ-VCS-012 | DES-VCS-014 | AT-VCS-014 | VER-VCS-004 | — | — |
-| REQ-VCS-013 | DES-VCS-014 | — | VER-VCS-004 | — | — |
-| REQ-VCS-014 | DES-VCS-002, DES-VCS-003, DES-VCS-004 | AT-VCS-015 | VER-VCS-004 | — | — |
+| REQ-VCS-008 | DES-VCS-001 | — | VER-VCS-001 | test_des_vcs_001_input_goes_to_stdin, test_des_vcs_001_output_is_bytes_and_errors_are_decoded | vcs_lite/core/gitcli.py |
+| REQ-VCS-009 | DES-VCS-013, DES-VCS-026 | AT-VCS-010, AT-VCS-011 | VER-VCS-003 | test_req_vcs_009_commit_contains_only_staged_changes | vcs_lite/core/repo.py |
+| REQ-VCS-010 | DES-VCS-001, DES-VCS-013 | AT-VCS-012 | VER-VCS-003 | test_des_vcs_001_input_goes_to_stdin, test_des_vcs_001_output_is_bytes_and_errors_are_decoded, test_req_vcs_010_hook_rejection_returns_its_output_and_keeps_the_index | vcs_lite/core/gitcli.py, vcs_lite/core/repo.py |
+| REQ-VCS-011 | DES-VCS-014 | AT-VCS-013 | VER-VCS-004 | test_at_vcs_013_commit_and_push_reaches_the_upstream | vcs_lite/core/repo.py |
+| REQ-VCS-012 | DES-VCS-014 | AT-VCS-014 | VER-VCS-004 | test_at_vcs_014_rejected_push_keeps_the_commit_and_does_not_pull | vcs_lite/core/repo.py |
+| REQ-VCS-013 | DES-VCS-014 | — | VER-VCS-004 | test_req_vcs_013_push_can_set_the_upstream | vcs_lite/core/repo.py |
+| REQ-VCS-014 | DES-VCS-002, DES-VCS-003, DES-VCS-004 | AT-VCS-015 | VER-VCS-004 | test_des_vcs_002_git_never_prompts_in_a_hidden_terminal, test_des_vcs_002_reads_do_not_take_optional_locks, test_des_vcs_003_timeout_ends_with_a_message_instead_of_hanging, test_des_vcs_004_network_calls_use_ssh_batch_mode, test_des_vcs_004_user_core_ssh_command_is_kept, test_des_vcs_004_user_ssh_command_in_env_is_kept | vcs_lite/core/gitcli.py |
 | REQ-VCS-015 | DES-VCS-018 | — | VER-VCS-012 | test_uc_vcs_02_detached_head_has_no_branch | — |
 | REQ-VCS-016 | DES-VCS-016 | — | VER-VCS-012 | — | — |
-| REQ-VCS-017 | DES-VCS-002, DES-VCS-019, DES-VCS-038 | AT-VCS-017, AT-VCS-027 | VER-VCS-007 | test_des_vcs_038_empty_side_is_an_empty_file, test_des_vcs_038_git_sides_are_read_only_temp_files_with_the_file_name, test_des_vcs_038_temp_files_are_removed_after_the_tool_exits, test_des_vcs_038_temp_files_are_removed_when_the_tool_cannot_start | vcs_lite/core/difftool.py |
+| REQ-VCS-017 | DES-VCS-002, DES-VCS-019, DES-VCS-038 | AT-VCS-017, AT-VCS-027 | VER-VCS-007 | test_at_vcs_017_browsing_does_not_change_the_repository, test_des_vcs_002_git_never_prompts_in_a_hidden_terminal, test_des_vcs_002_reads_do_not_take_optional_locks, test_des_vcs_019_corrupt_file_is_reported_not_silently_reset, test_des_vcs_019_defaults_when_no_settings_file_exists, test_des_vcs_019_missing_keys_fall_back_to_defaults, test_des_vcs_019_rootdir_keeps_tilde_and_expands_on_use, test_des_vcs_019_values_of_the_wrong_type_are_reported, test_des_vcs_038_empty_side_is_an_empty_file, test_des_vcs_038_git_sides_are_read_only_temp_files_with_the_file_name, test_des_vcs_038_temp_files_are_removed_after_the_tool_exits, test_des_vcs_038_temp_files_are_removed_when_the_tool_cannot_start, test_req_vcs_017_saving_settings_writes_nothing_into_repositories | vcs_lite/core/difftool.py, vcs_lite/core/gitcli.py, vcs_lite/core/repo.py, vcs_lite/core/settings.py |
 | REQ-VCS-018 | DES-VCS-023 | AT-VCS-002 | VER-VCS-005 | test_uc_vcs_02_detached_head_has_no_branch | — |
 | REQ-VCS-019 | DES-VCS-006 | — | VER-VCS-001 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree, test_uc_vcs_02_detached_head_has_no_branch | vcs_lite/core/status.py |
-| REQ-VCS-020 | DES-VCS-015 | AT-VCS-020, AT-VCS-021 | VER-VCS-009 | — | — |
+| REQ-VCS-020 | DES-VCS-015 | AT-VCS-020, AT-VCS-021 | VER-VCS-009 | test_at_vcs_020_pull_fast_forwards_to_the_upstream, test_at_vcs_021_pull_with_diverged_branches_changes_nothing | vcs_lite/core/repo.py |
 | REQ-VCS-021 | DES-VCS-026 | AT-VCS-019 | VER-VCS-008, VER-VCS-012 | — | — |
 | REQ-VCS-022 | DES-VCS-021, DES-VCS-026 | AT-VCS-023, AT-VCS-024 | VER-VCS-010 | — | — |
-| REQ-VCS-023 | DES-VCS-007, DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039 | AT-VCS-004, AT-VCS-025, AT-VCS-026, AT-VCS-027, AT-VCS-028, AT-VCS-029 | VER-VCS-011 | test_des_vcs_036_any_cli_tool_can_be_plugged_in, test_des_vcs_037_default_command_is_beyond_compare, test_des_vcs_037_template_fills_paths_and_titles, test_des_vcs_037_titles_with_braces_are_inserted_literally, test_des_vcs_038_empty_side_is_an_empty_file, test_des_vcs_038_git_sides_are_read_only_temp_files_with_the_file_name, test_des_vcs_038_temp_files_are_removed_after_the_tool_exits, test_des_vcs_038_temp_files_are_removed_when_the_tool_cannot_start, test_des_vcs_039_exit_code_and_stderr_are_reported, test_des_vcs_039_missing_tool_error_names_the_command, test_des_vcs_039_nonzero_exit_without_stderr_is_not_a_failure, test_req_vcs_023_worktree_side_is_passed_as_the_real_file, test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/difftool.py |
+| REQ-VCS-023 | DES-VCS-007, DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039 | AT-VCS-004, AT-VCS-025, AT-VCS-026, AT-VCS-027, AT-VCS-028, AT-VCS-029 | VER-VCS-011 | test_des_vcs_007_empty_sides_for_new_and_deleted_files, test_des_vcs_007_rename_reads_head_from_original_path, test_des_vcs_007_staged_sides_are_head_and_index, test_des_vcs_036_any_cli_tool_can_be_plugged_in, test_des_vcs_037_default_command_is_beyond_compare, test_des_vcs_037_diff_tool_command_is_stored_in_settings, test_des_vcs_037_template_fills_paths_and_titles, test_des_vcs_037_titles_with_braces_are_inserted_literally, test_des_vcs_038_empty_side_is_an_empty_file, test_des_vcs_038_git_sides_are_read_only_temp_files_with_the_file_name, test_des_vcs_038_temp_files_are_removed_after_the_tool_exits, test_des_vcs_038_temp_files_are_removed_when_the_tool_cannot_start, test_des_vcs_039_exit_code_and_stderr_are_reported, test_des_vcs_039_missing_tool_error_names_the_command, test_des_vcs_039_nonzero_exit_without_stderr_is_not_a_failure, test_req_vcs_023_worktree_side_is_passed_as_the_real_file, test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/difftool.py, vcs_lite/core/repo.py, vcs_lite/core/settings.py |
 | REQ-VCS-100 | DES-VCS-008, DES-VCS-034 | AT-VCS-016 | VER-VCS-006 | — | — |
-| REQ-VCS-101 | DES-VCS-017, DES-VCS-035 | — | VER-VCS-006 | — | — |
+| REQ-VCS-101 | DES-VCS-017, DES-VCS-035 | — | VER-VCS-006 | test_des_vcs_035_every_call_is_counted | vcs_lite/core/gitcli.py |
 | REQ-VCS-102 | DES-VCS-034 | — | VER-VCS-006 | — | — |
 | REQ-VCS-103 | DES-VCS-028, DES-VCS-029 | — | VER-VCS-013 | — | — |
 | REQ-VCS-200 | DES-VCS-040 | — | VER-VCS-014 | test_req_vcs_200_checker_reports_duplicate_definition, test_req_vcs_200_each_id_defined_once | — |
@@ -125,8 +125,40 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 
 | Test | Plik | ID |
 |---|---|---|
+| `test_at_vcs_001_chosen_repositories_survive_a_restart` | test_settings.py | AT-VCS-001 |
+| `test_at_vcs_008_stage_records_the_whole_file` | test_repo.py | AT-VCS-008 |
+| `test_at_vcs_009_unstaging_a_rename_restores_both_paths` | test_repo.py | AT-VCS-009 |
+| `test_at_vcs_013_commit_and_push_reaches_the_upstream` | test_repo.py | AT-VCS-013 |
+| `test_at_vcs_014_rejected_push_keeps_the_commit_and_does_not_pull` | test_repo.py | AT-VCS-014 |
+| `test_at_vcs_017_browsing_does_not_change_the_repository` | test_repo.py | AT-VCS-017 |
+| `test_at_vcs_018_only_first_level_repositories_are_listed` | test_settings.py | AT-VCS-018 |
+| `test_at_vcs_020_pull_fast_forwards_to_the_upstream` | test_repo.py | AT-VCS-020 |
+| `test_at_vcs_021_pull_with_diverged_branches_changes_nothing` | test_repo.py | AT-VCS-021 |
+| `test_at_vcs_022_folders_that_are_not_repositories_are_hidden` | test_settings.py | AT-VCS-022 |
+| `test_des_vcs_001_input_goes_to_stdin` | test_gitcli.py | DES-VCS-001 |
+| `test_des_vcs_001_output_is_bytes_and_errors_are_decoded` | test_gitcli.py | DES-VCS-001 |
+| `test_des_vcs_002_git_never_prompts_in_a_hidden_terminal` | test_gitcli.py | DES-VCS-002 |
+| `test_des_vcs_002_reads_do_not_take_optional_locks` | test_gitcli.py | DES-VCS-002 |
+| `test_des_vcs_003_timeout_ends_with_a_message_instead_of_hanging` | test_gitcli.py | DES-VCS-003 |
+| `test_des_vcs_004_network_calls_use_ssh_batch_mode` | test_gitcli.py | DES-VCS-004 |
+| `test_des_vcs_004_user_core_ssh_command_is_kept` | test_gitcli.py | DES-VCS-004 |
+| `test_des_vcs_004_user_ssh_command_in_env_is_kept` | test_gitcli.py | DES-VCS-004 |
+| `test_des_vcs_007_empty_sides_for_new_and_deleted_files` | test_repo.py | DES-VCS-007 |
+| `test_des_vcs_007_rename_reads_head_from_original_path` | test_repo.py | DES-VCS-007 |
+| `test_des_vcs_007_staged_sides_are_head_and_index` | test_repo.py | DES-VCS-007 |
+| `test_des_vcs_012_unstage_in_a_repo_without_commits` | test_repo.py | DES-VCS-012 |
+| `test_des_vcs_019_corrupt_file_is_reported_not_silently_reset` | test_settings.py | DES-VCS-019 |
+| `test_des_vcs_019_defaults_when_no_settings_file_exists` | test_settings.py | DES-VCS-019 |
+| `test_des_vcs_019_missing_keys_fall_back_to_defaults` | test_settings.py | DES-VCS-019 |
+| `test_des_vcs_019_rootdir_keeps_tilde_and_expands_on_use` | test_settings.py | DES-VCS-019 |
+| `test_des_vcs_019_values_of_the_wrong_type_are_reported` | test_settings.py | DES-VCS-019 |
+| `test_des_vcs_020_hidden_folders_are_skipped` | test_settings.py | DES-VCS-020 |
+| `test_des_vcs_020_plain_files_are_ignored_and_names_are_sorted` | test_settings.py | DES-VCS-020 |
+| `test_des_vcs_020_worktree_with_git_file_counts_as_repository` | test_settings.py | DES-VCS-020 |
+| `test_des_vcs_035_every_call_is_counted` | test_gitcli.py | DES-VCS-035 |
 | `test_des_vcs_036_any_cli_tool_can_be_plugged_in` | test_difftool.py | DES-VCS-036 |
 | `test_des_vcs_037_default_command_is_beyond_compare` | test_difftool.py | DES-VCS-037 |
+| `test_des_vcs_037_diff_tool_command_is_stored_in_settings` | test_settings.py | DES-VCS-037 |
 | `test_des_vcs_037_template_fills_paths_and_titles` | test_difftool.py | DES-VCS-037 |
 | `test_des_vcs_037_titles_with_braces_are_inserted_literally` | test_difftool.py | DES-VCS-037 |
 | `test_des_vcs_038_empty_side_is_an_empty_file` | test_difftool.py | DES-VCS-038 |
@@ -138,6 +170,12 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `test_des_vcs_039_nonzero_exit_without_stderr_is_not_a_failure` | test_difftool.py | DES-VCS-039 |
 | `test_req_vcs_002_branch_upstream_and_ahead_behind_headers` | test_status.py | REQ-VCS-002 |
 | `test_req_vcs_004_ignored_files_are_not_reported` | test_status.py | REQ-VCS-004 |
+| `test_req_vcs_005_stage_adds_an_unversioned_file` | test_repo.py | REQ-VCS-005 |
+| `test_req_vcs_005_stage_records_a_deletion` | test_repo.py | REQ-VCS-005 |
+| `test_req_vcs_009_commit_contains_only_staged_changes` | test_repo.py | REQ-VCS-009 |
+| `test_req_vcs_010_hook_rejection_returns_its_output_and_keeps_the_index` | test_repo.py | REQ-VCS-010 |
+| `test_req_vcs_013_push_can_set_the_upstream` | test_repo.py | REQ-VCS-013 |
+| `test_req_vcs_017_saving_settings_writes_nothing_into_repositories` | test_settings.py | REQ-VCS-017 |
 | `test_req_vcs_023_worktree_side_is_passed_as_the_real_file` | test_difftool.py | REQ-VCS-023 |
 | `test_req_vcs_200_checker_reports_duplicate_definition` | test_traceability.py | REQ-VCS-200 |
 | `test_req_vcs_200_each_id_defined_once` | test_traceability.py | REQ-VCS-200 |
@@ -171,6 +209,8 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `test_t_vcs_01_untracked_files_are_listed_one_by_one` | test_status.py | T-VCS-01 |
 | `test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty` | test_status.py | T-VCS-01 |
 | `test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree` | test_status.py | T-VCS-01 |
+| `test_uc_vcs_01_failed_save_keeps_the_previous_settings` | test_settings.py | UC-VCS-01 |
+| `test_uc_vcs_01_missing_rootdir_is_reported_with_its_path` | test_settings.py | UC-VCS-01 |
 | `test_uc_vcs_02_detached_head_has_no_branch` | test_status.py | UC-VCS-02 |
 
 ## Wstecz: moduł → ID
@@ -180,6 +220,9 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `vcs_lite/__init__.py` | DEC-VCS-038, DES-VCS-030 |
 | `vcs_lite/core/__init__.py` | DEC-VCS-030, DES-VCS-030 |
 | `vcs_lite/core/difftool.py` | DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039, REQ-VCS-023 |
+| `vcs_lite/core/gitcli.py` | DES-VCS-001, DES-VCS-002, DES-VCS-003, DES-VCS-004, DES-VCS-035, REQ-VCS-010, REQ-VCS-014, REQ-VCS-017 |
+| `vcs_lite/core/repo.py` | DES-VCS-007, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, REQ-VCS-005, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020 |
+| `vcs_lite/core/settings.py` | DEC-VCS-007, DEC-VCS-016, DEC-VCS-027, DES-VCS-019, DES-VCS-020, DES-VCS-037, REQ-VCS-001, REQ-VCS-017 |
 | `vcs_lite/core/status.py` | DES-VCS-005, DES-VCS-006, REQ-VCS-002, REQ-VCS-003, REQ-VCS-004, REQ-VCS-019, T-VCS-01 |
 
 ## Ostrzeżenia
