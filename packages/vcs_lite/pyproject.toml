@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vcs-lite"
+version = "0.1.0"
+description = "Lightweight Tk git panel for macOS"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vcs_lite"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -32,14 +32,14 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then "app.py" jest w grupie Changes
     And grupa Staged nie zawiera "app.py"
 
-  @AT_VCS_004 @confirmed @UC_VCS_03 @REQ_VCS_003 @REQ_VCS_006 @VER_VCS_001
-  Scenario: Plik ze zmianami w indeksie i na dysku jest w obu grupach
+  @AT_VCS_004 @confirmed @UC_VCS_03 @REQ_VCS_003 @REQ_VCS_023 @DEC_VCS_035 @VER_VCS_011
+  Scenario: Zewnętrzne narzędzie dostaje strony zgodne z grupą pliku
     Given "app.py" ma w indeksie linię "return x * 3" zamiast "return x * 2" z HEAD
     And kopia robocza "app.py" ma dodatkowo linię "# todo"
-    When użytkownik wybiera "app.py" w grupie Staged
-    Then diff pokazuje po lewej "return x * 2" i po prawej "return x * 3"
-    When użytkownik wybiera "app.py" w grupie Changes
-    Then diff pokazuje po prawej dodaną linię "# todo"
+    When użytkownik otwiera porównanie "app.py" z grupy Staged
+    Then narzędzie diffu dostaje po lewej treść z HEAD, a po prawej treść z indeksu
+    When użytkownik otwiera porównanie "app.py" z grupy Changes
+    Then narzędzie diffu dostaje po lewej treść z indeksu, a po prawej plik z kopii roboczej
 
   @AT_VCS_005 @confirmed @UC_VCS_02 @REQ_VCS_003 @DEC_VCS_006 @VER_VCS_001
   Scenario: Pliki w nowym katalogu są pokazane pojedynczo
@@ -54,7 +54,8 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik wybiera repozytorium
     Then żadna grupa nie zawiera "debug.log"
 
-  @AT_VCS_007 @confirmed @UC_VCS_03 @REQ_VCS_007 @VER_VCS_001
+  # Zakres w v1 zależy od Q-VCS-029.
+  @AT_VCS_007 @decision_pending @UC_VCS_03 @REQ_VCS_007 @VER_VCS_001
   Scenario: Plik binarny nie ma diffu, ale można go stage'ować
     Given nieśledzony plik "logo.png" ma zawartość binarną
     When użytkownik wybiera "logo.png"
@@ -131,12 +132,12 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then w ciągu 30 sekund widoczny jest komunikat o błędzie uwierzytelnienia
     And interfejs reaguje na działania użytkownika przez cały czas
 
-  @AT_VCS_016 @confirmed @REQ_VCS_100 @DEC_VCS_013 @VER_VCS_006
+  @AT_VCS_016 @confirmed @REQ_VCS_100 @DEC_VCS_013 @DEC_VCS_042 @VER_VCS_006
   Scenario: Zużycie pamięci mieści się w progu
     Given 3 repozytoria są obserwowane, a jedno ma 300 zmienionych plików
-    And otwarty jest diff pliku o długości 2000 linii
+    And otwarte jest porównanie pliku o długości 2000 linii w zewnętrznym narzędziu
     When narzędzie pozostaje bezczynne przez 5 sekund
-    Then "footprint" procesu wynosi najwyżej 60 MB
+    Then "footprint" procesu vcs-lite wynosi najwyżej 60 MB
 
   @AT_VCS_017 @confirmed @REQ_VCS_017 @VER_VCS_007
   Scenario: Samo przeglądanie nie zmienia repozytorium
@@ -199,3 +200,41 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When narzędzie zostaje zamknięte i uruchomione ponownie
     And użytkownik wybiera "alpha"
     Then pole wiadomości jest puste
+
+  @AT_VCS_025 @confirmed @UC_VCS_03 @REQ_VCS_023 @VER_VCS_011
+  Scenario: Brak narzędzia diffu kończy się komunikatem
+    Given polecenie narzędzia diffu w ustawieniach wskazuje nieistniejący plik
+    When użytkownik otwiera porównanie "app.py" z grupy Changes
+    Then widoczny jest komunikat zawierający ścieżkę polecenia
+    And narzędzie działa dalej
+
+  @AT_VCS_026 @confirmed @REQ_VCS_023 @DEC_VCS_024 @VER_VCS_011
+  Scenario: Narzędzie diffu da się podmienić w ustawieniach
+    Given polecenie narzędzia diffu w ustawieniach to ["/usr/local/bin/inny-diff", "{left}", "{right}"]
+    When użytkownik otwiera porównanie "app.py" z grupy Changes
+    Then uruchomione zostaje "/usr/local/bin/inny-diff" ze ścieżkami obu stron
+
+  @AT_VCS_027 @confirmed @UC_VCS_03 @REQ_VCS_023 @REQ_VCS_017 @VER_VCS_011
+  Scenario: Pliki tymczasowe znikają po zamknięciu narzędzia diffu
+    Given użytkownik otworzył porównanie "app.py" z grupy Staged
+    When okno narzędzia diffu zostaje zamknięte
+    Then pliki tymczasowe obu stron nie istnieją
+    And repozytorium zostało odświeżone
+
+  @AT_VCS_028 @confirmed @UC_VCS_03 @REQ_VCS_023 @DEC_VCS_039 @VER_VCS_011
+  Scenario: Zmiana kopii roboczej w narzędziu diffu jest widoczna po zamknięciu
+    Given "app.py" jest w grupie Changes
+    And użytkownik otworzył porównanie "app.py" z grupy Changes
+    When narzędzie diffu zapisuje w kopii roboczej "app.py" linię "# poprawka"
+    And okno narzędzia diffu zostaje zamknięte
+    Then plik "app.py" na dysku zawiera linię "# poprawka"
+    And repozytorium zostało odświeżone
+
+  @AT_VCS_029 @confirmed @UC_VCS_03 @UC_VCS_04 @REQ_VCS_005 @REQ_VCS_023 @DEC_VCS_040 @VER_VCS_011
+  Scenario: Dwuklik otwiera porównanie, a spacja robi stage
+    Given "app.py" jest w grupie Changes
+    When użytkownik klika dwukrotnie "app.py"
+    Then otwiera się porównanie "app.py" z grupy Changes
+    And "app.py" pozostaje w grupie Changes
+    When użytkownik zaznacza "app.py" i naciska spację
+    Then "app.py" jest w grupie Staged

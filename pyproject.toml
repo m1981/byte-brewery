@@ -9,6 +9,7 @@ dependencies = [
     "prompt-extractor",
     "byte-utils",
     "svelte-mapper",
+    "vcs-lite",
     "pycallgraph2>=1.1.3",
     "setuptools>=82.0.1",
 ]
@@ -19,6 +20,7 @@ augment-ai      = { workspace = true }
 prompt-extractor = { workspace = true }
 byte-utils      = { workspace = true }
 svelte-mapper   = { workspace = true }
+vcs-lite        = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]

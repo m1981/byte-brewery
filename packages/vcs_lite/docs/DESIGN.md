@@ -23,7 +23,7 @@ app/ (bez Tk)     AppModel: stan aplikacji, reguły aktywności przycisków,
                   szkice wiadomości, S-VCS-01; zleca operacje do Worker
    ▲  wyniki           │ operacje
    │                   ▼
-core/ (bez Tk)    gitcli · status · repo · diffmodel · settings
+core/ (bez Tk)    gitcli · status · repo · difftool · settings
 ```
 
 | Moduł | Odpowiedzialność | REQ |
@@ -31,7 +31,7 @@ core/ (bez Tk)    gitcli · status · repo · diffmodel · settings
 | `core/gitcli.py` | Jedyne miejsce, które uruchamia `git`: środowisko, limity czasu, dekodowanie wyjścia, zamiana błędów na wynik. | REQ-VCS-010, 014, 017 |
 | `core/status.py` | Czysta funkcja: bajty `git status --porcelain=v2 -z --branch` → `RepoStatus` (gałąź, upstream, ahead/behind, wpisy). Implementuje T-VCS-01. | REQ-VCS-003–004, 019 |
 | `core/repo.py` | Operacje na jednym repo: status, treść stron diffu, stage, unstage, commit, push, pull. | REQ-VCS-005, 009–013, 020 |
-| `core/diffmodel.py` | Czysta funkcja: dwa teksty → wiersze lewo–prawo z typem (`equal`, `add`, `del`, `change`). | REQ-VCS-006–008 |
+| `core/difftool.py` | Port `ExternalDiffTool` i adapter `CommandTemplateDiffTool` (DES-VCS-036–039). Zastępuje wbudowany `diffmodel` (DEC-VCS-035). | REQ-VCS-023 |
 | `core/settings.py` | Skan `rootdir` i trwały zapis wyboru repo. | REQ-VCS-001, DEC-VCS-007, 016 |
 | `app/model.py` | `AppModel`: lista repo, wybrane repo, grupy plików, aktywność przycisków, szkice per repo, stan S-VCS-01. | REQ-VCS-002, 009, 016, 021–022 |
 | `app/worker.py` | Wykonanie operacji poza wątkiem Tk; najwyżej jedna operacja na repo naraz. | REQ-VCS-016, 101 |
@@ -60,9 +60,9 @@ core/ (bez Tk)    gitcli · status · repo · diffmodel · settings
 | ID | Decyzja | REQ |
 |---|---|---|
 | DES-VCS-007 | HEAD: `git cat-file blob HEAD:<ścieżka>`. Indeks: `git cat-file blob :<ścieżka>`. Kopia robocza: odczyt pliku z dysku. Strona „pusta” to pusty tekst. | T-VCS-01 |
-| DES-VCS-008 | Rozmiar sprawdzany przed odczytem (`git cat-file -s`, `os.stat`). Powyżej 1 MB treść nie jest ładowana. Plik jest binarny, jeśli pierwsze 8000 bajtów zawiera bajt NUL (ta sama heurystyka co w gicie). | REQ-VCS-007, 100 |
-| DES-VCS-009 | `diffmodel` używa `difflib.SequenceMatcher(autojunk=False)` na liniach. Opkody tłumaczy tak: `equal` → pary linii; `replace` → pary `change`, a nadmiar po jednej stronie jako `del` lub `add` z pustą drugą stroną; `delete` → `del`; `insert` → `add`. Powyżej 20 000 linii po którejkolwiek stronie: komunikat zamiast diffu. | REQ-VCS-006–007 |
-| DES-VCS-010 | Liczenie diffu odbywa się w wątku Worker; widok dostaje gotowe wiersze. Przy przełączeniu pliku poprzednie wiersze są zwalniane. | REQ-VCS-016, 100 |
+| DES-VCS-008 | Rozmiar sprawdzany przed odczytem (`git cat-file -s`, `os.stat`). Powyżej 1 MB treść nie jest ładowana. Plik jest binarny, jeśli pierwsze 8000 bajtów zawiera bajt NUL (ta sama heurystyka co w gicie). Zakres w v1: Q-VCS-029. | REQ-VCS-007, 100 |
+| DES-VCS-009 | WYCOFANE (DEC-VCS-035): wbudowany `diffmodel` na `difflib` zastąpiony zewnętrznym narzędziem. | REQ-VCS-006 |
+| DES-VCS-010 | WYCOFANE (DEC-VCS-035): liczenie wbudowanego diffu w wątku Worker. | REQ-VCS-006 |
 
 ### Operacje zmieniające repo
 
@@ -94,12 +94,12 @@ core/ (bez Tk)    gitcli · status · repo · diffmodel · settings
 
 | ID | Decyzja | REQ |
 |---|---|---|
-| DES-VCS-022 | Układ E-01: poziomy `ttk.PanedWindow` z trzema kolumnami (repo, pliki, diff) i dolny pasek commita. | E-01, DEC-VCS-015 |
+| DES-VCS-022 | Układ E-01: poziomy `ttk.PanedWindow` z dwiema kolumnami (repo, pliki) i dolny pasek commita; bez panelu diffu (DEC-VCS-035). | E-01, DEC-VCS-015 |
 | DES-VCS-023 | `RepoList`: `ttk.Treeview` z kolumnami nazwa, gałąź, liczba zmian. Repo NIEDOSTĘPNE jest wyszarzone. | REQ-VCS-002, 018 |
-| DES-VCS-024 | `FileTree`: `ttk.Treeview` z węzłami grup i plikami. Stage i unstage: dwuklik, spacja lub menu kontekstowe. Plik w obu grupach to dwa osobne wiersze. | REQ-VCS-003, 005 |
-| DES-VCS-025 | `DiffView`: dwa `tk.Text` w stanie `disabled`, numery linii w osobnych wąskich `tk.Text`. Kolory przez tagi `add`, `del`, `change`, `pad`. Jeden pasek przewijania steruje oboma panelami, a kółko myszy jest przypięte do obu. | REQ-VCS-006 |
+| DES-VCS-024 | `FileTree`: `ttk.Treeview` z węzłami grup i plikami. Stage i unstage: spacja lub menu kontekstowe; dwuklik lub Enter otwiera porównanie (DEC-VCS-040). Plik w obu grupach to dwa osobne wiersze. | REQ-VCS-003, 005 |
+| DES-VCS-025 | WYCOFANE (DEC-VCS-035): wbudowany `DiffView` na dwóch `tk.Text`. | REQ-VCS-006 |
 | DES-VCS-026 | `CommitBar`: wieloliniowe pole wiadomości oraz przyciski z nazwą repo („Commit do byte-brewery”), Commit & Push, Pull i Refresh. Aktywność przycisków liczy `AppModel`. Skróty: ⌘1–⌘9, ⌘↩, ⌘⇧↩. | REQ-VCS-009, 021–022 |
-| DES-VCS-027 | Jeden zestaw kolorów diffu, dobrany pod tryb jasny. Tryb ciemny nie jest obsługiwany w v1. | E-01, DEC-VCS-028 |
+| DES-VCS-027 | WYCOFANE (DEC-VCS-035): kolory wbudowanego diffu. Tryb ciemny i tak poza v1, DEC-VCS-028. | DEC-VCS-028 |
 
 ### Zewnętrzne narzędzie diffu
 
@@ -110,7 +110,7 @@ core/ (bez Tk)    gitcli · status · repo · diffmodel · settings
 | DES-VCS-038 | Strony z gita (HEAD, indeks) trafiają do plików tymczasowych tylko do odczytu (`0o444`). Strona z kopii roboczej to prawdziwa ścieżka, więc edycja w narzędziu zmienia plik na dysku. Wątek Worker czeka na zakończenie procesu (`bcomp` czeka na zamknięcie okna), a potem usuwa pliki tymczasowe i odświeża repo. | REQ-VCS-017, 023 |
 | DES-VCS-039 | Gdy polecenie z ustawień nie istnieje albo kończy się błędem, narzędzie pokazuje komunikat ze ścieżką i stderr. Wbudowany diff działa dalej. | REQ-VCS-023 |
 
-Termin wdrożenia DES-VCS-036–039 zależy od Q-VCS-012b, a relacja do wbudowanego diffu od Q-VCS-012c.
+DES-VCS-036–039 wchodzą do v1 i zastępują wbudowany diff (DEC-VCS-034, DEC-VCS-035). Edycja kopii roboczej w DES-VCS-038 jest dozwolona (DEC-VCS-039).
 
 ## Uruchamianie
 
@@ -127,26 +127,28 @@ Termin wdrożenia DES-VCS-036–039 zależy od Q-VCS-012b, a relacja do wbudowan
 | DES-VCS-031 | Testy jednostkowe `core/` na tymczasowych repo tworzonych przez git CLI w `tmp_path`; push i pull na lokalnym repo bare jako `origin`. Każdy wiersz T-VCS-01 ma swój test. | VER-VCS-001–004, 009 |
 | DES-VCS-032 | Scenariusze AT dotyczące przycisków, pól i grup są testowane na `AppModel`, bez Tk. Ręczna weryfikacja w Tk tylko dla układu i przewijania diffu. | VER-VCS-003, 005, 008, 010 |
 | DES-VCS-033 | Nazwy testów zawierają ID scenariusza i wymagania, np. `test_at_vcs_010_req_vcs_009_commit_only_staged`. `ACCEPTANCE.feature` jest dokumentacją, a wykonują go zwykłe testy pytest, bez `pytest-bdd`. | DEC-VCS-029 |
-| DES-VCS-034 | Skrypt pomiaru `tests/measure_footprint.py`: buduje środowisko z REQ-VCS-100 (3 repo, 300 zmian, diff 2000 linii), uruchamia narzędzie, po 5 s odczytuje `footprint <pid>` i zapisuje wynik z wersją Pythona i Tk. | VER-VCS-006 |
+| DES-VCS-034 | Skrypt pomiaru `tests/measure_footprint.py`: buduje środowisko z REQ-VCS-100 (3 repo, 300 zmian, otwarte porównanie w zewnętrznym narzędziu; mierzony tylko proces vcs-lite, DEC-VCS-042), uruchamia narzędzie, po 5 s odczytuje `footprint <pid>` i zapisuje wynik z wersją Pythona i Tk. | VER-VCS-006 |
 | DES-VCS-035 | Test REQ-VCS-101: licznik wywołań w `gitcli` i sprawdzenie, że przez 10 s bezczynności bez fokusu nie było żadnego. | REQ-VCS-101 |
 
 ## Kolejność realizacji
 
-1. `core/status.py` i `core/diffmodel.py` (czyste funkcje) z testami T-VCS-01.
-2. `core/gitcli.py` i `core/repo.py` z testami na tymczasowych repo, w tym push i pull.
-3. `core/settings.py`, potem `app/model.py` i `app/worker.py` z testami AT na modelu.
-4. `ui/` i ręczna weryfikacja w Tk.
-5. Pomiar DES-VCS-034 i przejście DoD.
+1. Sprawdzanie śledzenia powiązań (REQ-VCS-200–207), DES-VCS-040.
+2. `core/status.py` (czysta funkcja) z testami T-VCS-01 oraz `core/difftool.py` z adapterem testowym.
+3. `core/gitcli.py` i `core/repo.py` z testami na tymczasowych repo, w tym push i pull.
+4. `core/settings.py`, potem `app/model.py` i `app/worker.py` z testami AT na modelu.
+5. `ui/` i ręczna weryfikacja w Tk.
+6. Pomiar DES-VCS-034 i przejście DoD.
 
 ## Ryzyka
 
 | Ryzyko | Skutek | Środek zaradczy |
 |---|---|---|
-| `SequenceMatcher` jest wolny dla dużych, bardzo różnych plików. | Długie liczenie diffu. | Limit 20 000 linii (REQ-VCS-007) i liczenie w wątku (DES-VCS-010). Jeśli to nie wystarczy, zmierzyć i rozważyć `git diff --no-index` jako źródło opkodów. |
+| Beyond Compare 4 na Macu jest tylko na Intel i działa przez Rosettę (OBS-VCS-005). | Gdy Apple ograniczy Rosettę, diff przestanie działać. | Adapter wymienny (DES-VCS-037): zmiana polecenia w ustawieniach na BC5 lub inne narzędzie. |
+| Brak wbudowanego diffu (DEC-VCS-035). | Bez działającego narzędzia zewnętrznego nie ma żadnego podglądu zmian. | Komunikat DES-VCS-039; świadoma decyzja użytkownika. |
 | Tk 8.6 na macOS jest starszy niż Tk 9 (gorsza obsługa trybu ciemnego, starsze zachowanie widgetów). | Tryb ciemny poza v1 (DEC-VCS-028); inne różnice niezbadane. | Ręczna weryfikacja UI w Tk 8.6 w kroku 4 kolejności realizacji. |
 | Hook `pre-commit` może działać długo albo czekać na wejście. | Operacja W TOKU przez dłuższy czas. | Limit czasu 30 s (DES-VCS-003) może być za krótki dla ciężkich hooków; do obserwacji w użyciu. |
 | Wiele tysięcy plików nieśledzonych, np. niezignorowany `node_modules/`. | Długi status i duża lista. | Do obserwacji; v1 nie ogranicza listy. |
 
 ## Pytania projektowe
 
-Q-VCS-015–019 rozstrzygnięte 2026-10-21 (DEC-VCS-025–029). Otwarte, w rejestrze SPEC.md: Q-VCS-012b i Q-VCS-012c (zewnętrzny diff).
+Rozstrzygnięte: Q-VCS-012b, 012c, 015–019, 024–028. Otwarte, w rejestrze SPEC.md: Q-VCS-029 (zakres REQ-VCS-007 i 008 w v1).
