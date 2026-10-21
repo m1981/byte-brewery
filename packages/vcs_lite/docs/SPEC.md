@@ -401,4 +401,4 @@ Rozpoznanie z 2026-10-21 na tym Macu, PyCharm 2025.3.4 (build 253.32098.74).
 
 ## Punkt wznowienia
 
-2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–044); rejestr pytań bez otwartych pozycji. TDD rozpoczęte (`TDD_STARTED = True`): gotowy `core/status.py` z testami T-VCS-01. Test REQ-VCS-205 oblewa celowo, dopóki potwierdzone AT nie mają testów (DEC-VCS-037). Następny krok według DESIGN.md: `core/difftool.py` z adapterem testowym, potem `core/gitcli.py` i `core/repo.py`.
+2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–044); rejestr pytań bez otwartych pozycji. TDD rozpoczęte (`TDD_STARTED = True`): gotowe `core/status.py` (testy T-VCS-01) i `core/difftool.py` (port, adapter szablonu polecenia, pliki tymczasowe; testy DES-VCS-036–039). Test REQ-VCS-205 oblewa celowo, dopóki potwierdzone AT nie mają testów (DEC-VCS-037). Następny krok według DESIGN.md: `core/gitcli.py` i `core/repo.py`.
