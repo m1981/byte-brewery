@@ -41,13 +41,13 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik wybiera "app.py" w grupie Changes
     Then diff pokazuje po prawej dodaną linię "# todo"
 
-  @AT_VCS_005 @proposal @UC_VCS_02 @REQ_VCS_003 @DEC_VCS_006 @VER_VCS_001
+  @AT_VCS_005 @confirmed @UC_VCS_02 @REQ_VCS_003 @DEC_VCS_006 @VER_VCS_001
   Scenario: Pliki w nowym katalogu są pokazane pojedynczo
     Given nieśledzony katalog "new/" zawiera pliki "a.txt" i "b.txt"
     When użytkownik wybiera repozytorium
     Then grupa Unversioned zawiera "new/a.txt" i "new/b.txt"
 
-  @AT_VCS_006 @proposal @UC_VCS_02 @REQ_VCS_004 @VER_VCS_001
+  @AT_VCS_006 @confirmed @UC_VCS_02 @REQ_VCS_004 @VER_VCS_001
   Scenario: Pliki ignorowane nie są pokazywane
     Given ".gitignore" zawiera "*.log"
     And na dysku istnieje nieśledzony plik "debug.log"
@@ -162,17 +162,40 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And liczba commitów w "beta" się nie zmieniła
     And pliki "beta" pozostają w grupie Staged
 
-  @AT_VCS_020 @decision_pending @UC_VCS_07 @REQ_VCS_020 @VER_VCS_009
+  @AT_VCS_020 @confirmed @UC_VCS_07 @REQ_VCS_020 @DEC_VCS_014 @DEC_VCS_018 @VER_VCS_009
   Scenario: Pull przesuwa gałąź do upstreamu
     Given "origin/main" ma commit "remote fix", którego brakuje lokalnie
     And lokalna gałąź "main" nie ma własnych commitów ponad "origin/main"
     When użytkownik wybiera Pull
     Then lokalna gałąź "main" zawiera commit "remote fix"
 
-  @AT_VCS_021 @decision_pending @UC_VCS_07 @REQ_VCS_020 @VER_VCS_009
+  @AT_VCS_021 @confirmed @UC_VCS_07 @REQ_VCS_020 @DEC_VCS_014 @DEC_VCS_018 @VER_VCS_009
   Scenario: Pull przy rozjechanych gałęziach nie zmienia repozytorium
     Given "origin/main" i lokalna "main" mają różne nowe commity
     When użytkownik wybiera Pull
     Then widoczny jest komunikat gita o niemożliwym fast-forward
     And lokalna gałąź "main" wskazuje ten sam commit co przed Pull
     And nie powstał commit scalający
+
+  @AT_VCS_022 @confirmed @UC_VCS_01 @REQ_VCS_001 @DEC_VCS_016 @VER_VCS_010
+  Scenario: Foldery niebędące repozytorium są w Settings ukryte
+    Given rootdir zawiera repozytorium "alpha" i zwykły folder "zdjecia"
+    When użytkownik otwiera Settings
+    Then lista zawiera "alpha"
+    And lista nie zawiera "zdjecia"
+
+  @AT_VCS_023 @confirmed @REQ_VCS_022 @DEC_VCS_015 @VER_VCS_010
+  Scenario: Szkic wiadomości commita jest osobny dla każdego repozytorium
+    Given repozytoria "alpha" i "beta" są obserwowane
+    When użytkownik wpisuje w "alpha" wiadomość "wip alpha"
+    And przełącza się na "beta" i wpisuje wiadomość "wip beta"
+    And wraca do "alpha"
+    Then pole wiadomości zawiera "wip alpha"
+    And przycisk commita nosi nazwę "Commit do alpha"
+
+  @AT_VCS_024 @confirmed @REQ_VCS_022 @DEC_VCS_020 @VER_VCS_010
+  Scenario: Szkic wiadomości nie jest zachowywany po zamknięciu narzędzia
+    Given w repozytorium "alpha" pole wiadomości zawiera "wip alpha"
+    When narzędzie zostaje zamknięte i uruchomione ponownie
+    And użytkownik wybiera "alpha"
+    Then pole wiadomości jest puste
