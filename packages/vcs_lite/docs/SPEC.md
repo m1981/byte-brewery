@@ -80,7 +80,7 @@ Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
 | DEC-VCS-032 | Bez pomiarów RAM-u Sublime Merge, Kaleidoscope i Meld. | Użytkownik 2026-10-21: „1: nie” na powtórzone pytanie 1 z Q-VCS-020. |
 | DEC-VCS-033 | Bez rozważania Sublime Merge zamiast budowy vcs-lite. | Użytkownik 2026-10-21: „2: nie” na powtórzone pytanie 2 z Q-VCS-020. |
 | DEC-VCS-034 | Zewnętrzny diff przez adapter (Beyond Compare) wchodzi do v1. | Użytkownik 2026-10-21: „12b: v1”. Q-VCS-012b, REQ-VCS-023. Zastępuje część DEC-VCS-019 o odłożeniu do v2 (dla PyCharma DEC-VCS-019 obowiązuje). |
-| DEC-VCS-035 | Beyond Compare zastępuje wbudowany diff. | Użytkownik 2026-10-21: „12c: BC zastepuje wbudowany”. Q-VCS-012c. REQ-VCS-006 zastąpione przez REQ-VCS-023; skutki dla REQ-VCS-007, 008, 100 i DEC-VCS-002 w Q-VCS-024–027. |
+| DEC-VCS-035 | Beyond Compare zastępuje wbudowany diff. | Użytkownik 2026-10-21: „12c: BC zastepuje wbudowany”. Q-VCS-012c. REQ-VCS-006 zastąpione przez REQ-VCS-023; skutki dla REQ-VCS-007, REQ-VCS-008, REQ-VCS-100 i DEC-VCS-002 w Q-VCS-024–027. |
 | DEC-VCS-036 | Linia `Trace:` tylko w docstringach modułów. | Użytkownik 2026-10-21: „21: tylko modulach”. Q-VCS-021, REQ-VCS-206. |
 | DEC-VCS-037 | Brak testu dla AT `@confirmed` oblewa sprawdzenie od startu TDD; wcześniej tylko raport. | Użytkownik 2026-10-21: „22: od startu TDD”. Q-VCS-022, REQ-VCS-205. |
 | DEC-VCS-038 | Utworzyć szkielet `packages/vcs_lite/` i przenieść tam dokumentację. Wykonane 2026-10-21: `pyproject.toml`, `src/vcs_lite/__init__.py`, `docs/`; pakiet dopisany do zależności i źródeł workspace w głównym `pyproject.toml`. | Użytkownik 2026-10-21: „23: tak”. Q-VCS-023, DEC-VCS-005, REQ-VCS-207. |
@@ -89,7 +89,8 @@ Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
 | DEC-VCS-041 | REQ-VCS-007 i REQ-VCS-008 zostają, bo Beyond Compare może zostać wycofany (np. gdy Rosetta przestanie działać). | Użytkownik 2026-10-21: „26: zostaw bo moze BC bedzie wycofany jak rozeta przestanie dzialac albo cos bedzie nie tak”. Q-VCS-026. Nie rozstrzyga, czy w v1 obejmują porównanie w BC: Q-VCS-029. |
 | DEC-VCS-042 | Limit 60 MB dotyczy wyłącznie procesu vcs-lite; dodatkowa pamięć Beyond Compare jest akceptowana. | Użytkownik 2026-10-21: „27: tylko vcs-lite i kacjeptuje ekstra ram na BC”. Q-VCS-027, REQ-VCS-100. |
 | DEC-VCS-043 | Reguły śledzenia powiązań REQ-VCS-200–207 zaakceptowane. | Użytkownik 2026-10-21: „28: akceptuje”. Q-VCS-028. |
-| DEC-VCS-017 | Zatwierdzone wszystkie propozycje z Q-VCS-011: DEC-VCS-006, REQ-VCS-003, 004, 007, 008, 013, 019, 102 i UC-VCS-02 2b. | Użytkownik 2026-10-21: „11: tak”. |
+| DEC-VCS-044 | REQ-VCS-007 i REQ-VCS-008 są w v1 uśpione: obowiązują dopiero, gdy wróci wbudowany lub inny diff; w v1 każdy plik, także binarny i duży, trafia do Beyond Compare. | Użytkownik 2026-10-21: „1: a” na Q-VCS-029. |
+| DEC-VCS-017 | Zatwierdzone wszystkie propozycje z Q-VCS-011: DEC-VCS-006, REQ-VCS-003, REQ-VCS-004, REQ-VCS-007, REQ-VCS-008, REQ-VCS-013, REQ-VCS-019, REQ-VCS-102 i UC-VCS-02 2b. | Użytkownik 2026-10-21: „11: tak”. |
 
 ## Wymagania funkcjonalne
 
@@ -101,8 +102,8 @@ Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
 | REQ-VCS-004 | Pliki ignorowane przez `.gitignore` nie są pokazywane. | Potwierdzone, DEC-VCS-017 | T-VCS-01 |
 | REQ-VCS-005 | Użytkownik może przenieść cały plik z Changes lub Unversioned do Staged (stage) i ze Staged z powrotem (unstage). Dotyczy to także usunięć i zmian nazwy. | Potwierdzone | DEC-VCS-001, T-VCS-01, UC-VCS-04 |
 | REQ-VCS-006 | ZASTĄPIONE przez REQ-VCS-023 (DEC-VCS-035). Pierwotna treść: wybór pliku pokazuje wbudowany diff lewo–prawo, tylko do odczytu, z numerami linii, wyróżnieniem zmian, wyrównaniem i wspólnym przewijaniem; strony według T-VCS-01. | Zastąpione | DEC-VCS-002, DEC-VCS-035 |
-| REQ-VCS-007 | Dla pliku binarnego lub przekraczającego limit rozmiaru narzędzie pokazuje komunikat zamiast diffu. Stage i unstage nadal działają. | Zachowane, DEC-VCS-041; limit 1 MB lub 20 000 linii, DEC-VCS-017. Zakres w v1: Q-VCS-029. | UC-VCS-03 |
-| REQ-VCS-008 | Tekst w kodowaniu innym niż UTF-8 jest pokazywany ze znakami zastępczymi. Narzędzie nigdy nie zmienia treści pliku. | Zachowane, DEC-VCS-041. Zakres w v1: Q-VCS-029. | UC-VCS-03 |
+| REQ-VCS-007 | Dla pliku binarnego lub przekraczającego limit rozmiaru narzędzie pokazuje komunikat zamiast diffu. Stage i unstage nadal działają. | Uśpione w v1, DEC-VCS-044; zachowane, DEC-VCS-041; limit 1 MB lub 20 000 linii, DEC-VCS-017. | UC-VCS-03 |
+| REQ-VCS-008 | Tekst w kodowaniu innym niż UTF-8 jest pokazywany ze znakami zastępczymi. Narzędzie nigdy nie zmienia treści pliku. | Uśpione w v1, DEC-VCS-044; zachowane, DEC-VCS-041. | UC-VCS-03 |
 | REQ-VCS-009 | Commit zapisuje wyłącznie zawartość Staged z wiadomością z pola commita. Przycisk jest nieaktywny, gdy Staged jest puste lub wiadomość składa się tylko z białych znaków. Po sukcesie pole wiadomości jest czyszczone. | Potwierdzone | UC-VCS-05 |
 | REQ-VCS-010 | Jeśli git lub hook odrzuci commit, narzędzie pokazuje pełny komunikat (stdout i stderr). Wiadomość commita i Staged pozostają nienaruszone. | Potwierdzone | UC-VCS-05 |
 | REQ-VCS-011 | Commit & Push wykonuje commit według REQ-VCS-009, a po jego sukcesie push bieżącej gałęzi do upstreamu. | Potwierdzone | UC-VCS-06 |
@@ -221,7 +222,7 @@ Wspólne dla wszystkich UC. **Aktor podstawowy:** programista pracujący na Macu
 
 | Krok | Warunek | Reakcja |
 |---|---|---|
-| 2a | Plik binarny lub bardzo duży. | Zależy od Q-VCS-029. |
+| 2a | Plik binarny lub bardzo duży. | Trafia do zewnętrznego narzędzia jak każdy inny; REQ-VCS-007 uśpione w v1, DEC-VCS-044. |
 | 2b | Narzędzie z ustawień nie istnieje albo kończy się błędem. | Komunikat ze ścieżką polecenia i stderr, DES-VCS-039. Wbudowanego diffu nie ma (DEC-VCS-035). |
 | 2c | Plik zniknął z dysku między odświeżeniem a wyborem. | Komunikat i odświeżenie repo. |
 | 2d | Plik w Staged i Changes. | Strony wynikają z grupy, z której wybrano porównanie. |
@@ -296,7 +297,8 @@ NEED ─► REQ ─► DES ─► kod (moduł)
 
 | ID | Obserwacja | Dowód |
 |---|---|---|
-| OBS-VCS-006 | Wszystkie odwołania zapisane pełnym ID wskazują istniejące definicje. 44 odwołania używają jednak skrótów (`REQ-VCS-005–008`, `REQ-VCS-003, 004, 007`), których program nie rozwinie bez reguł; przez to np. REQ-VCS-004 wygląda na nieobecny w DESIGN.md, choć jest tam jako `REQ-VCS-003–004`. 10 wymagań nie ma żadnego scenariusza AT: REQ-VCS-002, 008, 013, 015, 016, 019, 023, 101, 102, 103. VER-VCS-001–005 opisują temat słowami zamiast ID wymagań. DES-VCS-030 odwołuje się do sekcji, a nie do ID. Kierunek wstecz (test → AT/REQ, kod → DES/REQ) jeszcze nie istnieje, bo nie ma testów ani kodu. | Doraźny skrypt agenta poza repo, uruchomiony na SPEC.md, DESIGN.md i ACCEPTANCE.feature. |
+| OBS-VCS-006 | Wszystkie odwołania zapisane pełnym ID wskazują istniejące definicje. 44 odwołania używają jednak skrótów (`REQ-VCS-005–008`, `REQ-VCS-003, REQ-VCS-004, REQ-VCS-007`), których program nie rozwinie bez reguł; przez to np. REQ-VCS-004 wygląda na nieobecny w DESIGN.md, choć jest tam jako `REQ-VCS-003–004`. 10 wymagań nie ma żadnego scenariusza AT: REQ-VCS-002, REQ-VCS-008, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-019, REQ-VCS-023, REQ-VCS-101, REQ-VCS-102, REQ-VCS-103. VER-VCS-001–005 opisują temat słowami zamiast ID wymagań. DES-VCS-030 odwołuje się do sekcji, a nie do ID. Kierunek wstecz (test → AT/REQ, kod → DES/REQ) jeszcze nie istnieje, bo nie ma testów ani kodu. | Doraźny skrypt agenta poza repo, uruchomiony na SPEC.md, DESIGN.md i ACCEPTANCE.feature. |
+| OBS-VCS-007 | Stan 2026-10-21 po wdrożeniu programu sprawdzającego (DES-VCS-040): 20 testów przechodzi (8 reguł na prawdziwych dokumentach i 12 testów samego programu). Program znalazł i agent naprawił: podwójną definicję Q-VCS-009 (nagłówek i wiersz rejestru); 23 niedozwolone skróty, przepisane automatycznie na pełne ID; odwołanie do niezdefiniowanego DES-VCS-040; wymagania bez AT, VER lub DES; wiersze DES-VCS-006, DES-VCS-007, DES-VCS-031 i DES-VCS-032 bez REQ ani DEC. Agent dodał: ID wymagań w VER-VCS-001–006, wiersze VER-VCS-012–014 i DES-VCS-040, powiązania REQ w DES-VCS-006, DES-VCS-007 i DES-VCS-034. Przy okazji wyszły dwa błędy samego programu (status i wyjątek „bez DES:” rozpoznawane w dowolnym miejscu tekstu), poprawione i pokryte testem. Przed startem TDD 28 scenariuszy `@confirmed` bez testów jest tylko ostrzeżeniem w TRACE.md. | `.venv/bin/python -m pytest packages/vcs_lite/tests` w byte-brewery, Python 3.12.11, pytest 9.0.2. |
 
 ### Reguły (zaakceptowane, DEC-VCS-043)
 
@@ -315,16 +317,19 @@ NEED ─► REQ ─► DES ─► kod (moduł)
 
 | ID | Co weryfikuje | Metoda | Scenariusze |
 |---|---|---|---|
-| VER-VCS-001 | Grupowanie statusów i strony diffu | Testy jednostkowe warstwy gita na tymczasowym repo; po jednym przypadku na wiersz T-VCS-01. | AT-VCS-003–007 |
-| VER-VCS-002 | Stage i unstage całych plików | Test na tymczasowym repo. | AT-VCS-008–009 |
-| VER-VCS-003 | Commit i obsługa odrzucenia | Test na tymczasowym repo z hookiem `pre-commit`. | AT-VCS-010–012 |
-| VER-VCS-004 | Push | Test z lokalnym bare repo jako `origin`. | AT-VCS-013–015 |
-| VER-VCS-005 | Settings i trwałość wyboru | Test na tymczasowym `rootdir`. | AT-VCS-001–002 |
-| VER-VCS-006 | REQ-VCS-100 | Pomiar `footprint` w opisanych warunkach. | AT-VCS-016 |
+| VER-VCS-001 | REQ-VCS-003, REQ-VCS-004, REQ-VCS-007, REQ-VCS-008, REQ-VCS-019: grupowanie statusów (T-VCS-01), pliki binarne i kodowanie | Testy jednostkowe warstwy gita na tymczasowym repo; po jednym przypadku na wiersz T-VCS-01. | AT-VCS-003–007 |
+| VER-VCS-002 | REQ-VCS-005: stage i unstage całych plików | Test na tymczasowym repo. | AT-VCS-008–009 |
+| VER-VCS-003 | REQ-VCS-009, REQ-VCS-010: commit i obsługa odrzucenia | Test na tymczasowym repo z hookiem `pre-commit`. | AT-VCS-010–012 |
+| VER-VCS-004 | REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-014: push | Test z lokalnym bare repo jako `origin`. | AT-VCS-013–015 |
+| VER-VCS-005 | REQ-VCS-001, REQ-VCS-018: Settings, trwałość wyboru, repo niedostępne | Test na tymczasowym `rootdir`. | AT-VCS-001–002 |
+| VER-VCS-006 | REQ-VCS-100, REQ-VCS-101, REQ-VCS-102: pamięć, brak pracy w tle, czas odświeżenia | Pomiar `footprint` i czasu odświeżenia (DES-VCS-034); licznik wywołań `git` w bezczynności (DES-VCS-035). | AT-VCS-016 |
 | VER-VCS-007 | REQ-VCS-017 | Porównanie stanu `.git` przed i po samym przeglądaniu. | AT-VCS-017 |
 | VER-VCS-008 | REQ-VCS-001 (pierwszy poziom), REQ-VCS-021 | Test na tymczasowym `rootdir` z repo zagnieżdżonym i dwoma repo obserwowanymi. | AT-VCS-018–019 |
 | VER-VCS-009 | REQ-VCS-020 | Test z lokalnym bare repo jako `origin`. | AT-VCS-020–021 |
 | VER-VCS-011 | REQ-VCS-023 | Test z adapterem testowym w miejscu Beyond Compare: zapisuje otrzymane polecenie i ścieżki, a test sprawdza treść stron i sprzątanie. Ręcznie: jedno porównanie w prawdziwym `bcomp`. | AT-VCS-004, AT-VCS-025–027 |
+| VER-VCS-012 | REQ-VCS-002, REQ-VCS-015, REQ-VCS-016, REQ-VCS-021: lista repo, odświeżanie, blokada równoległych operacji, akcje na wybranym repo | Testy `AppModel` bez Tk (DES-VCS-032) na tymczasowych repo. | AT-VCS-019, AT-VCS-023 |
+| VER-VCS-013 | REQ-VCS-103: uruchomienie | Ręcznie: `uv run vcs-lite` w katalogu byte-brewery otwiera okno E-01 na macOS z Apple Silicon. | — |
+| VER-VCS-014 | REQ-VCS-200–207: śledzenie powiązań w obie strony | `tests/test_traceability.py`: reguły na prawdziwych dokumentach i testy samego programu sprawdzającego na małych przykładach. | — |
 | VER-VCS-010 | REQ-VCS-001 (ukrywanie), REQ-VCS-022 | Test na tymczasowym `rootdir`; test przełączania repo. | AT-VCS-022–023 |
 
 Testy noszą w nazwie identyfikator REQ, np. `test_req_vcs_005_stage_whole_file`.
@@ -371,10 +376,10 @@ Testy noszą w nazwie identyfikator REQ, np. `test_req_vcs_005_stage_whole_file`
 | Q-VCS-026 | Co z REQ-VCS-007 (binarne i duże pliki) i REQ-VCS-008 (kodowanie), które dotyczyły wbudowanego diffu? Rekomendacja agenta: wycofać oba i przekazywać każdy plik do Beyond Compare, które samo porównuje pliki binarne i różne kodowania. | ROZSTRZYGNIĘTE 2026-10-21: zostawić, DEC-VCS-041; zakres w v1 w Q-VCS-029. | REQ-VCS-007, REQ-VCS-008, DES-VCS-008 |
 | Q-VCS-027 | REQ-VCS-100 mierzy pamięć „z otwartym diffem pliku 2000 linii”. Czy limit 60 MB dotyczy teraz tylko procesu vcs-lite, a Beyond Compare (ok. 235 MB, OBS-VCS-005) liczy się osobno? Rekomendacja agenta: tak. | ROZSTRZYGNIĘTE 2026-10-21: tak, DEC-VCS-042. | REQ-VCS-100, DES-VCS-034, AT-VCS-016 |
 | Q-VCS-028 | Czy akceptujesz reguły śledzenia powiązań REQ-VCS-200–207 jako całość? Odpowiedzi na Q-VCS-021–023 dotyczyły szczegółów, a pytanie o całość zostało bez odpowiedzi. | ROZSTRZYGNIĘTE 2026-10-21: tak, DEC-VCS-043. | REQ-VCS-200–207 |
-| Q-VCS-029 | REQ-VCS-007 i REQ-VCS-008 zostają (DEC-VCS-041). Co oznaczają w v1, gdy diff robi Beyond Compare? (a) Uśpione: obowiązują dopiero, gdy wróci wbudowany lub inny diff; w v1 każdy plik trafia do BC. (b) Obowiązują od razu: vcs-lite nie otwiera BC dla plików binarnych i ponad 1 MB lub 20 000 linii, tylko pokazuje komunikat. Rekomendacja agenta: (a), bo BC dobrze porównuje pliki binarne i duże, a wymagania czekają gotowe na wypadek jego wycofania. | OTWARTE; odpowiedź 26 zachowała wymagania bez określenia zakresu w v1. | REQ-VCS-007, REQ-VCS-008, DES-VCS-008, AT-VCS-007 |
+| Q-VCS-029 | REQ-VCS-007 i REQ-VCS-008 zostają (DEC-VCS-041). Co oznaczają w v1, gdy diff robi Beyond Compare? (a) Uśpione: obowiązują dopiero, gdy wróci wbudowany lub inny diff; w v1 każdy plik trafia do BC. (b) Obowiązują od razu: vcs-lite nie otwiera BC dla plików binarnych i ponad 1 MB lub 20 000 linii, tylko pokazuje komunikat. Rekomendacja agenta: (a), bo BC dobrze porównuje pliki binarne i duże, a wymagania czekają gotowe na wypadek jego wycofania. | ROZSTRZYGNIĘTE 2026-10-21: (a), DEC-VCS-044. | REQ-VCS-007, REQ-VCS-008, DES-VCS-008, AT-VCS-007 |
 | Q-VCS-013 | Czy szkic wiadomości commita (REQ-VCS-022) ma przetrwać zamknięcie narzędzia, czy wystarczy, że przetrwa przełączanie repo w trakcie pracy? | ROZSTRZYGNIĘTE 2026-10-21: wystarczy przełączanie repo, DEC-VCS-020. | REQ-VCS-022 |
 
-### Q-VCS-009 — warianty interfejsu jednego repo
+### Warianty interfejsu jednego repo (Q-VCS-009)
 
 | Wariant | Opis | Za | Przeciw |
 |---|---|---|---|
@@ -396,4 +401,4 @@ Rozpoznanie z 2026-10-21 na tym Macu, PyCharm 2025.3.4 (build 253.32098.74).
 
 ## Punkt wznowienia
 
-2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–043). Otwarte: Q-VCS-029. Następny krok: program sprawdzający śledzenie powiązań (REQ-VCS-200–207), dopiero potem architektura kodu i TDD.
+2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–043). Program sprawdzający śledzenie powiązań działa i przechodzi (OBS-VCS-007); macierz w `docs/TRACE.md`. Rejestr pytań nie ma otwartych pozycji. Następny krok: architektura kodu i TDD (ustawić `TDD_STARTED = True`).

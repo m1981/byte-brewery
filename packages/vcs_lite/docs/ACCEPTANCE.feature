@@ -2,6 +2,7 @@
 # Specyfikacja wykonywalna po dodaniu adaptera testowego; obecnie bez definicji kroków.
 # Status @confirmed oznacza potwierdzoną potrzebę, a nie przejście testu.
 # Statusy @proposal i @decision_pending nie stanowią decyzji użytkownika.
+# Status @dormant oznacza potwierdzoną potrzebę, która w v1 nie obowiązuje.
 @vcs_lite
 Feature: Lekki panel VCS dla kilku repozytoriów
   Programista z małą ilością wolnej pamięci przegląda zmiany w wybranych repozytoriach,
@@ -54,8 +55,8 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik wybiera repozytorium
     Then żadna grupa nie zawiera "debug.log"
 
-  # Zakres w v1 zależy od Q-VCS-029.
-  @AT_VCS_007 @decision_pending @UC_VCS_03 @REQ_VCS_007 @VER_VCS_001
+  # Uśpione w v1: DEC-VCS-044.
+  @AT_VCS_007 @dormant @UC_VCS_03 @REQ_VCS_007 @VER_VCS_001
   Scenario: Plik binarny nie ma diffu, ale można go stage'ować
     Given nieśledzony plik "logo.png" ma zawartość binarną
     When użytkownik wybiera "logo.png"
