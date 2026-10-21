@@ -9,7 +9,7 @@ import pytest
 from conftest import GIT_ENV, Repo
 
 from vcs_lite.core.gitcli import GitCli
-from vcs_lite.core.repo import GitRepo
+from vcs_lite.core.repo import GitRepo, UnresolvedConflict
 from vcs_lite.core.status import Group
 
 
@@ -185,3 +185,56 @@ def test_at_vcs_017_browsing_does_not_change_the_repository(repo, gr):
         for change in gr.status().changes:
             gr.sides(change)
     assert _snapshot(repo.path) == before
+
+
+# ---------- marking a conflict as resolved (REQ-VCS-024, DES-VCS-044) ----------
+
+def conflicted(repo, main_text="main\n", other_text="other\n", delete_on_other=False):
+    """Merge `other` into `main` so that f.txt ends up in conflict."""
+    repo.write("f.txt", "base\n"); repo.commit("base")
+    repo.git("checkout", "-q", "-b", "other")
+    if delete_on_other:
+        repo.git("rm", "-q", "f.txt"); repo.git("commit", "-q", "-m", "delete")
+    else:
+        repo.write("f.txt", other_text); repo.commit("other")
+    repo.git("checkout", "-q", "main"); repo.write("f.txt", main_text); repo.commit("main")
+    repo.git("merge", "-q", "other", check=False)
+
+
+def test_req_vcs_024_resolved_conflict_is_marked_with_git_add(repo, gr):
+    conflicted(repo)
+    repo.write("f.txt", "main and other\n")
+    assert gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt")).ok
+    st = gr.status()
+    assert not st.has_conflicts and [c.path for c in st.group(Group.STAGED)] == ["f.txt"]
+
+
+def test_req_vcs_024_file_with_markers_is_not_marked_and_names_the_line(repo, gr):
+    conflicted(repo)
+    calls = gr.git.call_count
+    with pytest.raises(UnresolvedConflict, match=r"f\.txt.*linia 1"):
+        gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt"))
+    assert gr.git.call_count == calls + 1  # only the status lookup above; no git add
+    assert gr.status().has_conflicts
+
+
+def test_req_vcs_024_diff3_base_marker_also_blocks(repo, gr):
+    conflicted(repo)
+    repo.write("f.txt", "ours\n||||||| base\nbase\n")
+    with pytest.raises(UnresolvedConflict, match="linia 2"):
+        gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt"))
+
+
+def test_req_vcs_024_markdown_heading_underline_is_not_a_marker(repo, gr):
+    conflicted(repo)
+    repo.write("f.txt", "Tytuł\n=======\n\nTreść po scaleniu.\n")
+    assert gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt")).ok
+    assert not gr.status().has_conflicts
+
+
+def test_req_vcs_024_conflict_resolved_by_deleting_the_file_uses_git_rm(repo, gr):
+    conflicted(repo, delete_on_other=True)
+    (repo.path / "f.txt").unlink()
+    assert gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt")).ok
+    st = gr.status()
+    assert not st.has_conflicts and [(c.path, c.code) for c in st.group(Group.STAGED)] == [("f.txt", "D")]

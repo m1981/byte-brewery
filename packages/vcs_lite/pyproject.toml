@@ -9,6 +9,9 @@ description = "Lightweight Tk git panel for macOS"
 requires-python = ">=3.10"
 dependencies = []
 
+[project.scripts]
+vcs-lite = "vcs_lite.ui.main:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/vcs_lite"]
 

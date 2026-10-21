@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 from conftest import GIT_ENV, Repo
-from fakes import FakeDiffTool, ManualWorker
+from world import World
 
 from vcs_lite.app.model import AppModel, RepoState
 from vcs_lite.app.worker import Worker
@@ -27,44 +27,6 @@ from vcs_lite.core.status import Group
 
 
 # ---------- fixtures ----------
-
-class World:
-    """A rootdir with repositories, plus the model wired to fakes."""
-
-    def __init__(self, tmp_path: Path):
-        self.root = tmp_path / "PycharmProjects"
-        self.root.mkdir()
-        self.git = GitCli(env=GIT_ENV)
-        self.worker = ManualWorker()
-        self.tool = FakeDiffTool()
-        self.questions: list[str] = []
-        self.answer = True
-        self.model: AppModel | None = None
-
-    def repo(self, name: str) -> Repo:
-        r = Repo(self.root / name)
-        r.path.mkdir()
-        r.git("init", "-q", "-b", "main")
-        r.write("README.md", "x\n")
-        r.commit("init")
-        return r
-
-    def start(self, *names: str) -> AppModel:
-        settings = Settings(rootdir=str(self.root), repos=names)
-        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, worker=self.worker, confirm=self._confirm)
-        self.model.refresh_all()
-        self.worker.settle()
-        return self.model
-
-    def _confirm(self, question: str) -> bool:
-        self.questions.append(question)
-        return self.answer
-
-    def select(self, name: str) -> AppModel:
-        self.model.select(name)
-        self.worker.settle()
-        return self.model
-
 
 @pytest.fixture
 def world(tmp_path) -> World:
@@ -403,3 +365,48 @@ def _drain_until(worker: Worker, predicate, timeout: float = 10.0) -> None:
         assert time.monotonic() < deadline, "timed out"
         worker.drain()
         time.sleep(0.02)
+
+
+def test_req_vcs_021_operation_targets_the_repository_selected_at_click_time(world):
+    a, b = staged_repo(world, "alpha"), staged_repo(world, "beta")
+    model = world.start("alpha", "beta")
+    world.select("beta"); model.message = "wip beta"
+    world.select("alpha"); model.message = "fix alpha"
+    beta_before = commit_count(b)
+    model.commit()
+    model.select("beta")  # the user switches before the commit has run
+    world.worker.settle()
+    assert a.git("log", "-1", "--format=%s").strip() == b"fix alpha"
+    assert commit_count(b) == beta_before
+    assert model.view("alpha").draft == "" and model.view("beta").draft == "wip beta"
+
+
+# ---------- conflicts (REQ-VCS-024) ----------
+
+def conflicted_repo(world: World, name: str = "gamma") -> Repo:
+    r = world.repo(name)
+    r.write("f.txt", "base\n"); r.commit("base")
+    r.git("checkout", "-q", "-b", "other"); r.write("f.txt", "other\n"); r.commit("other")
+    r.git("checkout", "-q", "main"); r.write("f.txt", "main\n"); r.commit("main")
+    r.git("merge", "-q", "other", check=False)
+    return r
+
+
+def test_at_vcs_030_fixed_conflict_is_marked_resolved_with_space(world):
+    r = conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    r.write("f.txt", "main and other\n")
+    model.toggle(change(model, Group.CONFLICTS, "f.txt")); world.worker.settle()
+    assert paths(model, Group.CONFLICTS) == [] and paths(model, Group.STAGED) == ["f.txt"]
+    model.message = "Merge branch 'other'"
+    assert model.can_commit
+
+
+def test_at_vcs_031_file_with_markers_stays_in_conflict_with_a_message(world):
+    conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    model.toggle(change(model, Group.CONFLICTS, "f.txt")); world.worker.settle()
+    assert "f.txt" in model.error and "linia 1" in model.error
+    assert paths(model, Group.CONFLICTS) == ["f.txt"]
+    model.message = "merge"
+    assert not model.can_commit

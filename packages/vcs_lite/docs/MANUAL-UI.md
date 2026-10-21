@@ -1,0 +1,50 @@
+# vcs-lite — ręczna weryfikacja okna
+
+Lista kontrolna dla VER-VCS-013 i części ręcznej DES-VCS-032. Wykonuje ją użytkownik na repozytoriach demonstracyjnych; agent przygotowuje repozytoria, uruchamia okno i odczytuje zrzuty. Odwołania do ID sprawdza `tests/test_traceability.py`.
+
+## Przygotowanie (agent)
+
+- `tools/make_demo.py <folder>` tworzy repozytoria demonstracyjne poza `~/PycharmProjects`:
+  - `alpha`: plik zmieniony, plik w Staged, plik w obu grupach, nowy folder z dwoma plikami, plik ignorowany `.log`, zmiana nazwy;
+  - `beta`: repo z lokalnym `origin` (push i pull);
+  - `gamma`: konflikt po merge;
+  - filtry: zwykły folder `zdjecia`, ukryte repo `.ukryte`, repo zagnieżdżone `alpha/nested`.
+- Okno startuje z własnym plikiem ustawień w folderze demo, więc ustawienia użytkownika zostają nietknięte.
+- Pamięć mierzy agent przez `footprint <pid>`.
+
+## Zrzuty ekranu
+
+- Zrzut jednego okna: ⌘⇧4, spacja, kliknięcie okna. Plik trafia na Biurko albo do folderu ustawionego w ⌘⇧5 → Opcje (np. `~/PycharmProjects/INBOX`).
+- Po każdym kroku: „krok N: OK” albo „krok N: nie, <co widać>”, a przy zrzucie numer kroku.
+- Dodatkowy zrzut zawsze, gdy coś wygląda źle: ucięty tekst, nachodzące elementy, komunikat błędu, zawieszone okno.
+
+## Kroki
+
+| Krok | Działanie | Oczekiwany wynik | Zrzut | Sprawdza |
+|---|---|---|---|---|
+| 1 | Okno startuje samo. | Wygląd zgodny ze wzorcem `ui-reference/E-01.png`: pasek narzędzi, pasek boczny repozytoriów, lista plików, panel commita, pasek stanu; lista repo pusta przed pierwszym wyborem w Settings. | tak, całe okno | DES-VCS-022, DES-VCS-042 |
+| 2 | Kliknij **⚙ Repozytoria…**. | Lista zawiera `alpha`, `beta`, `gamma`; nie zawiera `zdjecia`, `.ukryte` ani `alpha/nested`. | tak, okno Settings | AT-VCS-018, AT-VCS-022 |
+| 3 | Zaznacz `alpha`, `beta`, `gamma`; **Zapisz**. | Trzy repo z nazwą gałęzi i liczbą zmian; `gamma` oznaczone jako konflikt. | tak, lista repo | REQ-VCS-002, AT-VCS-001 |
+| 4 | Kliknij `alpha`. | Grupy Staged, Changes, Unversioned; plik zmieniony w obu miejscach w obu grupach; pliki z nowego folderu osobno; brak pliku `.log`. | tak, lista plików | T-VCS-01, AT-VCS-003, AT-VCS-005, AT-VCS-006 |
+| 5 | Zaznacz plik w Changes, naciśnij **spację**; potem spację na nim w Staged. | Plik przechodzi do Staged i z powrotem do Changes. | nie | AT-VCS-029 |
+| 6 | **Dwuklik** na pliku w Changes; obejrzyj okno BC i zamknij je. | Beyond Compare z tytułami `plik (indeks)` i `plik (kopia robocza)`; po zamknięciu lista się odświeża. | tak, okno BC | AT-VCS-004, AT-VCS-027 |
+| 7 | Bez wiadomości spójrz na przycisk commita. | „Commit do alpha” nieaktywny, obok przyczyna „Wpisz wiadomość commita.”. | tak, pasek commita | AT-VCS-011 |
+| 8 | Wpisz `wip alpha`; ⌘2; wpisz `wip beta`; ⌘1. | W `alpha` pole zawiera `wip alpha`, przycisk „Commit do alpha”. | tak, pasek commita | AT-VCS-023, REQ-VCS-022 |
+| 9 | W `alpha` z plikiem w Staged wpisz wiadomość i naciśnij ⌘↩. | Commit wykonany, pole puste, Staged pusty, okno nie zamarza. | nie | AT-VCS-010 |
+| 10 | Kliknij `gamma`. | Pliki w grupie Conflicts; Commit nieaktywny z przyczyną o konflikcie. | tak, całe okno | REQ-VCS-019 |
+| 11 | W `beta`: plik do Staged spacją, wiadomość, ⌘⇧↩ (Commit & Push), potem **Pull**. | Push bez pytań; Pull bez błędu. | nie | REQ-VCS-011, REQ-VCS-020 |
+| 12 | Napisz „gotowe do 12”; agent usuwa `beta` i zmienia plik w `alpha`; kliknij w okno vcs-lite. | `beta` wyszarzone („niedostępne”); `alpha` pokazuje nową zmianę bez Refresh. | tak, lista repo | AT-VCS-002, REQ-VCS-015 |
+| 13 | Zostaw okno minutę bez ruchu; napisz „gotowe do 13”. | Agent mierzy pamięć (limit 60 MB) i brak wywołań gita w bezczynności. | nie | AT-VCS-016, REQ-VCS-101 |
+| 14 | W `gamma` zaznacz `f.txt` (w konflikcie) i naciśnij **spację**. Napisz „gotowe do 14”; agent usuwa znaczniki z `f.txt`. Ponownie spacja na `f.txt`. | Za pierwszym razem pasek błędu: „f.txt: plik nadal zawiera znaczniki konfliktu (linia 1).”, plik zostaje w Conflicts. Za drugim razem plik przechodzi do Staged, a Commit staje się aktywny po wpisaniu wiadomości. | tak, po pierwszej spacji | AT-VCS-031, AT-VCS-030 |
+
+## Kolejne małe kroki budowy okna
+
+| Etap | Co powstaje | Kroki ręczne |
+|---|---|---|
+| UI-1 | Szkielet okna: lista repo, pusty obszar plików, pasek commita; uruchamianie i odpytywanie `Worker` tylko w trakcie operacji. | 1 |
+| UI-2 | Okno Settings z zapisem wyboru. | 2, 3 |
+| UI-3 | Drzewo plików z grupami po wyborze repo. | 4 |
+| UI-4 | Spacja (stage, unstage) i dwuklik (porównanie w Beyond Compare). | 5, 6 |
+| UI-5 | Pasek commita: przyczyna nieaktywności, szkice, skróty, commit. | 7, 8, 9 |
+| UI-6 | Konflikty, Commit & Push, Pull. | 10, 11, 14 |
+| UI-7 | Odświeżanie po fokusie, repo niedostępne, pomiar pamięci. | 12, 13 |

@@ -22,6 +22,7 @@ ROW_DEF_RE = re.compile(rf"^\| ((?:{PREFIXES})-VCS-\d+[a-z]?) \|", re.M)
 HEADING_DEF_RE = re.compile(rf"^#{{2,4}} ((?:{PREFIXES})-VCS-\d+[a-z]?)\b", re.M)
 TEST_NAME_RE = re.compile(r"^test_(at|req|des|ver|uc|t|s)_vcs_(\d+)_")
 TRACE_LINE_RE = re.compile(r"^Trace:\s*(.+)$", re.M)
+REFERENCE_ONLY_DOCS = ("MANUAL-UI.md", "ui-reference/UI-REFERENCE.md")
 
 
 @dataclass
@@ -75,6 +76,13 @@ def load_corpus(docs: Path, src: Path, tests: Path) -> Corpus:
             c.definitions[id_].append(Definition(id_, name, body))
         c.references += [(i, name) for i in expand_refs(text)]
         c.shorthands += [(m.group(0), name) for m in SHORTHAND_RE.finditer(text)]
+
+    for name in REFERENCE_ONLY_DOCS:  # documents that cite IDs but define none
+        path = docs / name
+        if path.exists():
+            text = path.read_text(encoding="utf-8")
+            c.references += [(i, name) for i in expand_refs(text)]
+            c.shorthands += [(m.group(0), name) for m in SHORTHAND_RE.finditer(text)]
 
     feature = (docs / "ACCEPTANCE.feature").read_text(encoding="utf-8")
     lines = feature.splitlines()

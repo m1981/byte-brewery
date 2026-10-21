@@ -1,6 +1,6 @@
 """Operations on one repository: status, diff sides, stage, unstage, commit, push, pull.
 
-Trace: DES-VCS-007, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, REQ-VCS-005, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
+Trace: DES-VCS-007, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, REQ-VCS-005, REQ-VCS-024, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
 """
 
 from __future__ import annotations
@@ -10,6 +10,26 @@ from pathlib import Path
 from vcs_lite.core.difftool import Content
 from vcs_lite.core.gitcli import GitCli, GitResult
 from vcs_lite.core.status import STATUS_ARGS, FileChange, RepoStatus, Side, parse_status
+
+
+# Lines that only a merge leaves behind. A bare "=======" is not one of them: Markdown uses it to
+# underline headings, and a resolved file never keeps "<<<<<<<" or ">>>>>>>" (DES-VCS-044).
+CONFLICT_MARKERS = (b"<<<<<<<", b">>>>>>>", b"|||||||")
+
+
+class UnresolvedConflict(Exception):
+    def __init__(self, path: str, line: int):
+        super().__init__(f"{path}: plik nadal zawiera znaczniki konfliktu (linia {line}).")
+        self.path = path
+        self.line = line
+
+
+def first_conflict_marker(path: Path) -> int | None:
+    """1-based number of the first line that starts with a conflict marker, or None."""
+    for number, line in enumerate(path.read_bytes().splitlines(), start=1):
+        if line.startswith(CONFLICT_MARKERS):
+            return number
+    return None
 
 
 class GitError(Exception):
@@ -54,6 +74,16 @@ class GitRepo:
         if self.status().oid is None:  # no HEAD to restore from
             return self.git.run(self.path, "rm", "-q", "--cached", "--", *paths)
         return self.git.run(self.path, "restore", "--staged", "--", *paths)
+
+    def mark_resolved(self, change: FileChange) -> GitResult:
+        """Stage a conflicted file once its markers are gone; a deleted file is staged as a deletion."""
+        worktree_file = self.path / change.path
+        if not worktree_file.exists():
+            return self.git.run(self.path, "rm", "-q", "--", change.path)
+        line = first_conflict_marker(worktree_file)
+        if line is not None:
+            raise UnresolvedConflict(change.path, line)
+        return self.git.run(self.path, "add", "--", change.path)
 
     def commit(self, message: str) -> GitResult:
         return self.git.run(self.path, "commit", "-F", "-", input=message.encode("utf-8"))

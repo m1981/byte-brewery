@@ -158,3 +158,10 @@ def test_req_vcs_207_matrix_links_tests_through_referenced_ids(tmp_path):
     spec = SPEC.replace("| REQ-VCS-001 | Stage. |", "| REQ-VCS-001 | Stage według T-VCS-01. |") + "## T-VCS-01 — tabela\n\n| a | b |\n"
     c = _corpus(tmp_path, spec=spec, tests={"test_s.py": "def test_t_vcs_01_row():\n    pass\n"})
     assert tr.req_to_tests(c)["REQ-VCS-001"] == {"test_t_vcs_01_row"}
+
+
+def test_req_vcs_201_checker_resolves_ids_cited_in_the_manual_checklist(tmp_path):
+    c = _corpus(tmp_path)
+    (tmp_path / "docs" / "MANUAL-UI.md").write_text("| 1 | Krok. | REQ-VCS-001, AT-VCS-009 |\n", encoding="utf-8")
+    c = tr.load_corpus(tmp_path / "docs", tmp_path / "src" / "vcs_lite", tmp_path / "tests")
+    assert "odwołanie do niezdefiniowanego AT-VCS-009 w MANUAL-UI.md" in tr.check_201(c)

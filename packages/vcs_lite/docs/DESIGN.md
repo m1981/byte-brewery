@@ -69,6 +69,7 @@ core/ (bez Tk)    gitcli · status · repo · difftool · settings
 | ID | Polecenie | REQ |
 |---|---|---|
 | DES-VCS-011 | Stage: `git add -- <ścieżka>`; obejmuje też usunięcia. | REQ-VCS-005 |
+| DES-VCS-044 | Oznaczenie konfliktu jako rozwiązanego: `GitRepo.mark_resolved(change)`. Gdy plik istnieje, czyta go jako bajty i szuka pierwszej linii zaczynającej się od `<<<<<<<`, `>>>>>>>` albo `|||||||` (znaczniki domyślnej długości 7). Znaleziona linia: wyjątek `UnresolvedConflict` z nazwą pliku i numerem linii, bez wywołania gita. Brak znaczników: `git add -- <plik>`. Brak pliku w kopii roboczej (konflikt zmieniony/usunięty rozwiązany usunięciem): `git rm -q -- <plik>`. Sama linia `=======` nie jest sprawdzana, bo w Markdownie podkreśla nagłówek; rozwiązany plik i tak nie ma `<<<<<<<` ani `>>>>>>>`. Ograniczenie: inna długość znaczników ustawiona atrybutem `conflict-marker-size` nie jest wykrywana. W `AppModel` spacja na wierszu z grupy Conflicts wywołuje `mark_resolved`. | REQ-VCS-024, DEC-VCS-050 |
 | DES-VCS-012 | Unstage: `git restore --staged -- <ścieżka>`; przy zmianie nazwy obie ścieżki. W repo bez commitów: `git rm --cached -- <ścieżka>`. | REQ-VCS-005, AT-VCS-009 |
 | DES-VCS-013 | Commit: `git commit -F -`, wiadomość przez stdin, więc bez problemów z cudzysłowami i wieloma liniami. Hooki działają normalnie. | REQ-VCS-009–010 |
 | DES-VCS-014 | Push: `git push`. Bez upstreamu narzędzie pyta, a po zgodzie wykonuje `git push -u origin HEAD`. | REQ-VCS-011–013 |
@@ -78,8 +79,8 @@ core/ (bez Tk)    gitcli · status · repo · difftool · settings
 
 | ID | Decyzja | REQ |
 |---|---|---|
-| DES-VCS-016 | Worker uruchamia każdą operację w osobnym wątku i oznacza repo jako zajęte (stan W TOKU). Druga operacja na zajętym repo jest odrzucana, a w interfejsie i tak jest nieaktywna. | REQ-VCS-016, S-VCS-01 |
-| DES-VCS-017 | Wyniki wracają przez `queue.Queue`. Wątek Tk sprawdza kolejkę przez `after(50)` **tylko wtedy, gdy trwa jakaś operacja**. W bezczynności nie działa żaden timer. | REQ-VCS-101 |
+| DES-VCS-016 | Worker uruchamia każdą operację w osobnym wątku i oznacza repo jako zajęte (stan W TOKU). Druga operacja na zajętym repo jest odrzucana, a w interfejsie i tak jest nieaktywna. Porównanie w zewnętrznym narzędziu ma osobny klucz (repo, grupa, plik), więc repo pozostaje dostępne, dopóki okno diffu jest otwarte. Każda operacja zapamiętuje repo wybrane w chwili kliknięcia (REQ-VCS-021), a nie w chwili wykonania. | REQ-VCS-016, S-VCS-01 |
+| DES-VCS-017 | Wyniki wracają przez `queue.Queue`. Wątek Tk sprawdza kolejkę przez `after(50)` **tylko wtedy, gdy trwa jakaś operacja**. W bezczynności nie działa żaden timer. Klucz pozostaje zajęty do chwili oddania wyniku przez `drain()`, dlatego `on_done` może bezpiecznie zlecić następną operację na tym samym repo (np. push po commicie); `drain()` oddaje także wyniki, które skończyły się w trakcie opróżniania kolejki. | REQ-VCS-101 |
 | DES-VCS-018 | Odświeżanie: po każdej operacji; po `<FocusIn>` okna (z opóźnieniem 300 ms, żeby kilka zdarzeń nie wywołało kilku odświeżeń); przyciskiem Refresh. Na fokus odświeżane są liczniki wszystkich repo obserwowanych, a pełny stan tylko wybranego. | REQ-VCS-015, REQ-VCS-002 |
 
 ### Ustawienia i stan
@@ -94,11 +95,13 @@ core/ (bez Tk)    gitcli · status · repo · difftool · settings
 
 | ID | Decyzja | REQ |
 |---|---|---|
-| DES-VCS-022 | Układ E-01: poziomy `ttk.PanedWindow` z dwiema kolumnami (repo, pliki) i dolny pasek commita; bez panelu diffu (DEC-VCS-035). | E-01, DEC-VCS-015 |
-| DES-VCS-023 | `RepoList`: `ttk.Treeview` z kolumnami nazwa, gałąź, liczba zmian. Repo NIEDOSTĘPNE jest wyszarzone. | REQ-VCS-002, REQ-VCS-018 |
-| DES-VCS-024 | `FileTree`: `ttk.Treeview` z węzłami grup i plikami. Stage i unstage: spacja lub menu kontekstowe; dwuklik lub Enter otwiera porównanie (DEC-VCS-040). Plik w obu grupach to dwa osobne wiersze. | REQ-VCS-003, REQ-VCS-005 |
+| DES-VCS-042 | Wygląd okna według wzorca `docs/ui-reference/UI-REFERENCE.md` (DEC-VCS-045): tokeny kolorów, typografia, wymiary i stany w jednym module `ui/theme.py`; widżety biorą wartości wyłącznie z niego. Odstępstwa tylko z tabeli „Przybliżenia w Tk”. Widżety według DEC-VCS-047: pasek boczny, chipy, liczniki, kwadraty statusu i lista plików na `tk.Canvas` i `PhotoImage`; przyciski `ttk` aqua. | DEC-VCS-045, DEC-VCS-047, E-01 |
+| DES-VCS-043 | `AppModel` podaje nazwę trwającej operacji (P4) i nazwę operacji, która się nie powiodła, razem z treścią od gita (P3); komunikat można zamknąć. Podaje też czas ostatniego odświeżenia wybranego repo dla paska stanu. Treść pytania o upstream według P9. | DEC-VCS-049, REQ-VCS-010, REQ-VCS-016, REQ-VCS-013 |
+| DES-VCS-022 | Układ E-01: poziomy `ttk.PanedWindow` z dwiema kolumnami (repo, pliki) i dolny pasek commita; bez panelu diffu (DEC-VCS-035). Wymiary i kolejność elementów według wzorca (DES-VCS-042): pasek narzędzi, pasek boczny 230, lista plików, panel commita, pasek stanu. | E-01, DEC-VCS-015 |
+| DES-VCS-023 | `RepoList`: `ttk.Treeview` z kolumnami nazwa, gałąź, liczba zmian. Repo NIEDOSTĘPNE jest wyszarzone. Wygląd elementu repo i stanów według wzorca (DES-VCS-042). | REQ-VCS-002, REQ-VCS-018 |
+| DES-VCS-024 | `FileTree`: `ttk.Treeview` z węzłami grup i plikami. Stage i unstage: spacja lub menu kontekstowe; dwuklik lub Enter otwiera porównanie (DEC-VCS-040). Plik w obu grupach to dwa osobne wiersze. Grupy, kwadraty statusu i podpowiedzi według wzorca (DES-VCS-042). | REQ-VCS-003, REQ-VCS-005 |
 | DES-VCS-025 | WYCOFANE (DEC-VCS-035): wbudowany `DiffView` na dwóch `tk.Text`. | REQ-VCS-006 |
-| DES-VCS-026 | `CommitBar`: wieloliniowe pole wiadomości oraz przyciski z nazwą repo („Commit do byte-brewery”), Commit & Push, Pull i Refresh. Aktywność przycisków liczy `AppModel`. Skróty: ⌘1–⌘9, ⌘↩, ⌘⇧↩. | REQ-VCS-009, REQ-VCS-021–022 |
+| DES-VCS-026 | `CommitBar`: wieloliniowe pole wiadomości oraz przyciski z nazwą repo („Commit do byte-brewery”), Commit & Push, Pull i Refresh. Aktywność przycisków liczy `AppModel`. Skróty: ⌘1–⌘9, ⌘↩, ⌘⇧↩. Przyczynę nieaktywności przycisku Commit podaje `AppModel.commit_disabled_reason` (np. konflikt, brak Staged, pusta wiadomość; REQ-VCS-019). Commit & Push najpierw robi commit, a dopiero potem pyta o ustawienie upstreamu (kolejność UC-VCS-06, krok 3a); odmowa zostawia commit bez pusha (REQ-VCS-013). Układ panelu commita, tekst zastępczy i linia przyczyny według wzorca (DES-VCS-042). | REQ-VCS-009, REQ-VCS-021–022 |
 | DES-VCS-027 | WYCOFANE (DEC-VCS-035): kolory wbudowanego diffu. Tryb ciemny i tak poza v1, DEC-VCS-028. | DEC-VCS-028 |
 
 ### Zewnętrzne narzędzie diffu
@@ -118,6 +121,7 @@ DES-VCS-036–039 wchodzą do v1 i zastępują wbudowany diff (DEC-VCS-034, DEC-
 |---|---|---|
 | DES-VCS-028 | Punkt wejścia `vcs-lite = "vcs_lite.ui.main:main"` w `[project.scripts]`, jak w `packages/utils`. | REQ-VCS-103 |
 | DES-VCS-029 | Uruchamianie: `uv run vcs-lite` w katalogu byte-brewery, w środowisku workspace (obecnie Python 3.12.11, Tk 8.6). Kod nie korzysta z funkcji dostępnych tylko w Tk 9. | REQ-VCS-103, DEC-VCS-025 |
+| DES-VCS-041 | Przed pierwszym `tkinter.Tk()` punkt startowy ustawia `TCL_LIBRARY` i `TK_LIBRARY` na `lib/tcl8.6` i `lib/tk8.6` Pythona bazowego (`sys.base_prefix`), o ile użytkownik ich nie ustawił i katalogi istnieją. Bez tego Tk nie startuje w venv z Pythona uv (OBS-VCS-009). | REQ-VCS-103, DEC-VCS-025 |
 | DES-VCS-030 | Kod zgodny z Pythonem 3.10+, żeby nie zawężać `requires-python` całego workspace i nie zmieniać zależności pozostałych pakietów. | Ograniczenia wejściowe, DEC-VCS-025 |
 
 ## Testy
@@ -125,7 +129,7 @@ DES-VCS-036–039 wchodzą do v1 i zastępują wbudowany diff (DEC-VCS-034, DEC-
 | ID | Decyzja | VER |
 |---|---|---|
 | DES-VCS-031 | Testy jednostkowe `core/` na tymczasowych repo tworzonych przez git CLI w `tmp_path`; push i pull na lokalnym repo bare jako `origin`. Każdy wiersz T-VCS-01 ma swój test. Nazwy testów według DEC-VCS-029. | VER-VCS-001–004, VER-VCS-009 |
-| DES-VCS-032 | Scenariusze AT dotyczące przycisków, pól i grup są testowane na `AppModel`, bez Tk. Ręczna weryfikacja w Tk tylko dla układu okna. Zgodne z DEC-VCS-029. | VER-VCS-003, VER-VCS-005, VER-VCS-008, VER-VCS-010 |
+| DES-VCS-032 | Scenariusze AT dotyczące przycisków, pól i grup są testowane na `AppModel`, bez Tk. Ręczna weryfikacja w Tk tylko dla układu okna. Zgodne z DEC-VCS-029. Atrapy w `tests/fakes.py`: `ManualWorker` (ten sam kontrakt co `Worker`, zadania uruchamiane jawnie przez `settle()`) i `FakeDiffTool` (zapisuje wywołania, może edytować prawą stronę). AT-VCS-015 korzysta z prawdziwego `Worker` i lokalnego serwera HTTP odpowiadającego 401. | VER-VCS-003, VER-VCS-005, VER-VCS-008, VER-VCS-010 |
 | DES-VCS-033 | Nazwy testów zawierają ID scenariusza i wymagania, np. `test_at_vcs_010_req_vcs_009_commit_only_staged`. `ACCEPTANCE.feature` jest dokumentacją, a wykonują go zwykłe testy pytest, bez `pytest-bdd`. | DEC-VCS-029 |
 | DES-VCS-034 | Skrypt pomiaru `tests/measure_footprint.py`: buduje środowisko z REQ-VCS-100 (3 repo, 300 zmian, otwarte porównanie w zewnętrznym narzędziu; mierzony tylko proces vcs-lite, DEC-VCS-042), uruchamia narzędzie, po 5 s odczytuje `footprint <pid>`, mierzy czas odświeżenia repo z 300 zmianami i zapisuje wyniki z wersją Pythona i Tk. | REQ-VCS-100, REQ-VCS-102, VER-VCS-006 |
 | DES-VCS-035 | Test REQ-VCS-101: licznik wywołań w `gitcli` i sprawdzenie, że przez 10 s bezczynności bez fokusu nie było żadnego. | REQ-VCS-101 |

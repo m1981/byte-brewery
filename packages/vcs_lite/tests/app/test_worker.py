@@ -74,8 +74,4 @@ def test_des_vcs_016_on_done_may_schedule_a_follow_up_on_the_same_key():
     worker, order = Worker(), []
     worker.submit("alpha", lambda: "commit", lambda o: (order.append(o.value),
                                                         worker.submit("alpha", lambda: "refresh", lambda o2: order.append(o2.value))))
-    wait_until(lambda: worker.ready())
-    worker.drain()
-    wait_until(lambda: worker.ready())
-    worker.drain()
-    assert order == ["commit", "refresh"]
+    wait_until(lambda: worker.drain() >= 0 and order == ["commit", "refresh"])

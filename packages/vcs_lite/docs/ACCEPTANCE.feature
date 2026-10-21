@@ -239,3 +239,21 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And "app.py" pozostaje w grupie Changes
     When użytkownik zaznacza "app.py" i naciska spację
     Then "app.py" jest w grupie Staged
+
+  @AT_VCS_030 @confirmed @UC_VCS_04 @REQ_VCS_024 @DEC_VCS_050 @VER_VCS_002
+  Scenario: Poprawiony plik w konflikcie można oznaczyć jako rozwiązany
+    Given repozytorium "gamma" ma plik "f.txt" w konflikcie po merge
+    And użytkownik usunął z "f.txt" znaczniki konfliktu i zapisał plik
+    When użytkownik zaznacza "f.txt" i naciska spację
+    Then grupa Conflicts jest pusta
+    And "f.txt" jest w grupie Staged
+    And przycisk commita jest aktywny po wpisaniu wiadomości
+
+  @AT_VCS_031 @confirmed @UC_VCS_04 @REQ_VCS_024 @DEC_VCS_050 @VER_VCS_002
+  Scenario: Plik ze znacznikami konfliktu nie zostaje oznaczony
+    Given repozytorium "gamma" ma plik "f.txt" w konflikcie po merge
+    And "f.txt" nadal zawiera linię "<<<<<<< HEAD" w linii 1
+    When użytkownik zaznacza "f.txt" i naciska spację
+    Then widoczny jest komunikat zawierający "f.txt" i "linia 1"
+    And "f.txt" pozostaje w grupie Conflicts
+    And przycisk commita jest nieaktywny

@@ -90,6 +90,12 @@ Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
 | DEC-VCS-042 | Limit 60 MB dotyczy wyłącznie procesu vcs-lite; dodatkowa pamięć Beyond Compare jest akceptowana. | Użytkownik 2026-10-21: „27: tylko vcs-lite i kacjeptuje ekstra ram na BC”. Q-VCS-027, REQ-VCS-100. |
 | DEC-VCS-043 | Reguły śledzenia powiązań REQ-VCS-200–207 zaakceptowane. | Użytkownik 2026-10-21: „28: akceptuje”. Q-VCS-028. |
 | DEC-VCS-044 | REQ-VCS-007 i REQ-VCS-008 są w v1 uśpione: obowiązują dopiero, gdy wróci wbudowany lub inny diff; w v1 każdy plik, także binarny i duży, trafia do Beyond Compare. | Użytkownik 2026-10-21: „1: a” na Q-VCS-029. |
+| DEC-VCS-045 | Wygląd okna według makiety A („pasek boczny macOS”) jako wzorca: `docs/ui-reference/E-01.html`, zrzut `E-01.png` i `UI-REFERENCE.md` ze wszystkimi wartościami (kolory, czcionki, rozmiary, odstępy, stany, teksty). Zastępuje szkic ASCII E-01. Makiety B i C w `docs/ui-mockups/` zostają jako odrzucone alternatywy. | Użytkownik 2026-10-21: „1 A jest cudowny zapisz html i wszystkie elementy jako referecnyjne, nie pomin niczego wlacznie z czcionka, kolorami, odstepami itp.”; zrzut makiety od użytkownika. DES-VCS-042. |
+| DEC-VCS-046 | Bez licznika linii „+12 −3” (`git diff --numstat`) zaproponowanego w makiecie C. | Użytkownik 2026-10-21: „2: pomijamy”. |
+| DEC-VCS-047 | Podejście mieszane: pasek boczny, chipy, liczniki, kwadraty statusu i lista plików rysowane wiernie wzorcowi (`tk.Canvas`, `PhotoImage`); przyciski natywne `ttk` w motywie aqua (przycisk główny jako przycisk domyślny). | Użytkownik 2026-10-22: „1: C” na Q-VCS-030. DES-VCS-042. |
+| DEC-VCS-048 | Bez wykrywania trwającego merge, rebase ani cherry-pick w v1: repo w konflikcie ma w drugiej linii samą gałąź, a konflikt sygnalizuje czerwony znacznik „konflikt”. | Użytkownik 2026-10-22: „2: B” na Q-VCS-031. Zmienia wzorzec „main · merge” w UI-REFERENCE.md. |
+| DEC-VCS-049 | Zaakceptowane propozycje stanów okna P2–P10 z makiety `a-states.html`: chip konfliktu, pasek błędu, wskaźnik operacji w toku, cztery puste stany, repo czyste bez licznika, podpowiedź UNVERSIONED, okno „Repozytoria do obserwowania” (E-02), natywne pytanie o upstream z nową treścią, odłączony HEAD. Wartości w `ui-reference/UI-REFERENCE.md`, sekcja 8. | Użytkownik 2026-10-22: „P2: ok P3: super P4: super P5: super wszystkie P6: super P7: super P8: super P9: super P10: super”. Q-VCS-032. P1 nierozstrzygnięte: Q-VCS-033. |
+| DEC-VCS-050 | Plik w konflikcie można oznaczyć jako rozwiązany spacją, ale tylko gdy nie zawiera już znaczników konfliktu (wariant b). Dotyczy też wyglądu z P1: grupa CONFLICTS na górze listy, kwadrat „!” w `conf`, nagłówek grupy w `conf`. | Użytkownik 2026-10-22: „P1: b wykonaj rzetelnie” na Q-VCS-033. REQ-VCS-024, DES-VCS-044, T-VCS-01. |
 | DEC-VCS-017 | Zatwierdzone wszystkie propozycje z Q-VCS-011: DEC-VCS-006, REQ-VCS-003, REQ-VCS-004, REQ-VCS-007, REQ-VCS-008, REQ-VCS-013, REQ-VCS-019, REQ-VCS-102 i UC-VCS-02 2b. | Użytkownik 2026-10-21: „11: tak”. |
 
 ## Wymagania funkcjonalne
@@ -119,6 +125,7 @@ Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
 | REQ-VCS-021 | Stage, unstage, Commit, Commit & Push i Pull działają na jednym repo: tym, które jest aktualnie wybrane. Interfejs w każdej chwili jednoznacznie pokazuje, którego repo dotyczy akcja: przyciski noszą nazwę repo, np. „Commit do byte-brewery”. | Potwierdzone | DEC-VCS-008, DEC-VCS-015, E-01 |
 | REQ-VCS-022 | Każde repo obserwowane ma własny szkic wiadomości commita, zachowany przy przełączaniu repo w czasie działania narzędzia; po zamknięciu narzędzia nie jest zachowywany. Skróty: ⌘1–⌘9 wybór repo z listy, ⌘↩ Commit, ⌘⇧↩ Commit & Push. | Potwierdzone | DEC-VCS-015, DEC-VCS-020, E-01 |
 | REQ-VCS-023 | Porównanie pliku otwiera jego strony (według T-VCS-01) w zewnętrznym narzędziu diffu przez wymienny adapter. Pierwszy adapter to Beyond Compare (`bcomp`); inne narzędzie z CLI da się podłączyć bez zmian w pozostałym kodzie. Zastępuje wbudowany diff. | Potwierdzone: v1, zastępuje wbudowany diff; edycja kopii roboczej dozwolona, DEC-VCS-039; wyzwalacz: dwuklik lub Enter, DEC-VCS-040. | DEC-VCS-024, DEC-VCS-034, DEC-VCS-035, DES-VCS-036, UC-VCS-03 |
+| REQ-VCS-024 | Spacja na pliku w grupie Conflicts oznacza go jako rozwiązany: `git add`, a gdy pliku nie ma w kopii roboczej, `git rm`. Warunek: plik nie zawiera linii zaczynającej się od `<<<<<<<`, `>>>>>>>` ani `|||||||`. Jeśli zawiera, narzędzie pokazuje komunikat z nazwą pliku i numerem pierwszej takiej linii i nie zmienia repozytorium. Commit pozostaje zablokowany, dopóki jakikolwiek plik jest w konflikcie (REQ-VCS-019). | Potwierdzone, DEC-VCS-050 | T-VCS-01, UC-VCS-04, DES-VCS-044 |
 
 ## Wymagania jakościowe
 
@@ -142,7 +149,7 @@ Wejście: `git status --porcelain=v2 -z --untracked-files=all`. `X` to stan inde
 | `1`/`2` z `Y ∈ {M, T}` | Changes | Stage | indeks ↔ kopia robocza |
 | `1`/`2` z `Y = D` | Changes | Stage (zapisuje usunięcie) | indeks ↔ pusta |
 | `?` | Unversioned | Stage | pusta ↔ kopia robocza |
-| `u` | Conflicts | brak w v1 | brak w v1, komunikat o konflikcie |
+| `u` | Conflicts | Oznacz jako rozwiązany (REQ-VCS-024) | brak w v1, komunikat o konflikcie |
 | `!` | niepokazywany | — | — |
 | Repo bez commitów, dowolny `X ≠ .` | Staged | Unstage | pusta ↔ indeks |
 
@@ -160,7 +167,7 @@ Po operacji zawsze następuje odświeżenie i przejście do stanu wynikającego 
 
 ## Ekrany
 
-E-01, okno główne (szkic, nie projekt graficzny). Diff otwiera się w Beyond Compare (DEC-VCS-035), więc okno nie ma panelu diffu:
+E-01, okno główne. **Wzorcem wyglądu jest `docs/ui-reference/` (DEC-VCS-045); poniższy szkic ASCII pokazuje tylko pierwotny podział i nie jest już wiążący.** Diff otwiera się w Beyond Compare (DEC-VCS-035), więc okno nie ma panelu diffu:
 
 ```
 ┌ Repozytoria ──┬ Pliki ─────────────────────────────────────┐
@@ -237,6 +244,7 @@ Wspólne dla wszystkich UC. **Aktor podstawowy:** programista pracujący na Macu
 |---|---|---|
 | 2a | Operacja gita się nie udała, np. blokada `index.lock`. | Komunikat z stderr; stan po odświeżeniu. |
 | 2b | Zmiana nazwy. | Unstage obejmuje obie ścieżki, T-VCS-01. |
+| 2c | Plik w grupie Conflicts. | Oznaczenie jako rozwiązany według REQ-VCS-024; przy znacznikach konfliktu komunikat z numerem linii, repo bez zmian. |
 
 ### UC-VCS-05 — Commit
 
@@ -300,6 +308,7 @@ NEED ─► REQ ─► DES ─► kod (moduł)
 | OBS-VCS-006 | Wszystkie odwołania zapisane pełnym ID wskazują istniejące definicje. 44 odwołania używają jednak skrótów (`REQ-VCS-005–008`, `REQ-VCS-003, REQ-VCS-004, REQ-VCS-007`), których program nie rozwinie bez reguł; przez to np. REQ-VCS-004 wygląda na nieobecny w DESIGN.md, choć jest tam jako `REQ-VCS-003–004`. 10 wymagań nie ma żadnego scenariusza AT: REQ-VCS-002, REQ-VCS-008, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-019, REQ-VCS-023, REQ-VCS-101, REQ-VCS-102, REQ-VCS-103. VER-VCS-001–005 opisują temat słowami zamiast ID wymagań. DES-VCS-030 odwołuje się do sekcji, a nie do ID. Kierunek wstecz (test → AT/REQ, kod → DES/REQ) jeszcze nie istnieje, bo nie ma testów ani kodu. | Doraźny skrypt agenta poza repo, uruchomiony na SPEC.md, DESIGN.md i ACCEPTANCE.feature. |
 | OBS-VCS-007 | Stan 2026-10-21 po wdrożeniu programu sprawdzającego (DES-VCS-040): 20 testów przechodzi (8 reguł na prawdziwych dokumentach i 12 testów samego programu). Program znalazł i agent naprawił: podwójną definicję Q-VCS-009 (nagłówek i wiersz rejestru); 23 niedozwolone skróty, przepisane automatycznie na pełne ID; odwołanie do niezdefiniowanego DES-VCS-040; wymagania bez AT, VER lub DES; wiersze DES-VCS-006, DES-VCS-007, DES-VCS-031 i DES-VCS-032 bez REQ ani DEC. Agent dodał: ID wymagań w VER-VCS-001–006, wiersze VER-VCS-012–014 i DES-VCS-040, powiązania REQ w DES-VCS-006, DES-VCS-007 i DES-VCS-034. Przy okazji wyszły dwa błędy samego programu (status i wyjątek „bez DES:” rozpoznawane w dowolnym miejscu tekstu), poprawione i pokryte testem. Przed startem TDD 28 scenariuszy `@confirmed` bez testów jest tylko ostrzeżeniem w TRACE.md. | `.venv/bin/python -m pytest packages/vcs_lite/tests` w byte-brewery, Python 3.12.11, pytest 9.0.2. |
 | OBS-VCS-008 | Ręczne próby 2026-10-21 prawdziwego `bcomp` (BC4 4.4.7) przez `CommandTemplateDiffTool` z domyślnym poleceniem DES-VCS-037: lewa strona z bajtów (plik tymczasowy `0o444`), prawa to plik na dysku. Trzy próby: okno otwarte 179 s, 29 s i 8 s; kody wyjścia 111, 13 i 1; stderr zawsze pusty, więc `failed=False` (DES-VCS-039). Pliki tymczasowe za każdym razem usunięte. Użytkownik potwierdził, że tytuły `-title1=`/`-title2=` są widoczne i że lewa strona jest zablokowana. W trzeciej próbie zapis prawej strony zmienił plik na dysku; jego treść stała się równa lewej stronie, bo użytkownik skopiował lewą stronę na prawą (potwierdzone: „skopiowalem lewa na prawa i zamknalem okno”). Kod wyjścia nie odróżnia błędu od wyniku porównania. | Skrypt agenta w scratchpadzie, `vcs_lite.core.difftool.compare`; odpowiedzi użytkownika „1: tak 2: tak”. |
+| OBS-VCS-009 | W środowisku `.venv` byte-brewery (Python 3.12.11 z uv, python-build-standalone) `import tkinter` działa, ale `tkinter.Tk()` kończy się błędem „Can't find a usable init.tcl”. Biblioteki Tcl/Tk są w Pythonie bazowym (`lib/tcl8.6`, `lib/tk8.6`). Z ustawionymi `TCL_LIBRARY` i `TK_LIBRARY` Tk 8.6.14 startuje; ten sam Python poza venv działa bez nich. Rozwiązanie: DES-VCS-041. | Sprawdzone 2026-10-21 poleceniami `.venv/bin/python -c "tkinter.Tk()"` z i bez zmiennych. |
 
 ### Reguły (zaakceptowane, DEC-VCS-043)
 
@@ -319,7 +328,7 @@ NEED ─► REQ ─► DES ─► kod (moduł)
 | ID | Co weryfikuje | Metoda | Scenariusze |
 |---|---|---|---|
 | VER-VCS-001 | REQ-VCS-003, REQ-VCS-004, REQ-VCS-007, REQ-VCS-008, REQ-VCS-019: grupowanie statusów (T-VCS-01), pliki binarne i kodowanie | Testy jednostkowe warstwy gita na tymczasowym repo; po jednym przypadku na wiersz T-VCS-01. | AT-VCS-003–007 |
-| VER-VCS-002 | REQ-VCS-005: stage i unstage całych plików | Test na tymczasowym repo. | AT-VCS-008–009 |
+| VER-VCS-002 | REQ-VCS-005, REQ-VCS-024: stage i unstage całych plików, oznaczanie konfliktu jako rozwiązanego | Test na tymczasowym repo, w tym konflikty ze znacznikami, bez znaczników, z nagłówkiem Markdown `=======` i rozwiązane przez usunięcie. | AT-VCS-008–009, AT-VCS-030–031 |
 | VER-VCS-003 | REQ-VCS-009, REQ-VCS-010: commit i obsługa odrzucenia | Test na tymczasowym repo z hookiem `pre-commit`. | AT-VCS-010–012 |
 | VER-VCS-004 | REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-014: push | Test z lokalnym bare repo jako `origin`. | AT-VCS-013–015 |
 | VER-VCS-005 | REQ-VCS-001, REQ-VCS-018: Settings, trwałość wyboru, repo niedostępne | Test na tymczasowym `rootdir`. | AT-VCS-001–002 |
@@ -329,7 +338,7 @@ NEED ─► REQ ─► DES ─► kod (moduł)
 | VER-VCS-009 | REQ-VCS-020 | Test z lokalnym bare repo jako `origin`. | AT-VCS-020–021 |
 | VER-VCS-011 | REQ-VCS-023 | Test z adapterem testowym w miejscu Beyond Compare: zapisuje otrzymane polecenie i ścieżki, a test sprawdza treść stron i sprzątanie. Ręcznie: jedno porównanie w prawdziwym `bcomp`. | AT-VCS-004, AT-VCS-025–027 |
 | VER-VCS-012 | REQ-VCS-002, REQ-VCS-015, REQ-VCS-016, REQ-VCS-021: lista repo, odświeżanie, blokada równoległych operacji, akcje na wybranym repo | Testy `AppModel` bez Tk (DES-VCS-032) na tymczasowych repo. | AT-VCS-019, AT-VCS-023 |
-| VER-VCS-013 | REQ-VCS-103: uruchomienie | Ręcznie: `uv run vcs-lite` w katalogu byte-brewery otwiera okno E-01 na macOS z Apple Silicon. | — |
+| VER-VCS-013 | REQ-VCS-103: uruchomienie i wygląd okna | Ręcznie według `docs/MANUAL-UI.md` (13 kroków z punktami zrzutów ekranu); w tym `uv run vcs-lite` w katalogu byte-brewery otwiera okno E-01 na macOS z Apple Silicon. | — |
 | VER-VCS-014 | REQ-VCS-200–207: śledzenie powiązań w obie strony | `tests/test_traceability.py`: reguły na prawdziwych dokumentach i testy samego programu sprawdzającego na małych przykładach. | — |
 | VER-VCS-010 | REQ-VCS-001 (ukrywanie), REQ-VCS-022 | Test na tymczasowym `rootdir`; test przełączania repo. | AT-VCS-022–023 |
 
@@ -378,6 +387,10 @@ Testy noszą w nazwie identyfikator REQ, np. `test_req_vcs_005_stage_whole_file`
 | Q-VCS-027 | REQ-VCS-100 mierzy pamięć „z otwartym diffem pliku 2000 linii”. Czy limit 60 MB dotyczy teraz tylko procesu vcs-lite, a Beyond Compare (ok. 235 MB, OBS-VCS-005) liczy się osobno? Rekomendacja agenta: tak. | ROZSTRZYGNIĘTE 2026-10-21: tak, DEC-VCS-042. | REQ-VCS-100, DES-VCS-034, AT-VCS-016 |
 | Q-VCS-028 | Czy akceptujesz reguły śledzenia powiązań REQ-VCS-200–207 jako całość? Odpowiedzi na Q-VCS-021–023 dotyczyły szczegółów, a pytanie o całość zostało bez odpowiedzi. | ROZSTRZYGNIĘTE 2026-10-21: tak, DEC-VCS-043. | REQ-VCS-200–207 |
 | Q-VCS-029 | REQ-VCS-007 i REQ-VCS-008 zostają (DEC-VCS-041). Co oznaczają w v1, gdy diff robi Beyond Compare? (a) Uśpione: obowiązują dopiero, gdy wróci wbudowany lub inny diff; w v1 każdy plik trafia do BC. (b) Obowiązują od razu: vcs-lite nie otwiera BC dla plików binarnych i ponad 1 MB lub 20 000 linii, tylko pokazuje komunikat. Rekomendacja agenta: (a), bo BC dobrze porównuje pliki binarne i duże, a wymagania czekają gotowe na wypadek jego wycofania. | ROZSTRZYGNIĘTE 2026-10-21: (a), DEC-VCS-044. | REQ-VCS-007, REQ-VCS-008, DES-VCS-008, AT-VCS-007 |
+| Q-VCS-030 | Wierność wzorcowi czy natywne widżety? (a) Pełna wierność: przyciski i lista plików rysowane na `tk.Canvas` z kolorami, promieniami i odstępami z `UI-REFERENCE.md`. (b) Natywne: `ttk` w motywie aqua dla przycisków i listy; wygląd macOS, ale kolory przycisków i zaokrąglenia wierszy nie będą zgodne z wzorcem. (c) Mieszane: pasek boczny, chipy, liczniki i kwadraty statusu wierne (Canvas, obrazki), przyciski natywne aqua. Rekomendacja agenta: (c), bo największy efekt daje pasek boczny i lista, a natywne przyciski zachowują fokus, skróty i dostępność bez pisania ich od nowa. | ROZSTRZYGNIĘTE 2026-10-22: (c), DEC-VCS-047. | DES-VCS-042, UI-REFERENCE.md §5 |
+| Q-VCS-031 | Na wzorcu repo w konflikcie ma drugą linię „main · merge”. Obecny model wie tylko, że są konflikty, nie że trwa merge (wymaga sprawdzenia `MERGE_HEAD`, `REBASE_HEAD` itp.). (a) Dodać wykrywanie trwającej operacji i pokazywać „merge”, „rebase”, „cherry-pick”. (b) Pokazywać tylko gałąź, a konflikt sygnalizować znacznikiem. Rekomendacja agenta: (b) w v1. | ROZSTRZYGNIĘTE 2026-10-22: (b), DEC-VCS-048. | UI-REFERENCE.md §4 |
+| Q-VCS-032 | Elementy nieobecne na wzorcu i drobne rozbieżności: wiersze konfliktu (litera, kolor), komunikat błędu gita (miejsce i wygląd), wskaźnik operacji w toku, puste stany, licznik repo czystego, podpowiedź dla UNVERSIONED (porównanie też działa według T-VCS-01), okno Settings (E-02), okno pytania o upstream. Propozycja agenta: zaprojektować je w stylu wzorca jako dodatek do makiety `E-01.html` do akceptacji przed wdrożeniem. | ROZSTRZYGNIĘTE 2026-10-22 dla P2–P10 (DEC-VCS-049); P1 przeniesione do Q-VCS-033. | UI-REFERENCE.md §7 |
+| Q-VCS-033 | P1: co można zrobić z plikiem w konflikcie? (a) Nic, jak dziś w T-VCS-01; podpowiedź „rozwiąż w edytorze, potem `git add <plik>` w terminalu”. (b) Spacja robi `git add`, czyli oznacza plik jako rozwiązany, ale tylko gdy w pliku nie ma już znaczników konfliktu (`<<<<<<<`, `=======`, `>>>>>>>`); w przeciwnym razie komunikat z numerem linii i nic się nie zmienia. (c) Spacja robi `git add` bez sprawdzania. Rekomendacja agenta: (b). | ROZSTRZYGNIĘTE 2026-10-22: (b), DEC-VCS-050. Doprecyzowanie agenta: sama linia `=======` nie jest znacznikiem, bo jest też podkreśleniem nagłówka w Markdownie (DES-VCS-044). | T-VCS-01, REQ-VCS-019 |
 | Q-VCS-013 | Czy szkic wiadomości commita (REQ-VCS-022) ma przetrwać zamknięcie narzędzia, czy wystarczy, że przetrwa przełączanie repo w trakcie pracy? | ROZSTRZYGNIĘTE 2026-10-21: wystarczy przełączanie repo, DEC-VCS-020. | REQ-VCS-022 |
 
 ### Warianty interfejsu jednego repo (Q-VCS-009)
@@ -402,4 +415,4 @@ Rozpoznanie z 2026-10-21 na tym Macu, PyCharm 2025.3.4 (build 253.32098.74).
 
 ## Punkt wznowienia
 
-2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–044); rejestr pytań bez otwartych pozycji. TDD rozpoczęte (`TDD_STARTED = True`): gotowa warstwa `core`: `status.py`, `difftool.py`, `gitcli.py`, `repo.py`, `settings.py` (89 testów). Test REQ-VCS-205 oblewa celowo: potwierdzone AT bez testów są na poziomie `AppModel` (DEC-VCS-037). Następny krok według DESIGN.md: `app/model.py` i `app/worker.py`.
+2026-10-22: warstwy `core` i `app` gotowe; UI-1 (szkielet okna) zweryfikowane krokiem 1 listy kontrolnej. Wygląd okna ma wzorzec `docs/ui-reference/` (DEC-VCS-045). Test REQ-VCS-205 oblewa celowo tylko dla AT-VCS-016. Rejestr pytań bez otwartych pozycji. REQ-VCS-024 (oznaczanie konfliktu) wdrożone w `core` i `app`. Następny krok: przebudowa UI-1 według wzorca, potem UI-2 (okno Settings).
