@@ -401,4 +401,4 @@ Rozpoznanie z 2026-10-21 na tym Macu, PyCharm 2025.3.4 (build 253.32098.74).
 
 ## Punkt wznowienia
 
-2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–043). Program sprawdzający śledzenie powiązań działa i przechodzi (OBS-VCS-007); macierz w `docs/TRACE.md`. Rejestr pytań nie ma otwartych pozycji. Następny krok: architektura kodu i TDD (ustawić `TDD_STARTED = True`).
+2026-10-21: specyfikacja, projekt i reguły śledzenia zaakceptowane (DEC-VCS-001–044); rejestr pytań bez otwartych pozycji. TDD rozpoczęte (`TDD_STARTED = True`): gotowy `core/status.py` z testami T-VCS-01. Test REQ-VCS-205 oblewa celowo, dopóki potwierdzone AT nie mają testów (DEC-VCS-037). Następny krok według DESIGN.md: `core/difftool.py` z adapterem testowym, potem `core/gitcli.py` i `core/repo.py`.

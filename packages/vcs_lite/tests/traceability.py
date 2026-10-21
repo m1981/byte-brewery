@@ -169,12 +169,22 @@ def module_ids(c: Corpus) -> dict[str, set[str]]:
     return out
 
 
+def covered_reqs(c: Corpus, id_: str) -> set[str]:
+    """REQs that an ID (named by a test) stands for: itself, AT tags, or a link in either definition."""
+    if id_.startswith("REQ-"):
+        return {id_}
+    reqs = {"REQ-VCS-" + t.removeprefix("@REQ_VCS_") for s in c.scenarios if s.at == id_ for t in s.tags if t.startswith("@REQ_VCS_")}
+    for d in c.definitions.get(id_, []):
+        reqs |= links(d, "REQ")
+    reqs |= {r for r, d in _rows(c, "REQ").items() if id_ in expand_refs(d.text)}
+    return reqs
+
+
 def req_to_tests(c: Corpus) -> dict[str, set[str]]:
-    at_req = {s.at: {"REQ-VCS-" + t.removeprefix("@REQ_VCS_") for t in s.tags if t.startswith("@REQ_VCS_")} for s in c.scenarios}
     out = defaultdict(set)
     for name, _ in c.tests:
         tid = test_id(name)
-        for r in ({tid} if tid and tid.startswith("REQ-") else at_req.get(tid, set())):
+        for r in covered_reqs(c, tid) if tid else set():
             out[r].add(name)
     return out
 

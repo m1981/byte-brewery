@@ -7,11 +7,11 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | REQ | DES | AT | VER | Testy | Moduły |
 |---|---|---|---|---|---|
 | REQ-VCS-001 | DES-VCS-019 | AT-VCS-001, AT-VCS-018, AT-VCS-022 | VER-VCS-005, VER-VCS-008, VER-VCS-010 | — | — |
-| REQ-VCS-002 | DES-VCS-018, DES-VCS-023 | — | VER-VCS-012 | — | — |
-| REQ-VCS-003 | DES-VCS-005, DES-VCS-006, DES-VCS-024 | AT-VCS-003, AT-VCS-004, AT-VCS-005 | VER-VCS-001 | — | — |
-| REQ-VCS-004 | DES-VCS-005 | AT-VCS-006 | VER-VCS-001 | — | — |
-| REQ-VCS-005 | DES-VCS-011, DES-VCS-012, DES-VCS-024 | AT-VCS-008, AT-VCS-009, AT-VCS-029 | VER-VCS-002 | — | — |
-| REQ-VCS-006 (zastąpione) | — | — | — | — | — |
+| REQ-VCS-002 | DES-VCS-018, DES-VCS-023 | — | VER-VCS-012 | test_req_vcs_002_branch_upstream_and_ahead_behind_headers, test_uc_vcs_02_detached_head_has_no_branch | vcs_lite/core/status.py |
+| REQ-VCS-003 | DES-VCS-005, DES-VCS-006, DES-VCS-024 | AT-VCS-003, AT-VCS-004, AT-VCS-005 | VER-VCS-001 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/status.py |
+| REQ-VCS-004 | DES-VCS-005 | AT-VCS-006 | VER-VCS-001 | test_req_vcs_004_ignored_files_are_not_reported, test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | vcs_lite/core/status.py |
+| REQ-VCS-005 | DES-VCS-011, DES-VCS-012, DES-VCS-024 | AT-VCS-008, AT-VCS-009, AT-VCS-029 | VER-VCS-002 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | — |
+| REQ-VCS-006 (zastąpione) | — | — | — | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | — |
 | REQ-VCS-007 | DES-VCS-008 | AT-VCS-007 | VER-VCS-001 | — | — |
 | REQ-VCS-008 | DES-VCS-001 | — | VER-VCS-001 | — | — |
 | REQ-VCS-009 | DES-VCS-013, DES-VCS-026 | AT-VCS-010, AT-VCS-011 | VER-VCS-003 | — | — |
@@ -20,15 +20,15 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | REQ-VCS-012 | DES-VCS-014 | AT-VCS-014 | VER-VCS-004 | — | — |
 | REQ-VCS-013 | DES-VCS-014 | — | VER-VCS-004 | — | — |
 | REQ-VCS-014 | DES-VCS-002, DES-VCS-003, DES-VCS-004 | AT-VCS-015 | VER-VCS-004 | — | — |
-| REQ-VCS-015 | DES-VCS-018 | — | VER-VCS-012 | — | — |
+| REQ-VCS-015 | DES-VCS-018 | — | VER-VCS-012 | test_uc_vcs_02_detached_head_has_no_branch | — |
 | REQ-VCS-016 | DES-VCS-016 | — | VER-VCS-012 | — | — |
 | REQ-VCS-017 | DES-VCS-002, DES-VCS-019, DES-VCS-038 | AT-VCS-017, AT-VCS-027 | VER-VCS-007 | — | — |
-| REQ-VCS-018 | DES-VCS-023 | AT-VCS-002 | VER-VCS-005 | — | — |
-| REQ-VCS-019 | DES-VCS-006 | — | VER-VCS-001 | — | — |
+| REQ-VCS-018 | DES-VCS-023 | AT-VCS-002 | VER-VCS-005 | test_uc_vcs_02_detached_head_has_no_branch | — |
+| REQ-VCS-019 | DES-VCS-006 | — | VER-VCS-001 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree, test_uc_vcs_02_detached_head_has_no_branch | vcs_lite/core/status.py |
 | REQ-VCS-020 | DES-VCS-015 | AT-VCS-020, AT-VCS-021 | VER-VCS-009 | — | — |
 | REQ-VCS-021 | DES-VCS-026 | AT-VCS-019 | VER-VCS-008, VER-VCS-012 | — | — |
 | REQ-VCS-022 | DES-VCS-021, DES-VCS-026 | AT-VCS-023, AT-VCS-024 | VER-VCS-010 | — | — |
-| REQ-VCS-023 | DES-VCS-007, DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039 | AT-VCS-004, AT-VCS-025, AT-VCS-026, AT-VCS-027, AT-VCS-028, AT-VCS-029 | VER-VCS-011 | — | — |
+| REQ-VCS-023 | DES-VCS-007, DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039 | AT-VCS-004, AT-VCS-025, AT-VCS-026, AT-VCS-027, AT-VCS-028, AT-VCS-029 | VER-VCS-011 | test_t_vcs_01_added_is_staged_empty_vs_index, test_t_vcs_01_conflict_is_listed_without_diff_sides, test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty, test_t_vcs_01_mm_is_in_staged_and_changes, test_t_vcs_01_modified_in_index_is_staged_head_vs_index, test_t_vcs_01_paths_with_spaces_and_polish_letters, test_t_vcs_01_rename_is_staged_with_original_path, test_t_vcs_01_repo_without_commits_stages_against_empty, test_t_vcs_01_untracked_files_are_listed_one_by_one, test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty, test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree | — |
 | REQ-VCS-100 | DES-VCS-008, DES-VCS-034 | AT-VCS-016 | VER-VCS-006 | — | — |
 | REQ-VCS-101 | DES-VCS-017, DES-VCS-035 | — | VER-VCS-006 | — | — |
 | REQ-VCS-102 | DES-VCS-034 | — | VER-VCS-006 | — | — |
@@ -40,7 +40,7 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | REQ-VCS-204 | DES-VCS-040 | — | VER-VCS-014 | test_req_vcs_204_checker_rejects_test_without_id, test_req_vcs_204_test_names_carry_ids | — |
 | REQ-VCS-205 | DES-VCS-040 | — | VER-VCS-014 | test_req_vcs_205_checker_reports_confirmed_scenario_without_test, test_req_vcs_205_confirmed_scenarios_have_tests | — |
 | REQ-VCS-206 | DES-VCS-040 | — | VER-VCS-014 | test_req_vcs_206_checker_requires_trace_line, test_req_vcs_206_modules_carry_trace | — |
-| REQ-VCS-207 | DES-VCS-040 | — | VER-VCS-014 | test_req_vcs_207_matrix_is_generated | — |
+| REQ-VCS-207 | DES-VCS-040 | — | VER-VCS-014 | test_req_vcs_207_matrix_is_generated, test_req_vcs_207_matrix_links_tests_through_referenced_ids | — |
 
 ## Wstecz: scenariusz → wymagania
 
@@ -125,6 +125,8 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 
 | Test | Plik | ID |
 |---|---|---|
+| `test_req_vcs_002_branch_upstream_and_ahead_behind_headers` | test_status.py | REQ-VCS-002 |
+| `test_req_vcs_004_ignored_files_are_not_reported` | test_status.py | REQ-VCS-004 |
 | `test_req_vcs_200_checker_reports_duplicate_definition` | test_traceability.py | REQ-VCS-200 |
 | `test_req_vcs_200_each_id_defined_once` | test_traceability.py | REQ-VCS-200 |
 | `test_req_vcs_201_checker_expands_en_dash_ranges` | test_traceability.py | REQ-VCS-201 |
@@ -145,40 +147,28 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `test_req_vcs_206_checker_requires_trace_line` | test_traceability.py | REQ-VCS-206 |
 | `test_req_vcs_206_modules_carry_trace` | test_traceability.py | REQ-VCS-206 |
 | `test_req_vcs_207_matrix_is_generated` | test_traceability.py | REQ-VCS-207 |
+| `test_req_vcs_207_matrix_links_tests_through_referenced_ids` | test_traceability.py | REQ-VCS-207 |
+| `test_t_vcs_01_added_is_staged_empty_vs_index` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_conflict_is_listed_without_diff_sides` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_deleted_in_index_is_staged_head_vs_empty` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_mm_is_in_staged_and_changes` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_modified_in_index_is_staged_head_vs_index` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_paths_with_spaces_and_polish_letters` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_rename_is_staged_with_original_path` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_repo_without_commits_stages_against_empty` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_untracked_files_are_listed_one_by_one` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_worktree_deleted_is_changes_index_vs_empty` | test_status.py | T-VCS-01 |
+| `test_t_vcs_01_worktree_modified_is_changes_index_vs_worktree` | test_status.py | T-VCS-01 |
+| `test_uc_vcs_02_detached_head_has_no_branch` | test_status.py | UC-VCS-02 |
 
 ## Wstecz: moduł → ID
 
 | Moduł | Trace |
 |---|---|
 | `vcs_lite/__init__.py` | DEC-VCS-038, DES-VCS-030 |
+| `vcs_lite/core/__init__.py` | DEC-VCS-030, DES-VCS-030 |
+| `vcs_lite/core/status.py` | DES-VCS-005, DES-VCS-006, REQ-VCS-002, REQ-VCS-003, REQ-VCS-004, REQ-VCS-019, T-VCS-01 |
 
 ## Ostrzeżenia
 
-- AT-VCS-001 (@confirmed) nie ma testu test_at_vcs_001_…
-- AT-VCS-002 (@confirmed) nie ma testu test_at_vcs_002_…
-- AT-VCS-003 (@confirmed) nie ma testu test_at_vcs_003_…
-- AT-VCS-004 (@confirmed) nie ma testu test_at_vcs_004_…
-- AT-VCS-005 (@confirmed) nie ma testu test_at_vcs_005_…
-- AT-VCS-006 (@confirmed) nie ma testu test_at_vcs_006_…
-- AT-VCS-008 (@confirmed) nie ma testu test_at_vcs_008_…
-- AT-VCS-009 (@confirmed) nie ma testu test_at_vcs_009_…
-- AT-VCS-010 (@confirmed) nie ma testu test_at_vcs_010_…
-- AT-VCS-011 (@confirmed) nie ma testu test_at_vcs_011_…
-- AT-VCS-012 (@confirmed) nie ma testu test_at_vcs_012_…
-- AT-VCS-013 (@confirmed) nie ma testu test_at_vcs_013_…
-- AT-VCS-014 (@confirmed) nie ma testu test_at_vcs_014_…
-- AT-VCS-015 (@confirmed) nie ma testu test_at_vcs_015_…
-- AT-VCS-016 (@confirmed) nie ma testu test_at_vcs_016_…
-- AT-VCS-017 (@confirmed) nie ma testu test_at_vcs_017_…
-- AT-VCS-018 (@confirmed) nie ma testu test_at_vcs_018_…
-- AT-VCS-019 (@confirmed) nie ma testu test_at_vcs_019_…
-- AT-VCS-020 (@confirmed) nie ma testu test_at_vcs_020_…
-- AT-VCS-021 (@confirmed) nie ma testu test_at_vcs_021_…
-- AT-VCS-022 (@confirmed) nie ma testu test_at_vcs_022_…
-- AT-VCS-023 (@confirmed) nie ma testu test_at_vcs_023_…
-- AT-VCS-024 (@confirmed) nie ma testu test_at_vcs_024_…
-- AT-VCS-025 (@confirmed) nie ma testu test_at_vcs_025_…
-- AT-VCS-026 (@confirmed) nie ma testu test_at_vcs_026_…
-- AT-VCS-027 (@confirmed) nie ma testu test_at_vcs_027_…
-- AT-VCS-028 (@confirmed) nie ma testu test_at_vcs_028_…
-- AT-VCS-029 (@confirmed) nie ma testu test_at_vcs_029_…
+- brak

@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent))
-import traceability as tr  # noqa: E402
+import traceability as tr
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS, SRC, TESTS = ROOT / "docs", ROOT / "src" / "vcs_lite", ROOT / "tests"
 
 # DEC-VCS-037: before TDD a confirmed AT without a test is only a warning.
 # Flip to True when TDD starts; from then on a missing test fails.
-TDD_STARTED = False
+TDD_STARTED = True
 
 
 @pytest.fixture(scope="module")
@@ -154,3 +152,9 @@ def test_req_vcs_202_checker_reads_status_only_from_description_start(tmp_path):
     assert tr.check_202(_corpus(tmp_path, spec=spec, design=design)) == []
     c = _corpus(tmp_path / "b", spec=spec, design="| DES-VCS-001 | Moduł. | REQ-VCS-001 |\n")
     assert tr.check_202(c) == ["REQ-VCS-002 nie ma DES (ani wyjątku „bez DES: <powód>”)"]
+
+
+def test_req_vcs_207_matrix_links_tests_through_referenced_ids(tmp_path):
+    spec = SPEC.replace("| REQ-VCS-001 | Stage. |", "| REQ-VCS-001 | Stage według T-VCS-01. |") + "## T-VCS-01 — tabela\n\n| a | b |\n"
+    c = _corpus(tmp_path, spec=spec, tests={"test_s.py": "def test_t_vcs_01_row():\n    pass\n"})
+    assert tr.req_to_tests(c)["REQ-VCS-001"] == {"test_t_vcs_01_row"}
