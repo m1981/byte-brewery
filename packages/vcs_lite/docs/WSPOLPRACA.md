@@ -20,8 +20,9 @@ Zastępuje regułę promptu startowego „najpierw wypisz pytania”: na starcie
    - **Do decyzji** (D1–D3);
    - **Czeka na Ciebie**: zrzuty, kroki ręczne;
    - **Informacyjnie**: kilka linii; szczegóły w dokumentach, w wiadomości tylko odnośnik.
-5. **Otwarte:** tabela na końcu wiadomości; każdy punkt ma właściciela (użytkownik / agent) i następny krok. Żaden temat nie zostaje bez opiekuna; temat odłożony trafia do „Punktu wznowienia” albo rejestru pytań.
-6. **Test przed wysłaniem:** czy agent podpisałby proponowane działanie sam i postawił na nie swoją reputację? Szkic jest dozwolony, ale kompletny, a nie przerzucający pracę na użytkownika.
+5. **Otwarte:** tabela (kiedy, mówi punkt 6); każdy punkt ma właściciela (użytkownik / agent) i następny krok. Żaden temat nie zostaje bez opiekuna; temat odłożony trafia do „Punktu wznowienia” albo rejestru pytań.
+6. **Jeden temat na wiadomość** (użytkownik 2026-10-22: „Jeden tamtat na raz bo sie gubie”). Wiadomość dotyczy jednej sprawy: jednej decyzji albo jednej czynności użytkownika. Pełna tabela „Otwarte” tylko na prośbę albo na końcu etapu; poza tym na końcu jedna linia „Dalej: …”. Pozostałe tematy czekają w „Punkcie wznowienia” w `SPEC.md`, więc żaden nie ginie.
+7. **Test przed wysłaniem:** czy agent podpisałby proponowane działanie sam i postawił na nie swoją reputację? Szkic jest dozwolony, ale kompletny, a nie przerzucający pracę na użytkownika.
 
 ## Bez zmian
 

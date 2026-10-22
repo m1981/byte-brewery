@@ -115,6 +115,7 @@ Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
 | DEC-VCS-067 | Tekst projektu pomiaru i dziennika gita zaakceptowany: DES-VCS-034 (zmieniony) i DES-VCS-047. | Użytkownik 2026-10-22: „44: akceptuje” na Q-VCS-044. DEC-VCS-063. |
 | DEC-VCS-068 | Wygląd stanu „merge gotowy do commita” według makiety `ui-reference/E-01-scalanie.html` (P11a, P11b): niebieski chip „merge gotowy do commita” w pasku narzędzi zamiast chipa P2, kropka „zmiany”, pusty stan „Merge gotowy do commita”, Commit aktywny po wpisaniu wiadomości. | Użytkownik 2026-10-22: „P11a i P11b tak” na Q-VCS-043. REQ-VCS-027, UI-REFERENCE.md §8 P11. |
 | DEC-VCS-069 | W trakcie merge druga linia repo w pasku bocznym to „main · merge”, także przy konfliktach, jak na pierwotnym wzorcu `E-01.png` (P11c). Konflikty bez merge pokazują samą gałąź. Zmienia DEC-VCS-048. | Użytkownik 2026-10-22: „11c tak” na Q-VCS-043. REQ-VCS-027, UI-REFERENCE.md §4. |
+| DEC-VCS-070 | Repo bez zdalnego `origin`: Commit & Push zostaje aktywny jak dotąd; po zgodzie z pytania P9 push kończy się komunikatem gita w pasku błędu P3. Bez dodatkowego sprawdzania `origin`. | Użytkownik 2026-10-22: „D1 nie zostanie jak jest” na Q-VCS-045. REQ-VCS-013. |
 | DEC-VCS-017 | Zatwierdzone wszystkie propozycje z Q-VCS-011: DEC-VCS-006, REQ-VCS-003, REQ-VCS-004, REQ-VCS-007, REQ-VCS-008, REQ-VCS-013, REQ-VCS-019, REQ-VCS-102 i UC-VCS-02 2b. | Użytkownik 2026-10-21: „11: tak”. |
 
 ## Wymagania funkcjonalne
@@ -333,6 +334,8 @@ NEED ─► REQ ─► DES ─► kod (moduł)
 | OBS-VCS-008 | Ręczne próby 2026-10-21 prawdziwego `bcomp` (BC4 4.4.7) przez `CommandTemplateDiffTool` z domyślnym poleceniem DES-VCS-037: lewa strona z bajtów (plik tymczasowy `0o444`), prawa to plik na dysku. Trzy próby: okno otwarte 179 s, 29 s i 8 s; kody wyjścia 111, 13 i 1; stderr zawsze pusty, więc `failed=False` (DES-VCS-039). Pliki tymczasowe za każdym razem usunięte. Użytkownik potwierdził, że tytuły `-title1=`/`-title2=` są widoczne i że lewa strona jest zablokowana. W trzeciej próbie zapis prawej strony zmienił plik na dysku; jego treść stała się równa lewej stronie, bo użytkownik skopiował lewą stronę na prawą (potwierdzone: „skopiowalem lewa na prawa i zamknalem okno”). Kod wyjścia nie odróżnia błędu od wyniku porównania. | Skrypt agenta w scratchpadzie, `vcs_lite.core.difftool.compare`; odpowiedzi użytkownika „1: tak 2: tak”. |
 | OBS-VCS-009 | W środowisku `.venv` byte-brewery (Python 3.12.11 z uv, python-build-standalone) `import tkinter` działa, ale `tkinter.Tk()` kończy się błędem „Can't find a usable init.tcl”. Biblioteki Tcl/Tk są w Pythonie bazowym (`lib/tcl8.6`, `lib/tk8.6`). Z ustawionymi `TCL_LIBRARY` i `TK_LIBRARY` Tk 8.6.14 startuje; ten sam Python poza venv działa bez nich. Rozwiązanie: DES-VCS-041. | Sprawdzone 2026-10-21 poleceniami `.venv/bin/python -c "tkinter.Tk()"` z i bez zmiennych. |
 | OBS-VCS-010 | Krok 14 `MANUAL-UI.md` 2026-10-22 na repo demo `gamma`: po usunięciu znaczników z `f.txt` (zostawiona strona „ours”, czyli treść równa HEAD) spacja wykonała `git add` zgodnie z REQ-VCS-024. Indeks stał się równy HEAD, więc `git status --porcelain=v2` nie zgłosił żadnego wpisu: vcs-lite pokazał `gamma` jako czyste („Brak zmian”), a Commit był nieaktywny („Brak plików w Staged.”). Git w tym czasie: „All conflicts fixed but you are still merging”, `MERGE_HEAD` obecny. Merge nie dawał się zakończyć z vcs-lite. Przy treści różnej od HEAD plik trafia do Staged i commit kończy merge. Rozwiązanie: DEC-VCS-065. | Zrzut użytkownika po spacji; `git status` w `gamma`. |
+| OBS-VCS-011 | Pomiar automatyczny VER-VCS-006 2026-10-22 16:31 (`tests/measure_footprint.py`, atrapa narzędzia diffu): 3 repo, 300 zmian, otwarte porównanie pliku 2000 linii. Footprint procesu vcs-lite w 5 s bezczynności: 45,7–45,9 MB (maksimum 45,9; limit 60, REQ-VCS-100). Odświeżenie repo z 300 zmianami: mediana 0,064 s z 5 pomiarów (limit 1 s, REQ-VCS-102). Wywołania gita w bezczynności: 0, przed gotowością 11 (REQ-VCS-101). Python 3.12.11, Tk 8.6.14, macOS 26.2, git 2.47.1, kod `c41a1ab-dirty`. Pomiar z prawdziwym Beyond Compare: krok 13. | Wynik JSON skryptu; testy `tests/test_footprint.py` przechodzą. |
+| OBS-VCS-012 | Krok 13 `MANUAL-UI.md` 2026-10-22 na żywym oknie (repo demo, dziennik `VCS_LITE_GIT_LOG`, DES-VCS-047): porównanie `README.md` z `alpha` otwarte w prawdziwym Beyond Compare, okno bez fokusu. Footprint vcs-lite 40,1 MB (limit 60, REQ-VCS-100); Beyond Compare osobno 127 MB (DEC-VCS-042). W dzienniku 5 wywołań gita: 3 × `status` przy starcie, `status` i `cat-file` przy wyborze `alpha` i otwarciu porównania; potem 106 s bez żadnego wywołania (REQ-VCS-101). Python 3.12.11, Tk 8.6.14, macOS 26.2. | `footprint -j`, dziennik gita, `pgrep -lP` (dziecko `bcomp`). |
 
 ### Reguły (zaakceptowane, DEC-VCS-043)
 
@@ -427,6 +430,7 @@ Testy noszą w nazwie identyfikator REQ, np. `test_req_vcs_005_stage_whole_file`
 | Q-VCS-042 | Merge z wynikiem równym HEAD nie daje się zakończyć z vcs-lite (OBS-VCS-010): (a) wykrywać `MERGE_HEAD` i pozwolić na commit scalający, (b) jak (a) i wstawiać `MERGE_MSG`, (c) tylko opis ograniczenia? | ROZSTRZYGNIĘTE 2026-10-22: (a), DEC-VCS-065. | REQ-VCS-027 |
 | Q-VCS-043 | Wygląd stanu „merge gotowy do commita” (P11): tekst pustego stanu, kropka i druga linia w pasku bocznym, przyczyna przy przycisku; przy okazji powrót do drugiej linii „main · merge” z oryginalnego wzorca (DEC-VCS-048). Agent przygotuje makietę w stylu `E-01-stany.html`. | ROZSTRZYGNIĘTE 2026-10-22: makieta `ui-reference/E-01-scalanie.html` przyjęta, DEC-VCS-068 i DEC-VCS-069. | REQ-VCS-027, UI-REFERENCE.md §8 |
 | Q-VCS-044 | Akceptacja tekstu projektu dla DEC-VCS-063: rozszerzenie DES-VCS-034 (sygnał gotowości, limity czasu, `footprint -j`, próbki i maksimum, sprzątanie grupy procesów, mediana czasu) i nowy DES dziennika `VCS_LITE_GIT_LOG`. | ROZSTRZYGNIĘTE 2026-10-22: zaakceptowany, DEC-VCS-067. | DES-VCS-034, REQ-VCS-101 |
+| Q-VCS-045 | Repo bez zdalnego `origin` (repo demo `epsilon`, 2026-10-22): Commit & Push pyta o push do `origin`, a push kończy się błędem „'origin' does not appear to be a git repository”. Czy Commit & Push i Pull mają być wtedy nieaktywne z przyczyną? | ROZSTRZYGNIĘTE 2026-10-22: nie, zostaje jak jest, DEC-VCS-070. | REQ-VCS-013 |
 | Q-VCS-013 | Czy szkic wiadomości commita (REQ-VCS-022) ma przetrwać zamknięcie narzędzia, czy wystarczy, że przetrwa przełączanie repo w trakcie pracy? | ROZSTRZYGNIĘTE 2026-10-21: wystarczy przełączanie repo, DEC-VCS-020. | REQ-VCS-022 |
 
 ### Warianty interfejsu jednego repo (Q-VCS-009)
@@ -451,9 +455,11 @@ Rozpoznanie z 2026-10-21 na tym Macu, PyCharm 2025.3.4 (build 253.32098.74).
 
 ## Punkt wznowienia
 
-2026-10-22: specyfikacja, projekt, wzorzec wyglądu (`ui-reference/`, §1–§9) i reguły śledzenia zaakceptowane (DEC-VCS-001–065). Gotowe i przetestowane: `core`, `app`, UI-1 (szkielet), UI-2 (okno Repozytoria), UI-3 (pasek boczny, lista plików w stylu PyCharma, widok folderów), UI-4 (spacja, dwuklik, Beyond Compare), UI-5 (skróty ⌘↩, ⌘⇧↩, ⌘1–⌘9), UI-6 (pasek błędu P3, wskaźnik operacji P4, pytanie o upstream P9). 242 testy przechodzą; REQ-VCS-205 oblewa celowo tylko dla AT-VCS-016.
+2026-10-22: specyfikacja, projekt, wzorzec wyglądu (`ui-reference/`, §1–§9) i reguły śledzenia zaakceptowane (DEC-VCS-001–065). Gotowe i przetestowane: `core`, `app`, UI-1 (szkielet), UI-2 (okno Repozytoria), UI-3 (pasek boczny, lista plików w stylu PyCharma, widok folderów), UI-4 (spacja, dwuklik, Beyond Compare), UI-5 (skróty ⌘↩, ⌘⇧↩, ⌘1–⌘9), UI-6 (pasek błędu P3, wskaźnik operacji P4, pytanie o upstream P9). 263 testy przechodzą (stan 2026-10-22 po UI-7).
 
-Kroki `MANUAL-UI.md` potwierdzone przez użytkownika: 1–4, 10, 11 (Commit & Push i Pull w demo `beta`, Pull w `kuchnie2`), 14a, 15 oraz próby Beyond Compare (OBS-VCS-008). Krok 14b ujawnił OBS-VCS-010 (DEC-VCS-065). Niepotwierdzone: 5–9, 12, 13, 14b.
+Kroki `MANUAL-UI.md` potwierdzone przez użytkownika: 1–4, 10, 11 (Commit & Push i Pull w demo `beta`, Pull w `kuchnie2`), 14a, 15 oraz próby Beyond Compare (OBS-VCS-008). Krok 14b ujawnił OBS-VCS-010 (DEC-VCS-065); po wykonaniu REQ-VCS-027 powtórzony 2026-10-22: merge zakończony commitem scalającym. Przy powtórce wyszły dwa błędy, naprawione metodą TDD: pole wiadomości nie było czyszczone po commicie (REQ-VCS-009) i opis pustego stanu nie był zawijany do 46 znaków (P5). Obie poprawki potwierdzone zrzutem 2026-10-22 (repo demo `epsilon`). Krok 12 potwierdzony 2026-10-22 (odświeżanie po powrocie z innej aplikacji, DEC-VCS-059). Krok 13: OBS-VCS-012. Niepotwierdzone: 5–9.
+
+Do oceny przy kroku 9: w czasie pytania P9 pole wiadomości jeszcze pokazuje treść zapisanego commita (model czyści szkic przed pytaniem, ale okno odrysowuje się dopiero po jego zamknięciu; zrzut 2026-10-22).
 
 Chip P2 „N plików w konflikcie” dopisany 2026-10-22 (brakował od UI-6) i potwierdzony zrzutem; UI-6 zamknięte.
 
@@ -461,8 +467,8 @@ Następne kroki, w kolejności zaproponowanej przez agenta:
 1. Wykonane: krok 11 według DEC-VCS-066.
 2. Wykonane: chip P2.
 3. DEC-VCS-065: makieta P11 `ui-reference/E-01-scalanie.html` przyjęta (DEC-VCS-068, DEC-VCS-069), po akceptacji REQ-VCS-027 metodą TDD i krok 14 jeszcze raz (repo demo `gamma` pozostawione w stanie OBS-VCS-010).
-4. UI-7: odświeżanie po fokusie (DEC-VCS-059) i krok 12.
-5. UI-7: pomiar według DES-VCS-034 i DES-VCS-047: `tests/measure_footprint.py`, testy AT-VCS-016 i REQ-VCS-102, dziennik `VCS_LITE_GIT_LOG`; krok 13 i wynik jako OBS (DEC-VCS-062).
-6. Pasek błędu z zaokrągleniem (DEC-VCS-064).
+4. Wykonane: odświeżanie po fokusie (DEC-VCS-059), krok 12.
+5. Wykonane poza krokiem 13 (OBS-VCS-011); wszystkie testy przechodzą, także REQ-VCS-205. UI-7: pomiar według DES-VCS-034 i DES-VCS-047: `tests/measure_footprint.py`, testy AT-VCS-016 i REQ-VCS-102, dziennik `VCS_LITE_GIT_LOG`; krok 13 i wynik jako OBS (DEC-VCS-062).
+6. Pasek błędu z zaokrągleniem (DEC-VCS-064): wykonany metodą TDD 2026-10-22, czeka na zrzut.
 7. VER-VCS-013: `uv run vcs-lite` (zainstaluje pakiet w `.venv` byte-brewery; zapytać użytkownika przed uruchomieniem).
 8. Ręczne kroki 5–9 (UI-4, UI-5), dotąd niepotwierdzone.
