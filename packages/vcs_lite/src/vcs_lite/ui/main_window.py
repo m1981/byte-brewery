@@ -17,6 +17,7 @@ from vcs_lite.ui.widgets import Pill, Tooltip, kbd
 
 C, S = theme.COLORS, theme.SPACE
 PLACEHOLDER = "Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push"
+FOCUS_REFRESH_MS = 300  # several focus events on the way back give one refresh (DES-VCS-018)
 
 
 def hline(parent: tk.Misc) -> tk.Frame:
@@ -40,8 +41,11 @@ class MainWindow(tk.Frame):
         self._shown_repo: str | None = None
         self.settings_dialog: RepoDialog | None = None
         self._placeholder = False
+        self._away = False                     # the focus left the app (DEC-VCS-059)
+        self._focus_after: str | None = None   # pending refresh after coming back
         self._build()
         self._bind_shortcuts()
+        self._bind_focus_refresh()
         model.subscribe(self.render)
         self.render()
 
@@ -210,6 +214,38 @@ class MainWindow(tk.Frame):
             self._show_placeholder()
         else:
             self.message_box.delete("1.0", tk.END)
+
+    # ---------- refresh on return (DES-VCS-018, DEC-VCS-059) ----------
+
+    def _bind_focus_refresh(self) -> None:
+        top = self.winfo_toplevel()
+        top.bind("<FocusOut>", lambda _e: self.on_focus_out(), add="+")
+        top.bind("<FocusIn>", lambda _e: self.on_focus_in(), add="+")
+
+    def on_focus_out(self) -> None:
+        """A widget lost the focus; the app lost it only if none of ours has it once Tk settles."""
+        self.after_idle(self._note_focus_left)
+
+    def _note_focus_left(self) -> None:
+        if self.focus_get() is None:
+            self._away = True
+
+    def on_focus_in(self) -> None:
+        """Back from another app: refresh once, 300 ms later. Moving the focus inside the window does nothing."""
+        if not self._away:
+            return
+        self._away = False
+        if self._focus_after:
+            self.after_cancel(self._focus_after)
+        self._focus_after = self.after(FOCUS_REFRESH_MS, self._refresh_on_return)
+
+    def _refresh_on_return(self) -> None:
+        self._focus_after = None
+        self.model.refresh_all()
+
+    @property
+    def focus_refresh_pending(self) -> bool:
+        return self._focus_after is not None
 
     def toggle_folders(self) -> None:
         self.model.show_folders = self.show_folders.get()
