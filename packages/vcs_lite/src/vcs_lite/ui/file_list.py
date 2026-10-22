@@ -415,13 +415,19 @@ class FileList(tk.Frame):
         ]
         if empty.path:
             lines.append((empty.path, "path", theme.TYPE["path"].color))
-        heights = [theme.font(role).metrics("linespace") for _, role, _ in lines]
+        items = []
+        for text, role, color in lines:  # the description wraps at 46 characters (P5)
+            wrap = theme.font(role).measure("0") * S["empty_text_width"] if role == "empty_sub" else 0
+            items.append(c.create_text(width / 2, 0, text=text, font=theme.font(role), fill=color, justify=tk.CENTER,
+                                       anchor=tk.N, width=wrap))
+            self._empty.append(text)
+        heights = [max(c.bbox(i)[3] - c.bbox(i)[1], theme.font(role).metrics("linespace"))
+                   for i, (_, role, _) in zip(items, lines)]
         button_height = 28 if empty.action else 0
         total = sum(heights) + gap * (len(lines) - 1) + (gap + button_height if empty.action else 0)
         y = (height - total) / 2
-        for (text, role, color), h in zip(lines, heights):
-            c.create_text(width / 2, y + h / 2, text=text, font=theme.font(role), fill=color, justify=tk.CENTER)
-            self._empty.append(text)
+        for item, h in zip(items, heights):
+            c.move(item, 0, y)
             y += h + gap
         if empty.action:
             label = "⚙ Wybierz repozytoria…" if empty.action == "choose_repos" else "⟳ Sprawdź ponownie"

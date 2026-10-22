@@ -7,6 +7,7 @@ from test_main_window import conflicted, root, world  # noqa: F401 - shared fixt
 
 from vcs_lite.core.settings import SettingsStore
 from vcs_lite.core.status import Group
+from vcs_lite.ui import theme
 from vcs_lite.ui.main_window import MainWindow
 
 FILE_MOD, FILE_ADD, FILE_UNV, FILE_REN, FILE_DEL = "#002daa", "#0c7216", "#a92c3e", "#002daa", "#6e6e73"
@@ -129,6 +130,22 @@ def test_des_vcs_043_empty_state_is_drawn_in_the_file_area(root, world):  # noqa
     world.select("beta")
     assert window.file_list.rows() == []
     assert window.file_list.empty_texts() == ["✓", "Brak zmian", "Kopia robocza beta jest zgodna z ostatnim commitem."]
+
+
+def test_des_vcs_043_empty_state_description_wraps_at_46_characters(root, world):  # noqa: F811
+    r = conflicted(world, "gamma")
+    r.write("f.txt", "main\n"); r.git("add", "f.txt")
+    model = world.start("gamma")
+    window = MainWindow(root, model)
+    window.pack()
+    world.select("gamma")
+    root.update_idletasks()
+    c = window.file_list.canvas
+    item = next(i for i in c.find_all() if c.type(i) == "text" and c.itemcget(i, "text").startswith("Konflikty w gamma"))
+    limit = theme.font("empty_sub").measure("0") * 46
+    x1, y1, x2, y2 = c.bbox(item)
+    assert float(c.itemcget(item, "width")) == limit and x2 - x1 <= limit + 2
+    assert y2 - y1 > 1.5 * theme.font("empty_sub").metrics("linespace")  # wrapped onto more lines
 
 
 # ---------- folder view ----------

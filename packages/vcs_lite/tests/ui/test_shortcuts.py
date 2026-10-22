@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from test_main_window import root, world  # noqa: F401 - shared fixtures
 
-from vcs_lite.ui.main_window import MainWindow
+from vcs_lite.ui.main_window import PLACEHOLDER, MainWindow
 
 
 def staged(world, name):  # noqa: F811
@@ -28,6 +28,17 @@ def test_req_vcs_022_cmd_return_in_the_message_commits_without_a_new_line(root, 
     world.worker.settle()
     assert r.git("log", "-1", "--format=%s").strip() == b"fix a"
     assert model.message == "" and "\n" not in window.message_box.get("1.0", "end-1c")
+
+
+def test_req_vcs_009_message_field_is_emptied_after_a_commit(root, world):  # noqa: F811
+    staged(world, "alpha")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    window.type_message("fix a")
+    window.message_box.focus_set()
+    model.commit(); world.worker.settle()
+    assert window.message_box.get("1.0", "end-1c") in ("", PLACEHOLDER)
 
 
 def test_req_vcs_022_cmd_return_anywhere_in_the_window_commits(root, world):  # noqa: F811

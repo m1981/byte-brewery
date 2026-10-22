@@ -208,6 +208,8 @@ class MainWindow(tk.Frame):
             self.message_box.insert("1.0", self.model.message)
         elif self.focus_get() is not self.message_box:
             self._show_placeholder()
+        else:
+            self.message_box.delete("1.0", tk.END)
 
     def toggle_folders(self) -> None:
         self.model.show_folders = self.show_folders.get()
@@ -325,8 +327,8 @@ class MainWindow(tk.Frame):
         self.pull_button.configure(state=tk.NORMAL if self.model.can_pull else tk.DISABLED)
 
     def _render_commit_panel(self) -> None:
-        if self._shown_repo != self.model.selected:
-            self._shown_repo = self.model.selected
+        if self._shown_repo != self.model.selected or self._message_text() != self.model.message:
+            self._shown_repo = self.model.selected  # another repository, or the model cleared the draft after a commit
             self._load_draft()
         self.commit_button.configure(text=self.model.commit_label,
                                      state=tk.NORMAL if self.model.can_commit else tk.DISABLED)
