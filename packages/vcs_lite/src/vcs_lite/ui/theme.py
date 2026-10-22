@@ -137,7 +137,7 @@ SPACE = {
     "kbd_pad": (4, 0), "kbd_radius": 4,
     "line": 1,
     # section 8
-    "banner_margin": (12, 8, 4), "banner_pad": (12, 8), "banner_radius": 8, "banner_edge": 3, "banner_lines": 4,
+    "banner_margin": (12, 8, 4), "banner_pad": (12, 8), "banner_pad_right": 10, "banner_radius": 8, "banner_edge": 3, "banner_lines": 4,
     "busy_bar_height": 2, "busy_bar_share": 0.3, "busy_bar_period_ms": 1200,
     "empty_pad": (24, 40), "empty_gap": 6, "empty_text_width": 46,
     "dialog_width": 420, "dialog_list_height": 220,

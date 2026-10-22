@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, E-01, E-02
+Trace: DES-VCS-018, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, DEC-VCS-064, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from vcs_lite.ui import theme
 from vcs_lite.ui.file_list import FileList
 from vcs_lite.ui.settings_dialog import RepoDialog
 from vcs_lite.ui.sidebar import RepoSidebar
-from vcs_lite.ui.widgets import Pill, Tooltip, kbd
+from vcs_lite.ui.widgets import Pill, Tooltip, kbd, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 PLACEHOLDER = "Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push"
@@ -100,12 +100,15 @@ class MainWindow(tk.Frame):
         return middle
 
     def _build_banner(self, parent: tk.Frame) -> None:
-        """P3: the failed operation and git's own message, above the file list; hidden until needed."""
-        pad_x, pad_y = S["banner_pad"]
-        self.banner = tk.Frame(parent, bg=C["conf_soft"])
-        tk.Frame(self.banner, width=S["banner_edge"], bg=C["conf"]).pack(side=tk.LEFT, fill=tk.Y)
-        content = tk.Frame(self.banner, bg=C["conf_soft"], padx=pad_x - S["banner_edge"], pady=pad_y)
-        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        """P3: the failed operation and git's own message, above the file list; hidden until needed.
+        A canvas draws the 8 pt corners and the red left edge (DEC-VCS-064); the content sits on it."""
+        self.banner = tk.Canvas(parent, bg=C["bg"], highlightthickness=0, bd=0, height=1)
+        content = self._banner_content = tk.Frame(self.banner, bg=C["conf_soft"])
+        pad_left, pad_top = S["banner_pad"]
+        self.banner.create_window(S["banner_edge"] + pad_left, pad_top, anchor=tk.NW, window=content,
+                                  tags=("banner_content",))
+        self.banner.bind("<Configure>", lambda _e: self._draw_banner())
+        content.bind("<Configure>", lambda _e: self._draw_banner())
         theme.label(content, "banner_title", "⚠", bg=C["conf_soft"]).grid(row=0, column=0, sticky=tk.NW, padx=(0, 10))
         self.banner_title = theme.label(content, "banner_title", bg=C["conf_soft"], anchor=tk.W)
         self.banner_title.grid(row=0, column=1, sticky=tk.W)
@@ -117,6 +120,17 @@ class MainWindow(tk.Frame):
                                    fg=theme.TYPE["banner_body"].color, font=theme.font("banner_body"))
         self.banner_body.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=(4, 0))
         content.columnconfigure(1, weight=1)
+
+    def _draw_banner(self) -> None:
+        c, edge, (pad_left, pad_y) = self.banner, S["banner_edge"], S["banner_pad"]
+        width = max(c.winfo_width(), c.winfo_reqwidth())
+        height = self._banner_content.winfo_reqheight() + 2 * pad_y
+        if int(c.cget("height")) != height:
+            c.configure(height=height)
+        c.itemconfigure("banner_content", width=max(1, width - edge - pad_left - S["banner_pad_right"]))
+        c.delete("banner_edge", "banner_bg")
+        rounded_rect(c, 0, 0, width - 1, height - 1, S["banner_radius"], fill=C["conf"], tags=("banner_edge",))
+        rounded_rect(c, edge, 0, width - 1, height - 1, S["banner_radius"], fill=C["conf_soft"], tags=("banner_bg",))
 
     def close_banner(self) -> None:
         self.model.dismiss_error()
@@ -321,6 +335,7 @@ class MainWindow(tk.Frame):
             if not self.banner.winfo_manager():
                 margin_x, margin_top, margin_bottom = S["banner_margin"]
                 self.banner.pack(fill=tk.X, padx=margin_x, pady=(margin_top, margin_bottom), before=self.file_list)
+            self.after_idle(self._draw_banner)  # once the new text has its size
         elif self.banner.winfo_manager():
             self.banner.pack_forget()
 

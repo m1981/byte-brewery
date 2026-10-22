@@ -22,6 +22,28 @@ def test_des_vcs_043_banner_shows_the_failed_operation_and_closes(root, world): 
     assert window.banner.winfo_manager() == "" and model.error is None
 
 
+def test_des_vcs_042_banner_has_8_pt_corners_a_red_left_edge_and_the_reference_padding(root, world):  # noqa: F811
+    conflicted(world, "gamma")
+    model = world.start("gamma")
+    window = MainWindow(root, model)
+    window.pack(fill="both", expand=True)
+    world.select("gamma")
+    model.toggle(next(c for c in model.files(Group.CONFLICTS))); world.worker.settle()
+    root.update_idletasks()
+    c = window.banner
+    assert c.winfo_class() == "Canvas"
+    background = c.find_withtag("banner_bg")
+    assert {c.itemcget(i, "fill") for i in background} == {"#fbe3e1"}
+    corners = [c.coords(i) for i in background if c.type(i) == "oval"]
+    assert corners and all(x2 - x1 == 16 for x1, _, x2, _ in corners)  # radius 8
+    edge = c.find_withtag("banner_edge")
+    assert edge and {c.itemcget(i, "fill") for i in edge} == {"#c2302a"}
+    assert min(c.coords(i)[0] for i in edge) == 0
+    [content] = c.find_withtag("banner_content")
+    assert c.coords(content) == [15.0, 8.0]  # 3 edge + 12 left, 8 top (UI-REFERENCE §8 P3)
+    assert int(c.cget("height")) == c.nametowidget(c.itemcget(content, "window")).winfo_reqheight() + 16
+
+
 def test_des_vcs_043_busy_bar_runs_only_during_an_operation(root, world):  # noqa: F811
     r = world.repo("alpha")
     r.write("a.py", "a\n"); r.git("add", "a.py")
