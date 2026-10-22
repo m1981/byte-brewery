@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import os
+import threading
+
 from conftest import GIT_ENV
 
-from vcs_lite.core.gitcli import GitCli
+from vcs_lite.core.gitcli import GIT_LOG_ENV, GitCli
 
 
 def cli() -> GitCli:
@@ -58,3 +62,32 @@ def test_des_vcs_035_every_call_is_counted(repo):
     g.run(repo.path, "status")
     g.run(repo.path, "status")
     assert g.call_count == 2
+
+
+# ---------- git call log (DES-VCS-047) ----------
+
+def test_des_vcs_047_each_call_is_logged_as_a_json_line_without_paths(repo, tmp_path):
+    log = tmp_path / "git.log"
+    GitCli(env={**GIT_ENV, GIT_LOG_ENV: str(log)}).run(repo.path, "status", "--porcelain")
+    [record] = [json.loads(line) for line in log.read_text().splitlines()]
+    assert set(record) == {"t", "pid", "cmd"} and record["cmd"] == "status" and record["pid"] == os.getpid()
+    assert str(repo.path) not in log.read_text()
+
+
+def test_des_vcs_047_nothing_is_written_without_the_variable(repo, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    before = set(tmp_path.iterdir())
+    g = cli()
+    g.run(repo.path, "status")
+    assert g.log_path is None and set(tmp_path.iterdir()) == before
+
+
+def test_des_vcs_047_lines_from_parallel_calls_never_interleave(repo, tmp_path):
+    log = tmp_path / "git.log"
+    g = GitCli(env={**GIT_ENV, GIT_LOG_ENV: str(log)})
+    threads = [threading.Thread(target=lambda: [g.run(repo.path, "version") for _ in range(10)]) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert [json.loads(line)["cmd"] for line in log.read_text().splitlines()] == ["version"] * 40

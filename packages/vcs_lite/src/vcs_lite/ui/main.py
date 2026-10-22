@@ -1,6 +1,6 @@
 """Entry point and composition root: settings, git, worker, model and the main window.
 
-Trace: DES-VCS-028, DES-VCS-029, DES-VCS-036, DES-VCS-041, REQ-VCS-103
+Trace: DES-VCS-028, DES-VCS-029, DES-VCS-034, DES-VCS-036, DES-VCS-041, REQ-VCS-103
 """
 
 from __future__ import annotations
@@ -28,17 +28,24 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Sequence[str] | None = None) -> None:
-    args = parse_args(argv)
-    store = SettingsStore(args.settings)
+def build(settings_path: Path) -> tuple[tk.Tk, AppModel, TkPump]:
+    """The whole app without starting it; tests/measure_footprint.py measures exactly this (DES-VCS-034)."""
+    store = SettingsStore(settings_path)
     prepare_tk()
     root = tk.Tk()
     root.title("vcs-lite")
     root.geometry("960x620")
-    model = AppModel.from_settings(store.load(), git=GitCli(), worker=TkPump(root, Worker()),
+    pump = TkPump(root, Worker())
+    model = AppModel.from_settings(store.load(), git=GitCli(), worker=pump,
                                    confirm=lambda title, message: messagebox.askyesno(title, message, parent=root),
                                    save_settings=store.save)
     MainWindow(root, model, reduce_motion=reduce_motion()).pack(fill=tk.BOTH, expand=True)
+    return root, model, pump
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    args = parse_args(argv)
+    root, model, _ = build(args.settings)
     model.refresh_all()
     _bring_to_front(root)
     root.mainloop()

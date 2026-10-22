@@ -1,12 +1,14 @@
 """The only place that runs git: environment, timeouts, decoding, failures as results.
 
-Trace: DES-VCS-001, DES-VCS-002, DES-VCS-003, DES-VCS-004, DES-VCS-035, REQ-VCS-010, REQ-VCS-014, REQ-VCS-017
+Trace: DES-VCS-001, DES-VCS-002, DES-VCS-003, DES-VCS-004, DES-VCS-035, DES-VCS-047, REQ-VCS-101, REQ-VCS-010, REQ-VCS-014, REQ-VCS-017
 """
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +16,7 @@ from pathlib import Path
 LOCAL_TIMEOUT = 30.0
 NETWORK_TIMEOUT = 120.0
 BATCH_SSH = "ssh -o BatchMode=yes"
+GIT_LOG_ENV = "VCS_LITE_GIT_LOG"  # path of the git call log; unset means no log (DES-VCS-047)
 
 
 @dataclass(frozen=True)
@@ -38,6 +41,7 @@ class GitCli:
         self.git = git
         self.base_env = dict(os.environ if env is None else env)
         self.call_count = 0
+        self.log_path = self.base_env.get(GIT_LOG_ENV) or None
 
     def env_for(self, repo: Path, *, read_only: bool, network: bool) -> dict[str, str]:
         env = {**self.base_env, "GIT_TERMINAL_PROMPT": "0"}
@@ -56,6 +60,8 @@ class GitCli:
         argv = [self.git, "-C", str(repo), "-c", "core.quotepath=false", *args]
         limit = timeout if timeout is not None else (NETWORK_TIMEOUT if network else LOCAL_TIMEOUT)
         self.call_count += 1
+        if self.log_path:
+            append_log(self.log_path, {"t": time.monotonic(), "pid": os.getpid(), "cmd": args[0] if args else ""})
         try:
             proc = subprocess.run(argv, input=input, stdin=None if input is not None else subprocess.DEVNULL,
                                   capture_output=True, env=env, timeout=limit, check=False)
@@ -64,3 +70,12 @@ class GitCli:
         except OSError as exc:
             return GitResult(args, 127, b"", f"Nie można uruchomić {self.git}: {exc.strerror or exc}")
         return GitResult(args, proc.returncode, proc.stdout, proc.stderr.decode("utf-8", errors="replace"))
+
+
+def append_log(path: str, record: dict) -> None:
+    """One JSON line in one O_APPEND write, so lines from threads and processes never interleave."""
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    try:
+        os.write(fd, (json.dumps(record) + "\n").encode("utf-8"))
+    finally:
+        os.close(fd)
