@@ -413,6 +413,43 @@ def test_at_vcs_031_file_with_markers_stays_in_conflict_with_a_message(world):
     assert not model.can_commit
 
 
+def test_at_vcs_034_merge_resolved_to_head_can_be_concluded_with_a_commit(world):
+    r = conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    r.write("f.txt", "main\n")
+    model.toggle(change(model, Group.CONFLICTS, "f.txt")); world.worker.settle()
+    assert model.state("gamma") is RepoState.MERGE
+    assert model.sidebar_line("gamma") == "main · merge"
+    assert model.merge_summary == "merge gotowy do commita" and model.conflict_summary == ""
+    assert model.empty_state.head == "Merge gotowy do commita"
+    assert model.commit_disabled_reason == "Wpisz wiadomość commita."
+    model.message = "Merge branch 'other'"
+    assert model.can_commit and paths(model, Group.STAGED) == []
+    model.commit(); world.worker.settle()
+    assert len(r.git("log", "-1", "--format=%P").split()) == 2
+    assert model.state("gamma") is RepoState.CLEAN and model.merge_summary == ""
+
+
+def test_req_vcs_027_conflicts_during_a_merge_say_merge_in_the_sidebar(world):
+    conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    assert model.state("gamma") is RepoState.CONFLICT
+    assert model.sidebar_line("gamma") == "main · merge"
+    assert model.merge_summary == ""
+
+
+def test_req_vcs_027_merge_with_a_staged_result_keeps_the_list_and_the_upstream_line(world, tracked):
+    r, _ = tracked
+    r.git("commit", "-q", "-m", "staged")
+    r.git("checkout", "-q", "-b", "other"); r.write("o.txt", "o\n"); r.git("add", "o.txt"); r.git("commit", "-q", "-m", "o")
+    r.git("checkout", "-q", "main"); r.git("merge", "-q", "--no-ff", "--no-commit", "other")
+    model = world.start("alpha"); world.select("alpha")
+    assert model.state("alpha") is RepoState.MERGE
+    assert paths(model, Group.STAGED) == ["o.txt"]
+    assert model.sidebar_line("alpha") == "main · ↑1 ↓0 · merge"
+    assert model.empty_state is None
+
+
 # ---------- toolbar, title and status bar (DES-VCS-043, P10) ----------
 
 def test_des_vcs_043_branch_summary_names_the_upstream(world, tracked):

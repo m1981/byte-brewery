@@ -64,6 +64,7 @@ class MainWindow(tk.Frame):
         self.branch_chip = Pill(bar, role="chip", fill=C["chip_bg"], pad=S["chip_pad"], parent_bg=C["panel"])
         self.branch_chip.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0))
         self.conflict_chip = Pill(bar, role="conflict_chip", fill=C["conf_soft"], pad=S["chip_pad"], parent_bg=C["panel"])  # P2
+        self.merge_chip = Pill(bar, role="merge_chip", fill=C["accent_soft"], pad=S["chip_pad"], parent_bg=C["panel"])  # P11
         self.busy_text = theme.label(bar, "busy_text", bg=C["panel"])  # P4
         self.busy_text.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0))
         self.busy_bar = tk.Canvas(bar, height=S["busy_bar_height"], bg=C["panel"], highlightthickness=0, bd=0)
@@ -315,11 +316,12 @@ class MainWindow(tk.Frame):
     def _render_toolbar(self) -> None:
         self.repo_title.configure(text=self.model.selected or "")
         self.branch_chip.set(self.model.branch_summary)
-        self.conflict_chip.set(self.model.conflict_summary)
-        if self.conflict_chip.text and not self.conflict_chip.winfo_manager():
-            self.conflict_chip.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0), after=self.branch_chip)
-        elif not self.conflict_chip.text and self.conflict_chip.winfo_manager():
-            self.conflict_chip.pack_forget()
+        for chip, text in ((self.conflict_chip, self.model.conflict_summary), (self.merge_chip, self.model.merge_summary)):
+            chip.set(text)  # at most one of them has text
+            if text and not chip.winfo_manager():
+                chip.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0), after=self.branch_chip)
+            elif not text and chip.winfo_manager():
+                chip.pack_forget()
         self.pull_button.configure(state=tk.NORMAL if self.model.can_pull else tk.DISABLED)
 
     def _render_commit_panel(self) -> None:

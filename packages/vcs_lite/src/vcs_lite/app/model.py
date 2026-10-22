@@ -1,6 +1,6 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ class RepoState(Enum):
     CLEAN = "czyste"
     CHANGES = "zmiany"
     CONFLICT = "konflikt"
+    MERGE = "scalanie"  # merge in progress, no conflicts left (REQ-VCS-027)
     BUSY = "w toku"
 
 
@@ -190,9 +191,12 @@ class AppModel:
             return RepoState.BUSY
         if not view.available:
             return RepoState.UNAVAILABLE
-        if view.status is None or not view.status.changes:
-            return RepoState.CLEAN
-        return RepoState.CONFLICT if view.status.has_conflicts else RepoState.CHANGES
+        status = view.status
+        if status is not None and status.has_conflicts:
+            return RepoState.CONFLICT
+        if status is not None and status.merging:
+            return RepoState.MERGE
+        return RepoState.CHANGES if status is not None and status.changes else RepoState.CLEAN
 
     def sidebar_line(self, name: str) -> str:
         """Second line of a repository in the sidebar (UI-REFERENCE §4, P4)."""
@@ -204,9 +208,10 @@ class AppModel:
         if view.status is None:
             return ""
         status = view.status
+        line = view.branch_label
         if status.upstream and not status.detached:
-            return f"{view.branch_label} · ↑{status.ahead} ↓{status.behind}"
-        return view.branch_label
+            line = f"{line} · ↑{status.ahead} ↓{status.behind}"
+        return f"{line} · merge" if status.merging else line  # P11
 
     def badge(self, name: str) -> tuple[str, str] | None:
         """(text, kind) at the right of a sidebar row: change count or conflict; none when clean (P6)."""
@@ -228,6 +233,10 @@ class AppModel:
         if not view.available:
             return EmptyState("⊘", "Repozytorium niedostępne", "Folder nie istnieje albo nie jest repozytorium gita.",
                               path=f"{self._rootdir}/{view.name}", action="recheck")
+        if view.status is not None and not view.status.changes and view.status.merging:  # P11
+            return EmptyState("⑂", "Merge gotowy do commita",
+                              f"Konflikty w {view.name} są rozwiązane, a wynik jest taki sam jak ostatni commit. "
+                              "Wpisz wiadomość i zatwierdź, żeby zakończyć merge.")
         if view.status is not None and not view.status.changes:
             return EmptyState("✓", "Brak zmian", f"Kopia robocza {view.name} jest zgodna z ostatnim commitem.",
                               glyph_color="add")
@@ -286,7 +295,7 @@ class AppModel:
             return "Repozytorium jest niedostępne."
         if state is RepoState.CONFLICT:
             return "Rozwiąż konflikty przed commitem."
-        if not self.files(Group.STAGED):
+        if state is not RepoState.MERGE and not self.files(Group.STAGED):  # a merge commits even with nothing staged
             return "Brak plików w Staged."
         if not view.draft.strip():
             return "Wpisz wiadomość commita."
@@ -347,6 +356,12 @@ class AppModel:
         """P2: the red toolbar chip; empty without conflicts."""
         count = len(self.files(Group.CONFLICTS))
         return f"{files_label(count)} w konflikcie" if count else ""
+
+    @property
+    def merge_summary(self) -> str:
+        """P11: the blue toolbar chip while a merge waits for its commit."""
+        view = self._current()
+        return "merge gotowy do commita" if view and self.state(view.name) is RepoState.MERGE else ""
 
     @property
     def refreshed_label(self) -> str:

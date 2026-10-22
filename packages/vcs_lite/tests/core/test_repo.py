@@ -260,3 +260,31 @@ def test_req_vcs_026_unstage_all_restores_renames_too(repo, gr):
     st = gr.status()
     assert st.group(Group.STAGED) == []
     assert sorted(c.path for c in st.group(Group.UNVERSIONED)) == ["d/new.py"]
+
+
+# ---------- merge in progress (DES-VCS-046, REQ-VCS-027) ----------
+
+def test_des_vcs_046_status_reports_a_merge_in_progress(repo, gr):
+    repo.write("a.txt", "a\n"); repo.commit("init")
+    assert not gr.status().merging
+    conflicted(repo)
+    assert gr.status().merging
+
+
+def test_des_vcs_046_merge_is_found_through_a_git_file(tmp_path):
+    Repo(tmp_path).git("init", "-q", "-b", "main", "--separate-git-dir", str(tmp_path / "store"), str(tmp_path / "wt"))
+    r = Repo(tmp_path / "wt")
+    conflicted(r)
+    assert (r.path / ".git").is_file()
+    assert GitRepo(r.path, GitCli(env=GIT_ENV)).status().merging
+
+
+def test_req_vcs_027_commit_concludes_a_merge_resolved_to_head(repo, gr):
+    conflicted(repo)
+    repo.write("f.txt", "main\n")
+    assert gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt")).ok
+    st = gr.status()
+    assert st.changes == () and st.merging
+    assert gr.commit("Merge branch 'other'").ok
+    assert len(repo.git("log", "-1", "--format=%P").split()) == 2
+    assert not gr.status().merging

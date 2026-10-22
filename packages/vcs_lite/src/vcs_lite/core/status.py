@@ -1,6 +1,6 @@
 """Parse `git status --porcelain=v2 -z --branch` into the groups of T-VCS-01.
 
-Trace: DES-VCS-005, DES-VCS-006, REQ-VCS-002, REQ-VCS-003, REQ-VCS-004, REQ-VCS-019, T-VCS-01
+Trace: DES-VCS-005, DES-VCS-006, DES-VCS-046, REQ-VCS-002, REQ-VCS-003, REQ-VCS-004, REQ-VCS-019, T-VCS-01
 """
 
 from __future__ import annotations
@@ -44,6 +44,7 @@ class RepoStatus:
     ahead: int
     behind: int
     changes: tuple[FileChange, ...]
+    merging: bool = False  # MERGE_HEAD exists (DES-VCS-046)
 
     @property
     def detached(self) -> bool:

@@ -1,10 +1,11 @@
 """Operations on one repository: status, diff sides, stage, unstage, commit, push, pull.
 
-Trace: DES-VCS-007, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
+Trace: DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from vcs_lite.core.difftool import Content
@@ -50,7 +51,15 @@ class GitRepo:
         return result
 
     def status(self) -> RepoStatus:
-        return parse_status(self._read(*STATUS_ARGS).stdout)
+        status = parse_status(self._read(*STATUS_ARGS).stdout)
+        return replace(status, merging=(self.git_dir() / "MERGE_HEAD").exists())
+
+    def git_dir(self) -> Path:
+        """The git directory without calling git: `.git` itself, or where a `.git` file points (worktree)."""
+        dot_git = self.path / ".git"
+        if dot_git.is_file():
+            return self.path / dot_git.read_text(encoding="utf-8").partition("gitdir:")[2].strip()
+        return dot_git
 
     def content(self, side: Side, path: str) -> Content:
         if side is Side.EMPTY:

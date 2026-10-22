@@ -3,7 +3,7 @@
 Geometry (UI-REFERENCE §3): sidebar padding 8 × 10, header padding 8 × 6, row padding 8 × 7,
 rows 2 apart, dot column 10, gap 8; line heights follow the reference's 1.4 line height.
 
-Trace: DES-VCS-023, DES-VCS-042, REQ-VCS-002, REQ-VCS-016, REQ-VCS-018, DEC-VCS-047, DEC-VCS-049
+Trace: DES-VCS-023, DES-VCS-042, DES-VCS-046, REQ-VCS-027, DEC-VCS-068, DEC-VCS-069, REQ-VCS-002, REQ-VCS-016, REQ-VCS-018, DEC-VCS-047, DEC-VCS-049
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ DOT_COLORS = {
     RepoState.CHANGES: C["mod"],
     RepoState.CLEAN: C["state_clean"],
     RepoState.CONFLICT: C["conf"],
+    RepoState.MERGE: C["mod"],  # P11: never the green "clean" dot
     RepoState.UNAVAILABLE: C["state_off"],
 }
 
@@ -130,7 +131,7 @@ class RepoSidebar(tk.Frame):
     def _dot_color(model: AppModel, name: str, state: RepoState) -> str:
         if state is RepoState.BUSY:  # keep the colour the repository had before the operation
             view = model.view(name)
-            if not view.status or not view.status.changes:
+            if not view.status or not (view.status.changes or view.status.merging):
                 return C["state_clean"]
             return C["conf"] if view.status.has_conflicts else C["mod"]
         return DOT_COLORS[state]

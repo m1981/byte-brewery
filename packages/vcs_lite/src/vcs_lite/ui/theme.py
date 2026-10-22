@@ -4,7 +4,7 @@ Source: docs/ui-reference/UI-REFERENCE.md (sections 1, 2, 3, 8) and E-01.html.
 Approximations allowed by section 6: sizes rounded to whole points, weights >= 550 drawn bold,
 no letter spacing, transparency replaced by computed colours.
 
-Trace: DES-VCS-042, DES-VCS-045, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053
+Trace: DES-VCS-042, DES-VCS-045, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068
 """
 
 from __future__ import annotations
@@ -101,6 +101,7 @@ TYPE = {
     "banner_body": Type(12, mono=True),
     "busy_text": Type(12, color=COLORS["dim"]),
     "conflict_chip": Type(12, "bold", COLORS["conf"]),
+    "merge_chip": Type(12, "bold", COLORS["accent"]),
     "empty_glyph": Type(26, color=COLORS["empty_glyph"]),
     "empty_head": Type(15, "bold"),
     "empty_sub": Type(13, color=COLORS["dim"]),

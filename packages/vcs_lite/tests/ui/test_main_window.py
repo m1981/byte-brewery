@@ -97,6 +97,25 @@ def test_des_vcs_042_conflict_chip_follows_the_branch_chip_in_red(root, world):
     assert chip.text == "" and not chip.winfo_manager()
 
 
+def test_des_vcs_042_merge_chip_is_blue_and_takes_the_place_of_the_conflict_chip(root, world):
+    r = conflicted(world, "gamma")
+    model = world.start("gamma")
+    window = MainWindow(root, model)
+    world.select("gamma")
+    assert window.conflict_chip.winfo_manager() and not window.merge_chip.winfo_manager()
+    r.write("f.txt", "main\n"); r.git("add", "f.txt")
+    model.refresh_all(); world.worker.settle()
+    chip = window.merge_chip
+    assert chip.text == "merge gotowy do commita" and not window.conflict_chip.winfo_manager()
+    slaves = chip.master.pack_slaves()
+    assert slaves.index(chip) == slaves.index(window.branch_chip) + 1
+    texts = [i for i in chip.find_all() if chip.type(i) == "text"]
+    assert [chip.itemcget(i, "fill") for i in texts] == ["#0a66d8"]
+    assert {chip.itemcget(i, "fill") for i in chip.find_all() if chip.type(i) != "text"} == {"#e3eefc"}
+    assert chip.tk.call("font", "actual", chip.itemcget(texts[0], "font"), "-weight") == "bold"
+    assert [r.dot for r in window.sidebar.rows()] == ["#b4690e"]
+
+
 def test_des_vcs_042_commit_button_is_the_default_button_and_names_the_repo(root, world):
     world.repo("alpha")
     model = world.start("alpha")
@@ -157,6 +176,7 @@ def conflicted(world, name):
     r.git("checkout", "-q", "-b", "other"); r.write("f.txt", "other\n"); r.commit("other")
     r.git("checkout", "-q", "main"); r.write("f.txt", "main\n"); r.commit("main")
     r.git("merge", "-q", "other", check=False)
+    return r
 
 
 def test_des_vcs_023_sidebar_draws_state_line_badge_and_selection(root, world):
@@ -170,7 +190,7 @@ def test_des_vcs_023_sidebar_draws_state_line_badge_and_selection(root, world):
     assert [(r.name, r.line, r.badge, r.selected) for r in rows] == [
         ("alpha", "main", ("1", "count"), True),
         ("beta", "main", None, False),
-        ("gamma", "main", ("konflikt", "conflict"), False),
+        ("gamma", "main · merge", ("konflikt", "conflict"), False),
         ("delta", "niedostępne", None, False),
     ]
     assert [r.dot for r in rows] == ["#b4690e", "#9fd3ad", "#c2302a", "#c7c7cc"]
