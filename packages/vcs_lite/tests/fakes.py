@@ -27,17 +27,22 @@ class ManualWorker:
         self.queued.append((key, job, on_done))
         return True
 
+    def step(self) -> str:
+        """Run only the oldest queued job; returns its key."""
+        key, job, on_done = self.queued.pop(0)
+        self.history.append(key)
+        try:
+            outcome = Outcome(value=job())
+        except Exception as exc:  # noqa: BLE001 - delivered to on_done like the real worker
+            outcome = Outcome(error=exc)
+        self._busy.discard(key)
+        on_done(outcome)
+        return key
+
     def settle(self) -> None:
         """Run queued jobs, including the follow-up jobs they schedule, until nothing is left."""
         while self.queued:
-            key, job, on_done = self.queued.pop(0)
-            self.history.append(key)
-            try:
-                outcome = Outcome(value=job())
-            except Exception as exc:  # noqa: BLE001 - delivered to on_done like the real worker
-                outcome = Outcome(error=exc)
-            self._busy.discard(key)
-            on_done(outcome)
+            self.step()
 
 
 class FakeDiffTool:

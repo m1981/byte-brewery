@@ -274,3 +274,13 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik najeżdża na węzeł "spec-evidence" i klika „+”
     Then "spec-evidence/a.json" i "spec-evidence/b.json" są w grupie Staged
     And grupa Unversioned nie zawiera węzła "spec-evidence"
+
+  @AT_VCS_034 @confirmed @UC_VCS_05 @REQ_VCS_027 @DEC_VCS_065 @VER_VCS_003
+  Scenario: Merge rozwiązany do treści HEAD da się zakończyć commitem
+    Given w repozytorium trwa merge z konfliktem w "f.txt"
+    And użytkownik usunął znaczniki, zostawił treść z HEAD i oznaczył plik spacją jako rozwiązany
+    Then repozytorium nie jest pokazane jako czyste, a druga linia w pasku bocznym to „main · merge”
+    When użytkownik wpisuje wiadomość "Merge branch 'other'"
+    Then Commit jest aktywny, choć grupa Staged jest pusta
+    When użytkownik wybiera Commit
+    Then powstaje commit scalający z dwoma rodzicami i merge się kończy

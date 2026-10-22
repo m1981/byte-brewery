@@ -2,7 +2,7 @@
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
 
-1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
+1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
 2. `E-01.png`: zrzut makiety wykonany przez użytkownika (1135 × 712 px); pokazuje, jak wartości wyglądają razem.
 3. Ten dokument: każda wartość wypisana jawnie, z odwzorowaniem w Tk 8.6 i listą przybliżeń.
 
@@ -126,7 +126,8 @@ Nagłówek „REPOZYTORIA”. Element repo: kropka stanu, nazwa (pogrubiona), dr
 |---|---|---|---|
 | ZMIANY | `mod` | „main”; z upstreamem „main · ↑<ahead> ↓<behind>” | licznik na `#dfe1e6` |
 | CZYSTE | `#9fd3ad` | jak wyżej | brak licznika (P6) |
-| KONFLIKT | `conf` | sama gałąź, np. „main” (DEC-VCS-048; makieta pokazuje „main · merge”) | znacznik „konflikt”: tło `#fbe3e1`, tekst `conf` |
+| KONFLIKT | `conf` | w trakcie merge „main · merge”, przy innych konfliktach sama gałąź (DEC-VCS-069) | znacznik „konflikt”: tło `#fbe3e1`, tekst `conf` |
+| SCALANIE | `mod` | „main · merge”; z upstreamem „main · ↑<ahead> ↓<behind> · merge” (P11) | licznik albo nic, gdy lista pusta |
 | NIEDOSTĘPNE | `#c7c7cc` | „niedostępne” | brak; nazwa w `#8e8e93` |
 | zaznaczone | — | tło `accent`, nazwa biała, gałąź `#dbe8fb` | licznik `#478ce2`, biały |
 
@@ -214,7 +215,7 @@ Okno modalne nad oknem głównym (`tk.Toplevel`, `transient`, `grab_set`): szero
 - nagłówek „Repozytoria do obserwowania”: 15, 650; padding 16 × 18 × 4;
 - podtytuł „z folderu `<rootdir>`”: `dim`, padding 0 × 18 × 10; ścieżka jako chip monospace 12 na `#eef0f3`, promień 5, padding 1 × 6; nieedytowalna w v1;
 - lista: linie 1 `line` u góry i u dołu; wysokość do 220 z przewijaniem; padding 4 × 0; wiersz: pole wyboru natywne / nazwa / miejsce na dodatek, odstęp 10, padding 6 × 18; kolejność alfabetyczna;
-- repo wybrane wcześniej, a nieobecne na dysku: na końcu listy, zaznaczone, nazwa w `#8e8e93`, po prawej „niedostępne” (12, `dim`); odznaczenie usuwa je z listy. Propozycja agenta z 2026-10-22, żeby Zapisz nie usuwało ich po cichu; do potwierdzenia przez użytkownika.
+- repo wybrane wcześniej, a nieobecne na dysku: na końcu listy, zaznaczone, nazwa w `#8e8e93`, po prawej „niedostępne” (12, `dim`); odznaczenie usuwa je z listy. Zaakceptowane (DEC-VCS-058).
 - notka „Pokazane są repozytoria z pierwszego poziomu folderu. Zwykłe i ukryte foldery są pominięte.”: 12, `dim`, padding 8 × 18;
 - stopka: tło `#fafafb`, linia górna 1 `line`, padding 12 × 18, odstęp 8; po lewej „Zaznaczono N z M” (12, `dim`); po prawej „Anuluj” i „Zapisz” (przycisk domyślny).
 
@@ -223,6 +224,13 @@ Natywne `tkinter.messagebox.askyesno`. Tytuł: „Gałąź <gałąź> nie ma ups
 
 ### P10 Odłączony HEAD
 Chip „⎇ odłączony HEAD · <7 znaków commita>”. Pull nieaktywny, podpowiedź „Odłączony HEAD: brak gałęzi do pull”. Commit & Push nieaktywny, podpowiedź „Odłączony HEAD: brak gałęzi do wypchnięcia”. Commit aktywny.
+
+### P11 Merge w toku (DEC-VCS-068, DEC-VCS-069)
+Źródło: `E-01-scalanie.html`. Dotyczy repo, w którym istnieje `MERGE_HEAD` (REQ-VCS-027).
+- chip „merge gotowy do commita” w pasku narzędzi, gdy merge trwa i nie ma konfliktów: tło `accent-soft`, tekst `accent`, grubość 600, wymiary jak chip gałęzi, w miejscu chipa P2; przy konfliktach zostaje chip P2;
+- pasek boczny: stan SCALANIE z §4; druga linia z dopiskiem „· merge” przy każdym trwającym merge, także w stanie KONFLIKT;
+- pusty stan, gdy lista plików jest pusta: znak „⑂” w `#b9bac0`, nagłówek „Merge gotowy do commita”, opis „Konflikty w <repo> są rozwiązane, a wynik jest taki sam jak ostatni commit. Wpisz wiadomość i zatwierdź, żeby zakończyć merge.”;
+- Commit aktywny po wpisaniu wiadomości także przy pustym Staged; Commit & Push według zwykłych reguł upstreamu.
 
 ### Odwzorowanie w Tk
 - pasek błędu i puste stany: `tk.Frame` i `tk.Label` z tokenami; treść błędu w `tk.Text` tylko do odczytu, wysokość 4 linie;

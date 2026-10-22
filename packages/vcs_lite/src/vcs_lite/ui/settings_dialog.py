@@ -10,7 +10,7 @@ from collections.abc import Callable
 
 from vcs_lite.app.model import AppModel
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import Pill
+from vcs_lite.ui.widgets import Pill, elide_middle
 
 C, S = theme.COLORS, theme.SPACE
 PAD_X = 18
@@ -43,10 +43,14 @@ class RepoDialog(tk.Toplevel):
         theme.label(self, "dialog_title", "Repozytoria do obserwowania", anchor=tk.W).pack(fill=tk.X, padx=PAD_X, pady=(16, 4))
         sub = tk.Frame(self, bg=C["bg"])
         sub.pack(fill=tk.X, padx=PAD_X, pady=(0, 10))
-        theme.label(sub, "empty_sub", "z folderu").pack(side=tk.LEFT)
-        chip = Pill(sub, role="path", fill=C["chip_bg"], ink=C["ink"], pad=(6, 1), radius=5, parent_bg=C["bg"])
-        chip.set(self.path_text)
-        chip.pack(side=tk.LEFT, padx=(6, 0))
+        prefix = theme.label(sub, "empty_sub", "z folderu")
+        prefix.pack(side=tk.LEFT)
+        chip_pad, gap = 6, 6
+        room = S["dialog_width"] - 2 * PAD_X - theme.font("empty_sub").measure("z folderu") - gap - 2 * chip_pad
+        self.path_shown = elide_middle(self.path_text, theme.font("path"), room)  # keeps the dialog 420 wide
+        chip = Pill(sub, role="path", fill=C["chip_bg"], ink=C["ink"], pad=(chip_pad, 1), radius=5, parent_bg=C["bg"])
+        chip.set(self.path_shown)
+        chip.pack(side=tk.LEFT, padx=(gap, 0))
         if error:
             self._build_error(error)
         tk.Frame(self, height=S["line"], bg=C["line"]).pack(fill=tk.X)

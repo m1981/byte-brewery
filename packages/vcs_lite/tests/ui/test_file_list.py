@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from test_main_window import conflicted, root, tk_root, world  # noqa: F401 - shared fixtures
+from test_main_window import conflicted, root, world  # noqa: F401 - shared fixtures
 
 from vcs_lite.core.settings import SettingsStore
 from vcs_lite.core.status import Group

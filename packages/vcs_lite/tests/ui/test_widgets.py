@@ -6,21 +6,14 @@ import tkinter as tk
 
 import pytest
 
-from vcs_lite.ui.tkenv import prepare_tk
 from vcs_lite.ui.widgets import rounded_rect
 
 
 @pytest.fixture(scope="module")
-def canvas():
-    prepare_tk()
-    try:
-        root = tk.Tk()
-    except tk.TclError as exc:
-        pytest.skip(f"Tk unavailable: {exc}")
-    root.withdraw()
-    c = tk.Canvas(root)
+def canvas(tk_root):
+    c = tk.Canvas(tk_root)
     yield c
-    root.destroy()
+    c.destroy()
 
 
 def ovals(c: tk.Canvas, tag: str) -> list[tuple[float, ...]]:

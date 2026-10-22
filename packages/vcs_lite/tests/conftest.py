@@ -1,12 +1,15 @@
-"""Shared fixtures: throwaway git repositories isolated from the user's git config."""
+"""Shared fixtures: throwaway git repositories isolated from the user's git config, and the one Tk root."""
 
 from __future__ import annotations
 
 import os
 import subprocess
+import tkinter as tk
 from pathlib import Path
 
 import pytest
+
+from vcs_lite.ui.tkenv import prepare_tk
 
 GIT_ENV = {
     **os.environ,
@@ -45,3 +48,16 @@ def repo(tmp_path: Path) -> Repo:
     r.path.mkdir()
     r.git("init", "-q", "-b", "main")
     return r
+
+
+@pytest.fixture(scope="session")
+def tk_root():
+    """One Tk per test session, like the app: fonts cached by ui.theme belong to a single interpreter."""
+    prepare_tk()
+    try:
+        r = tk.Tk()
+    except tk.TclError as exc:  # no display, e.g. over ssh
+        pytest.skip(f"Tk unavailable: {exc}")
+    r.withdraw()
+    yield r
+    r.destroy()

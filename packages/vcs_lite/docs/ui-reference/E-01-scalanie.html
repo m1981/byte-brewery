@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · E-01 merge</title>
+<style>
+  /* Tokens and rules of E-01.html, E-01-stany.html and E-01-lista.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --chrome: #ececee; --sidebar: #f2f2f5; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73;
+    --accent: #0a66d8; --accent-soft: #e3eefc; --row-hover: #f5f7fb;
+    --mod: #b4690e; --add: #1f7a3a; --conf: #c2302a; --conf-soft: #fbe3e1;
+    --file-mod: #002daa; --file-add: #0c7216; --file-unv: #a92c3e;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 80ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 86ch; }
+  .scroll { overflow-x: auto; }
+  .window { min-width: 860px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 38px; background: var(--chrome); display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .title { flex: 1; text-align: center; font-weight: 600; color: #4a4a50; margin-right: 52px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: #fafafb; }
+  .repo-title { font-size: 15px; font-weight: 650; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; background: #eef0f3; color: #3a3a40; font-size: 12px; white-space: nowrap; }
+  .chip .arrow { color: var(--dim); }
+  .chip.conf { background: var(--conf-soft); color: var(--conf); font-weight: 600; }
+  .chip.merge { background: var(--accent-soft); color: var(--accent); font-weight: 600; }      /* NEW P11 */
+  .spacer { flex: 1; }
+  .check { display: inline-flex; gap: 6px; align-items: center; }
+  .check .box { width: 14px; height: 14px; border: 1px solid #b8b8be; border-radius: 3px; background: #fff; }
+  .btn { font: inherit; border: 1px solid #c9c9cf; background: #fff; border-radius: 6px; padding: 4px 12px; color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn[disabled] { opacity: .45; }
+  .body { display: grid; grid-template-columns: 230px 1fr; min-height: 300px; }
+  .sidebar { background: var(--sidebar); border-right: 1px solid var(--line); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .side-h { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--dim); padding: 6px 8px; text-transform: uppercase; }
+  .repo { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 7px; }
+  .repo.sel { background: var(--accent); color: #fff; } .repo.sel .branch { color: #dbe8fb; }
+  .repo .name { font-weight: 600; } .repo .branch { font-size: 11.5px; color: var(--dim); }
+  .badge { min-width: 22px; text-align: center; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 1px 7px; background: #dfe1e6; color: #3a3a40; }
+  .repo.sel .badge { background: rgba(255,255,255,.25); color: #fff; }
+  .badge.conf { background: var(--conf-soft); color: var(--conf); }
+  .repo.sel .badge.conf { background: #fff; color: var(--conf); }
+  .state { width: 9px; height: 9px; border-radius: 50%; }
+  .s-changes { background: var(--mod); } .s-clean { background: #9fd3ad; } .s-conf { background: var(--conf); }
+  .side-foot { margin-top: auto; padding: 8px; display: flex; }
+  .files { padding: 6px 0 0; min-width: 0; }
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .row { height: 24px; display: flex; align-items: center; padding: 0 16px 0 28px; white-space: nowrap; }
+  .row.sel { background: var(--accent-soft); }
+  .M { color: var(--file-mod); }
+  .hint { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+  .empty { display: grid; place-items: center; align-content: center; gap: 6px; text-align: center; padding: 40px 24px; height: 100%; }
+  .empty .glyph { font-size: 26px; color: #b9bac0; }
+  .empty .head { font-size: 15px; font-weight: 600; }
+  .empty .sub { color: var(--dim); max-width: 46ch; }
+  .commit { border-top: 1px solid var(--line); background: #fafafb; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+  textarea { font: inherit; border: 1px solid #c9c9cf; border-radius: 8px; padding: 8px 10px; resize: none; height: 64px; width: 100%; color: var(--ink); }
+  .actions { display: flex; flex-direction: column; gap: 6px; }
+  .reason { grid-column: 1 / -1; color: var(--dim); font-size: 12px; display: flex; gap: 6px; }
+  .status { display: flex; gap: 14px; padding: 6px 14px; font-size: 11.5px; color: var(--dim); border-top: 1px solid var(--line); background: var(--chrome); }
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+  .minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .mini { background: var(--sidebar); border-radius: 10px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); padding: 8px; }
+  .mini-cap { font-size: 12px; font-weight: 600; color: #3a3a40; margin: 0 0 6px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  .notes table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .notes th, .notes td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  .notes th { background: #fafafb; }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>vcs-lite — P11: merge w toku</h1>
+    <p class="lead">Propozycja do akceptacji (Q-VCS-043) dla REQ-VCS-027 i DEC-VCS-065: gdy istnieje <code>MERGE_HEAD</code>, repo nie jest pokazywane jako czyste, a commit kończy merge także przy pustym Staged. Wszystkie wartości z tokenów wzorca; nowy jest tylko niebieski chip <code>accent-soft</code> / <code>accent</code>.</p>
+  </div>
+
+  <!-- P11a: merge ready, nothing staged -->
+  <section>
+    <h2 class="sec"><span class="pid">P11a</span> Konflikty rozwiązane do treści HEAD (przypadek z OBS-VCS-010)</h2>
+    <p class="cap">Lista plików jest pusta, bo indeks jest równy HEAD. Zamiast „Brak zmian” pusty stan mówi, co zostało do zrobienia. W pasku narzędzi niebieski chip „merge gotowy do commita” w miejscu czerwonego chipa P2. W pasku bocznym kropka „zmiany” i druga linia „main · merge”, bez licznika. Commit aktywny po wpisaniu wiadomości.</p>
+    <div class="scroll"><div class="window">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">vcs-lite — gamma</span></div>
+      <div class="toolbar">
+        <span class="repo-title">gamma</span>
+        <span class="chip">⎇ main <span class="arrow">→</span> brak upstreamu</span>
+        <span class="chip merge">merge gotowy do commita</span>
+        <span class="spacer"></span>
+        <span class="check"><span class="box"></span>Pokaż foldery</span>
+        <button class="btn" disabled>⇣ Pull</button><button class="btn">⟳ Odśwież</button>
+      </div>
+      <div class="body">
+        <aside class="sidebar">
+          <div class="side-h">Repozytoria</div>
+          <div class="repo"><span class="state s-changes"></span><span><span class="name">alpha</span><br><span class="branch">main</span></span><span class="badge">6</span></div>
+          <div class="repo"><span class="state s-clean"></span><span><span class="name">beta</span><br><span class="branch">main · ↑0 ↓0</span></span><span></span></div>
+          <div class="repo sel"><span class="state s-changes"></span><span><span class="name">gamma</span><br><span class="branch">main · merge</span></span><span></span></div>
+          <div class="side-foot"><button class="btn">⚙ Repozytoria…</button></div>
+        </aside>
+        <main class="files">
+          <div class="empty">
+            <div class="glyph">⑂</div>
+            <div class="head">Merge gotowy do commita</div>
+            <div class="sub">Konflikty w gamma są rozwiązane, a wynik jest taki sam jak ostatni commit. Wpisz wiadomość i zatwierdź, żeby zakończyć merge.</div>
+          </div>
+        </main>
+      </div>
+      <div class="commit">
+        <textarea placeholder="Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push"></textarea>
+        <div class="actions"><button class="btn primary" disabled>Commit do gamma</button><button class="btn" disabled>Commit &amp; Push</button></div>
+        <div class="reason">ⓘ Wpisz wiadomość commita.</div>
+      </div>
+      <div class="status"><span>Odświeżono 14:52</span><span>Dwuklik: porównanie w Beyond Compare</span><span><kbd>⌘1</kbd>–<kbd>⌘9</kbd> wybór repo</span></div>
+    </div></div>
+  </section>
+
+  <!-- P11b: merge ready with staged files -->
+  <section>
+    <h2 class="sec"><span class="pid">P11b</span> Konflikty rozwiązane inną treścią</h2>
+    <p class="cap">Rozwiązany plik jest w Staged jak dotąd. Dochodzą tylko chip i druga linia „main · merge”, żeby było widać, że commit zakończy merge.</p>
+    <div class="scroll"><div class="window">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">vcs-lite — gamma</span></div>
+      <div class="toolbar">
+        <span class="repo-title">gamma</span>
+        <span class="chip">⎇ main <span class="arrow">→</span> brak upstreamu</span>
+        <span class="chip merge">merge gotowy do commita</span>
+        <span class="spacer"></span>
+        <span class="check"><span class="box"></span>Pokaż foldery</span>
+        <button class="btn" disabled>⇣ Pull</button><button class="btn">⟳ Odśwież</button>
+      </div>
+      <div class="body">
+        <aside class="sidebar">
+          <div class="side-h">Repozytoria</div>
+          <div class="repo"><span class="state s-changes"></span><span><span class="name">alpha</span><br><span class="branch">main</span></span><span class="badge">6</span></div>
+          <div class="repo sel"><span class="state s-changes"></span><span><span class="name">gamma</span><br><span class="branch">main · merge</span></span><span class="badge">1</span></div>
+          <div class="side-foot"><button class="btn">⚙ Repozytoria…</button></div>
+        </aside>
+        <main class="files">
+          <div class="group">Staged <span class="n">1</span></div>
+          <div class="row sel"><span class="M">f.txt</span><span class="hint"><kbd>spacja</kbd> unstage · <kbd>dwuklik</kbd> porównaj</span></div>
+        </main>
+      </div>
+      <div class="commit">
+        <textarea>Merge branch 'other'</textarea>
+        <div class="actions"><button class="btn primary">Commit do gamma</button><button class="btn" disabled>Commit &amp; Push</button></div>
+      </div>
+      <div class="status"><span>Odświeżono 14:53</span><span>Dwuklik: porównanie w Beyond Compare</span><span><kbd>⌘1</kbd>–<kbd>⌘9</kbd> wybór repo</span></div>
+    </div></div>
+  </section>
+
+  <!-- P11c: sidebar line during a merge with conflicts -->
+  <section>
+    <h2 class="sec"><span class="pid">P11c</span> Druga linia w pasku bocznym w trakcie merge</h2>
+    <p class="cap">Skoro merge jest już wykrywany, druga linia „main · merge” może wrócić także dla repo w konflikcie, jak na pierwotnym wzorcu <code>E-01.png</code>. To zmiana DEC-VCS-048. Konflikty bez merge (rebase, cherry-pick) nadal pokazują samą gałąź.</p>
+    <div class="minis">
+      <div class="mini"><p class="mini-cap">Dziś (DEC-VCS-048)</p>
+        <div class="repo"><span class="state s-conf"></span><span><span class="name">gamma</span><br><span class="branch">main</span></span><span class="badge conf">konflikt</span></div>
+        <div class="repo"><span class="state s-clean"></span><span><span class="name">gamma</span><br><span class="branch">main</span></span><span></span></div>
+      </div>
+      <div class="mini"><p class="mini-cap">Propozycja</p>
+        <div class="repo"><span class="state s-conf"></span><span><span class="name">gamma</span><br><span class="branch">main · merge</span></span><span class="badge conf">konflikt</span></div>
+        <div class="repo"><span class="state s-changes"></span><span><span class="name">gamma</span><br><span class="branch">main · merge</span></span><span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Reguły P11</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Merge z konfliktami</th><th>Merge bez konfliktów</th></tr>
+      <tr><td>Chip w pasku narzędzi</td><td>czerwony P2 „N plików w konflikcie” (bez zmian)</td><td>niebieski „merge gotowy do commita”: tło <code>accent-soft</code>, tekst <code>accent</code>, 600, wymiary chipa gałęzi</td></tr>
+      <tr><td>Kropka w pasku bocznym</td><td><code>conf</code> (bez zmian)</td><td><code>mod</code>, nigdy zielona „czyste”</td></tr>
+      <tr><td>Druga linia</td><td colspan="2">„main · merge”; z upstreamem „main · ↑1 ↓0 · merge”</td></tr>
+      <tr><td>Prawa strona</td><td>znacznik „konflikt” (bez zmian)</td><td>licznik plików albo nic, gdy lista pusta</td></tr>
+      <tr><td>Pusty stan</td><td>—</td><td>znak „⑂” w <code>#b9bac0</code>, „Merge gotowy do commita”, opis jak w P11a</td></tr>
+      <tr><td>Commit</td><td>nieaktywny, „Rozwiąż konflikty przed commitem.” (bez zmian)</td><td>aktywny po wpisaniu wiadomości, także przy pustym Staged; Commit &amp; Push według zwykłych reguł upstreamu</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from conftest import Repo
-from test_main_window import root, tk_root, world  # noqa: F401 - shared fixtures
+from test_main_window import root, world  # noqa: F401 - shared fixtures
 
 from vcs_lite.app.model import AppModel
 from vcs_lite.core.settings import Settings
@@ -78,7 +78,7 @@ def test_req_vcs_018_missing_repository_is_listed_greyed_and_can_be_removed(root
 
 def test_uc_vcs_01_missing_rootdir_shows_the_error_and_blocks_saving(root, world, tmp_path):  # noqa: F811
     model = AppModel(Settings(rootdir=str(tmp_path / "nope")), git=world.git, diff_tool=world.tool,
-                     worker=world.worker, confirm=lambda q: True)
+                     worker=world.worker, confirm=lambda title, message: True)
     window = MainWindow(root, model)
     dialog = window.open_settings()
     assert "Katalog z repozytoriami nie istnieje" in dialog.error_text
@@ -99,7 +99,7 @@ def test_des_vcs_042_long_folder_path_is_shortened_in_the_middle_to_keep_420(roo
     deep = tmp_path / ("very-long-folder-name-" * 6) / "PycharmProjects"
     deep.mkdir(parents=True)
     model = AppModel(Settings(rootdir=str(deep)), git=world.git, diff_tool=world.tool,
-                     worker=world.worker, confirm=lambda q: True)
+                     worker=world.worker, confirm=lambda title, message: True)
     window = MainWindow(root, model)
     dialog = window.open_settings()
     assert "…" in dialog.path_shown and dialog.path_shown.endswith("PycharmProjects")
@@ -107,9 +107,10 @@ def test_des_vcs_042_long_folder_path_is_shortened_in_the_middle_to_keep_420(roo
     dialog.cancel()
 
 
-def test_des_vcs_042_short_folder_path_is_shown_whole(root, world):  # noqa: F811
-    rootdir_with_repos(world)
-    window = MainWindow(root, world.start())
-    dialog = window.open_settings()
-    assert dialog.path_shown == str(world.root) or "…" in dialog.path_shown
-    dialog.cancel()
+def test_des_vcs_042_short_folder_path_is_shown_whole(tk_root):  # noqa: F811
+    from vcs_lite.ui import theme
+    from vcs_lite.ui.widgets import elide_middle
+    font = theme.font("path")
+    assert elide_middle("~/PycharmProjects", font, 300) == "~/PycharmProjects"
+    shortened = elide_middle("/a/very/long/path/to/the/folder/PycharmProjects", font, 150)
+    assert shortened.startswith("/a/") and shortened.endswith("Projects") and font.measure(shortened) <= 150

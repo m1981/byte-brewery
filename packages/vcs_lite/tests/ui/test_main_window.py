@@ -14,20 +14,6 @@ from world import World
 from vcs_lite.app.worker import Worker
 from vcs_lite.ui.main_window import MainWindow
 from vcs_lite.ui.pump import TkPump
-from vcs_lite.ui.tkenv import prepare_tk
-
-
-@pytest.fixture(scope="session")
-def tk_root():
-    """One Tk per process, like the app."""
-    prepare_tk()
-    try:
-        r = tk.Tk()
-    except tk.TclError as exc:  # no display, e.g. over ssh
-        pytest.skip(f"Tk unavailable: {exc}")
-    r.withdraw()
-    yield r
-    r.destroy()
 
 
 @pytest.fixture
@@ -87,6 +73,28 @@ def test_des_vcs_042_toolbar_title_and_status_bar_follow_the_selection(root, wor
     assert window.winfo_toplevel().title() == "vcs-lite — alpha"
     assert window.refreshed.cget("text").startswith("Odświeżono ")
     assert str(window.pull_button.cget("state")) == "disabled"
+
+
+def test_des_vcs_042_conflict_chip_follows_the_branch_chip_in_red(root, world):
+    r = world.repo("gamma")
+    r.write("f.txt", "base\n"); r.commit("base")
+    r.git("checkout", "-q", "-b", "other"); r.write("f.txt", "other\n"); r.commit("other")
+    r.git("checkout", "-q", "main"); r.write("f.txt", "main\n"); r.commit("main")
+    r.git("merge", "-q", "other", check=False)
+    model = world.start("gamma")
+    window = MainWindow(root, model)
+    world.select("gamma")
+    chip = window.conflict_chip
+    assert chip.text == "1 plik w konflikcie"
+    slaves = chip.master.pack_slaves()
+    assert slaves.index(chip) == slaves.index(window.branch_chip) + 1
+    texts = [i for i in chip.find_all() if chip.type(i) == "text"]
+    assert [chip.itemcget(i, "fill") for i in texts] == ["#c2302a"]
+    assert {chip.itemcget(i, "fill") for i in chip.find_all() if chip.type(i) != "text"} == {"#fbe3e1"}
+    assert chip.tk.call("font", "actual", chip.itemcget(texts[0], "font"), "-weight") == "bold"
+    r.write("f.txt", "main\n"); r.git("add", "f.txt")
+    model.refresh_all(); world.worker.settle()
+    assert chip.text == "" and not chip.winfo_manager()
 
 
 def test_des_vcs_042_commit_button_is_the_default_button_and_names_the_repo(root, world):

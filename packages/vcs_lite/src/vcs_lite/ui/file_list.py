@@ -14,7 +14,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from vcs_lite.app.model import AppModel, EmptyState
+from vcs_lite.app.model import AppModel, EmptyState, files_label
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import rounded_rect
@@ -57,15 +57,6 @@ class ListRow:
     @property
     def key(self) -> Key:
         return self.group, self.path
-
-
-def files_label(n: int) -> str:
-    """Polish plural: 1 plik, 2–4 pliki (but 12–14 plików), otherwise plików."""
-    if n == 1:
-        return "1 plik"
-    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
-        return f"{n} pliki"
-    return f"{n} plików"
 
 
 def file_color(change: FileChange) -> str:

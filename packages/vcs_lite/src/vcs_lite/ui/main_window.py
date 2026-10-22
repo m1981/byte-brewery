@@ -30,13 +30,18 @@ def button(parent: tk.Misc, text: str, parent_bg: str, **options) -> tk.Button:
 
 
 class MainWindow(tk.Frame):
-    def __init__(self, master: tk.Misc, model: AppModel):
+    def __init__(self, master: tk.Misc, model: AppModel, *, reduce_motion: bool = False):
         super().__init__(master, bg=C["bg"])
         self.model = model
+        self._reduce_motion = reduce_motion
+        self._busy_after: str | None = None   # pending after() of the animation
+        self._busy_shown = False
+        self._busy_phase = 0
         self._shown_repo: str | None = None
         self.settings_dialog: RepoDialog | None = None
         self._placeholder = False
         self._build()
+        self._bind_shortcuts()
         model.subscribe(self.render)
         self.render()
 
@@ -58,6 +63,10 @@ class MainWindow(tk.Frame):
         self.repo_title.pack(side=tk.LEFT)
         self.branch_chip = Pill(bar, role="chip", fill=C["chip_bg"], pad=S["chip_pad"], parent_bg=C["panel"])
         self.branch_chip.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0))
+        self.conflict_chip = Pill(bar, role="conflict_chip", fill=C["conf_soft"], pad=S["chip_pad"], parent_bg=C["panel"])  # P2
+        self.busy_text = theme.label(bar, "busy_text", bg=C["panel"])  # P4
+        self.busy_text.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0))
+        self.busy_bar = tk.Canvas(bar, height=S["busy_bar_height"], bg=C["panel"], highlightthickness=0, bd=0)
         self.refresh_button = button(bar, "⟳ Odśwież", C["panel"], command=self.model.refresh_all)
         self.refresh_button.pack(side=tk.RIGHT)
         self.pull_button = button(bar, "⇣ Pull", C["panel"], command=self.model.pull)
@@ -79,10 +88,33 @@ class MainWindow(tk.Frame):
         self._build_repo_list(sidebar)
         files = tk.Frame(middle, bg=C["bg"])
         files.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._build_banner(files)
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
                                   on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action)
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
+
+    def _build_banner(self, parent: tk.Frame) -> None:
+        """P3: the failed operation and git's own message, above the file list; hidden until needed."""
+        pad_x, pad_y = S["banner_pad"]
+        self.banner = tk.Frame(parent, bg=C["conf_soft"])
+        tk.Frame(self.banner, width=S["banner_edge"], bg=C["conf"]).pack(side=tk.LEFT, fill=tk.Y)
+        content = tk.Frame(self.banner, bg=C["conf_soft"], padx=pad_x - S["banner_edge"], pady=pad_y)
+        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        theme.label(content, "banner_title", "⚠", bg=C["conf_soft"]).grid(row=0, column=0, sticky=tk.NW, padx=(0, 10))
+        self.banner_title = theme.label(content, "banner_title", bg=C["conf_soft"], anchor=tk.W)
+        self.banner_title.grid(row=0, column=1, sticky=tk.W)
+        close = theme.label(content, "empty_sub", "×", bg=C["conf_soft"], cursor="hand2")
+        close.configure(font=theme.font("folder_act"))
+        close.grid(row=0, column=2, sticky=tk.NE)
+        close.bind("<Button-1>", lambda e: self.close_banner())
+        self.banner_body = tk.Text(content, height=1, wrap=tk.WORD, bd=0, highlightthickness=0, bg=C["conf_soft"],
+                                   fg=theme.TYPE["banner_body"].color, font=theme.font("banner_body"))
+        self.banner_body.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=(4, 0))
+        content.columnconfigure(1, weight=1)
+
+    def close_banner(self) -> None:
+        self.model.dismiss_error()
 
     def _build_repo_list(self, sidebar: tk.Frame) -> None:
         foot = tk.Frame(sidebar, bg=C["sidebar"], padx=S["side_foot_pad"], pady=S["side_foot_pad"])
@@ -179,6 +211,32 @@ class MainWindow(tk.Frame):
     def toggle_folders(self) -> None:
         self.model.show_folders = self.show_folders.get()
 
+    def _bind_shortcuts(self) -> None:
+        """⌘↩ commit, ⌘⇧↩ commit and push, ⌘1–⌘9 repository (REQ-VCS-022). The message field gets its own
+        bindings so the Text class does not insert a new line first."""
+        top = self.winfo_toplevel()
+        self.shortcuts = {"<Command-Return>": self._shortcut(self.model.commit),
+                          "<Command-Shift-Return>": self._shortcut(self.model.commit_and_push)}
+        for sequence, handler in self.shortcuts.items():
+            top.bind(sequence, handler)
+            self.message_box.bind(sequence, handler)
+        for digit in range(1, 10):
+            sequence = f"<Command-Key-{digit}>"
+            self.shortcuts[sequence] = self._shortcut(lambda index=digit - 1: self._select_index(index))
+            top.bind(sequence, self.shortcuts[sequence])
+
+    def _shortcut(self, action):
+        def handler(_event=None):
+            self._sync_message()
+            action()
+            return "break"
+        return handler
+
+    def _select_index(self, index: int) -> None:
+        names = self.model.repo_names
+        if index < len(names):
+            self.model.select(names[index])
+
     def open_settings(self) -> RepoDialog:
         if self.settings_dialog is None:
             self.settings_dialog = RepoDialog(self, self.model, on_close=self._settings_closed)
@@ -203,11 +261,65 @@ class MainWindow(tk.Frame):
         self.sidebar.render(self.model)
         self.file_list.render(self.model)
         self._render_commit_panel()
+        self._render_feedback()
         self.refreshed.configure(text=self.model.refreshed_label)
+
+    # ---------- error banner and operation in progress (P3, P4) ----------
+
+    @property
+    def busy_animating(self) -> bool:
+        return self._busy_shown
+
+    def _render_feedback(self) -> None:
+        error = self.model.error
+        if error:
+            self.banner_title.configure(text=self.model.error_title or "Operacja nie powiodła się")
+            self.banner_body.configure(state=tk.NORMAL)
+            self.banner_body.delete("1.0", tk.END)
+            self.banner_body.insert("1.0", error)
+            lines = int(self.banner_body.count("1.0", tk.END, "displaylines")[0]) if self.banner.winfo_ismapped() else error.count("\n") + 1
+            self.banner_body.configure(height=max(1, min(lines, S["banner_lines"])), state=tk.DISABLED)
+            if not self.banner.winfo_manager():
+                margin_x, margin_top, margin_bottom = S["banner_margin"]
+                self.banner.pack(fill=tk.X, padx=margin_x, pady=(margin_top, margin_bottom), before=self.file_list)
+        elif self.banner.winfo_manager():
+            self.banner.pack_forget()
+
+        label = self.model.busy_label
+        self.busy_text.configure(text=label or "")
+        if label and not self._busy_shown:
+            self._busy_shown = True
+            self.busy_bar.place(relx=0, rely=1.0, anchor=tk.SW, relwidth=1, height=S["busy_bar_height"])
+            self._animate_busy()
+        elif not label and self._busy_shown:
+            self._busy_shown = False
+            self.busy_bar.place_forget()
+            if self._busy_after:
+                self.after_cancel(self._busy_after)
+                self._busy_after = None
+
+    def _animate_busy(self) -> None:
+        """A 30 % segment sliding left to right every 1.2 s; runs only while an operation is in progress."""
+        c, width = self.busy_bar, max(self.busy_bar.winfo_width(), 1)
+        c.delete("all")
+        if self._reduce_motion:  # still, full width (P4)
+            c.create_rectangle(0, 0, width, S["busy_bar_height"], fill=C["accent"], outline="")
+            return
+        share, frame_ms = S["busy_bar_share"], 16
+        steps = S["busy_bar_period_ms"] // frame_ms
+        x = (self._busy_phase / steps) * width * (1 + share) - width * share
+        c.create_rectangle(x, 0, x + width * share, S["busy_bar_height"], fill=C["accent"], outline="")
+        self._busy_phase = (self._busy_phase + 1) % steps
+        self._busy_after = self.after(frame_ms, self._animate_busy)
 
     def _render_toolbar(self) -> None:
         self.repo_title.configure(text=self.model.selected or "")
         self.branch_chip.set(self.model.branch_summary)
+        self.conflict_chip.set(self.model.conflict_summary)
+        if self.conflict_chip.text and not self.conflict_chip.winfo_manager():
+            self.conflict_chip.pack(side=tk.LEFT, padx=(S["toolbar_gap"], 0), after=self.branch_chip)
+        elif not self.conflict_chip.text and self.conflict_chip.winfo_manager():
+            self.conflict_chip.pack_forget()
         self.pull_button.configure(state=tk.NORMAL if self.model.can_pull else tk.DISABLED)
 
     def _render_commit_panel(self) -> None:

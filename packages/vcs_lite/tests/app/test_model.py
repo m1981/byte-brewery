@@ -152,7 +152,7 @@ def test_at_vcs_028_change_saved_in_the_tool_is_visible_after_closing(world):
 def test_at_vcs_025_missing_diff_tool_gives_a_message_and_the_app_keeps_working(world, tmp_path):
     world.repo("alpha").write("README.md", "changed\n")
     settings = Settings(rootdir=str(world.root), repos=("alpha",), diff_tool=("/nonexistent/inny-diff", "{left}", "{right}"))
-    model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda q: False)
+    model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda title, message: False)
     model.select("alpha"); world.worker.settle()
     model.activate(change(model, Group.CHANGES, "README.md")); world.worker.settle()
     assert "/nonexistent/inny-diff" in model.error
@@ -169,7 +169,7 @@ def test_at_vcs_026_the_diff_tool_can_be_swapped_in_settings(world, tmp_path):
     """))
     world.repo("alpha").write("README.md", "changed\n")
     settings = Settings(rootdir=str(world.root), repos=("alpha",), diff_tool=(sys.executable, str(script), "{left}", "{right}"))
-    model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda q: False)
+    model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda title, message: False)
     model.select("alpha"); world.worker.settle()
     model.activate(change(model, Group.CHANGES, "README.md")); world.worker.settle()
     left, right = json.loads(out.read_text())
@@ -308,7 +308,8 @@ def test_req_vcs_013_branch_without_upstream_asks_before_pushing(world, tracked,
     model = world.start("alpha"); world.select("alpha")
     model.message = "feat"
     model.commit_and_push(); world.worker.settle()
-    assert len(world.questions) == 1 and "origin" in world.questions[0]
+    assert world.questions == [("Gałąź feature nie ma upstreamu",
+                                "Commit został zapisany. Wypchnąć gałąź do origin i ustawić upstream?")]  # P9
     assert r.git("log", "-1", "--format=%s").strip() == b"feat"  # the commit happens either way
     assert (model.view("alpha").status.upstream == "origin/feature") is answer
 
@@ -346,7 +347,7 @@ def test_at_vcs_015_missing_credentials_end_with_a_message_not_a_hang(world, tmp
         r.git("config", "branch.main.remote", "origin"); r.git("config", "branch.main.merge", "refs/heads/main")
         worker = Worker()
         model = AppModel(Settings(rootdir=str(world.root), repos=("alpha",)), git=world.git,
-                         diff_tool=world.tool, worker=worker, confirm=lambda q: False)
+                         diff_tool=world.tool, worker=worker, confirm=lambda title, message: False)
         model.select("alpha")
         _drain_until(worker, lambda: model.view("alpha").status is not None)
         model.message = "fix a"
@@ -417,6 +418,15 @@ def test_at_vcs_031_file_with_markers_stays_in_conflict_with_a_message(world):
 def test_des_vcs_043_branch_summary_names_the_upstream(world, tracked):
     model = world.start("alpha"); world.select("alpha")
     assert model.branch_summary == "⎇ main → origin/main"
+
+
+def test_des_vcs_043_conflict_chip_counts_the_files_in_conflict(world):
+    r = conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    assert model.conflict_summary == "1 plik w konflikcie"
+    r.write("f.txt", "main\n"); r.git("add", "f.txt")
+    model.refresh_all(); world.worker.settle()
+    assert model.conflict_summary == ""
 
 
 def test_req_vcs_020_without_upstream_pull_is_off_with_a_reason(world):
@@ -563,7 +573,7 @@ def test_req_vcs_025_folder_view_choice_is_saved(world):
     saved = []
     settings = Settings(rootdir=str(world.root), repos=("alpha",))
     model = AppModel(settings, git=world.git, diff_tool=world.tool, worker=world.worker,
-                     confirm=lambda q: True, save_settings=saved.append)
+                     confirm=lambda title, message: True, save_settings=saved.append)
     assert model.show_folders is False
     model.show_folders = True
     assert model.show_folders is True and saved[-1].show_folders is True and saved[-1].repos == ("alpha",)
@@ -596,7 +606,7 @@ def test_req_vcs_018_chosen_repository_missing_from_disk_stays_listed(world):
 
 def test_uc_vcs_01_missing_rootdir_is_reported(world, tmp_path):
     model = AppModel(Settings(rootdir=str(tmp_path / "nope")), git=world.git, diff_tool=world.tool,
-                     worker=world.worker, confirm=lambda q: True)
+                     worker=world.worker, confirm=lambda title, message: True)
     choices, error = model.repo_choices()
     assert choices == [] and str(tmp_path / "nope") in error
 
@@ -612,3 +622,43 @@ def test_at_vcs_001_saving_the_choice_updates_the_list_and_settings(world):
     assert model.selected is None
     assert saved[-1].repos == ("beta", "gamma")
     assert model.view("beta").status is not None  # newly chosen repositories are refreshed
+
+
+
+# ---------- error banner and operation in progress (P3, P4, DES-VCS-043) ----------
+
+def test_des_vcs_043_failed_commit_names_the_operation(world):
+    r = staged_repo(world)
+    hook = r.path / ".git" / "hooks" / "pre-commit"
+    hook.write_text("#!/bin/sh\necho 'lint failed' >&2\nexit 1\n"); hook.chmod(0o755)
+    model = world.start("alpha"); world.select("alpha")
+    model.message = "fix"
+    model.commit(); world.worker.settle()
+    assert model.error_title == "Commit nie powiódł się" and "lint failed" in model.error
+
+
+def test_des_vcs_043_unresolved_conflict_names_the_operation(world):
+    conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    model.toggle(change(model, Group.CONFLICTS, "f.txt")); world.worker.settle()
+    assert model.error_title == "Oznaczenie jako rozwiązany nie powiodło się"
+
+
+def test_des_vcs_043_error_can_be_dismissed(world):
+    conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    model.toggle(change(model, Group.CONFLICTS, "f.txt")); world.worker.settle()
+    model.dismiss_error()
+    assert model.error is None and model.error_title is None
+
+
+def test_des_vcs_043_busy_label_names_the_running_operation(world, tracked):
+    model = world.start("alpha"); world.select("alpha")
+    assert model.busy_label is None
+    model.message = "fix a"
+    model.commit_and_push()
+    assert model.busy_label == "Zapisywanie commita…"
+    world.worker.step()          # the commit; the push is chained right after it
+    assert model.busy_label == "Wypychanie do origin…"
+    world.worker.settle()
+    assert model.busy_label is None

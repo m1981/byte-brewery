@@ -1,10 +1,13 @@
-"""Keyboard shortcuts of the commit bar and the repository list (REQ-VCS-022)."""
+"""Keyboard shortcuts of the commit bar and the repository list (REQ-VCS-022).
+
+Tk does not deliver generated key events to the hidden test window, so each test checks that the
+shortcut is bound and then runs its handler; the real keys are checked by hand (MANUAL-UI.md, steps 8–9).
+"""
 
 from __future__ import annotations
 
-from test_main_window import root, tk_root, world  # noqa: F401 - shared fixtures
+from test_main_window import root, world  # noqa: F401 - shared fixtures
 
-from vcs_lite.core.status import Group
 from vcs_lite.ui.main_window import MainWindow
 
 
@@ -21,7 +24,7 @@ def test_req_vcs_022_cmd_return_in_the_message_commits_without_a_new_line(root, 
     window = MainWindow(root, model)
     world.select("alpha")
     window.type_message("fix a")
-    window.message_box.event_generate("<Command-Return>")
+    press(window, "<Command-Return>", in_message=True)
     world.worker.settle()
     assert r.git("log", "-1", "--format=%s").strip() == b"fix a"
     assert model.message == "" and "\n" not in window.message_box.get("1.0", "end-1c")
@@ -33,7 +36,7 @@ def test_req_vcs_022_cmd_return_anywhere_in_the_window_commits(root, world):  # 
     window = MainWindow(root, model)
     world.select("alpha")
     window.type_message("fix a")
-    window.winfo_toplevel().event_generate("<Command-Return>")
+    press(window, "<Command-Return>")
     world.worker.settle()
     assert r.git("log", "-1", "--format=%s").strip() == b"fix a"
 
@@ -44,7 +47,7 @@ def test_req_vcs_022_cmd_return_does_nothing_when_commit_is_not_possible(root, w
     window = MainWindow(root, model)
     world.select("alpha")
     before = r.git("rev-parse", "HEAD")
-    window.winfo_toplevel().event_generate("<Command-Return>")  # empty message
+    press(window, "<Command-Return>")  # empty message
     world.worker.settle()
     assert r.git("rev-parse", "HEAD") == before
 
@@ -59,7 +62,7 @@ def test_req_vcs_022_cmd_shift_return_commits_and_pushes(root, world, tmp_path):
     window = MainWindow(root, model)
     world.select("alpha")
     window.type_message("fix a")
-    window.message_box.event_generate("<Command-Shift-Return>")
+    press(window, "<Command-Shift-Return>", in_message=True)
     world.worker.settle()
     assert Repo(bare).git("log", "-1", "--format=%s", "main").strip() == b"fix a"
 
@@ -68,9 +71,14 @@ def test_req_vcs_022_cmd_digit_selects_that_repository(root, world):  # noqa: F8
     world.repo("alpha"); world.repo("beta")
     model = world.start("alpha", "beta")
     window = MainWindow(root, model)
-    window.winfo_toplevel().event_generate("<Command-Key-2>")
+    press(window, "<Command-Key-2>")
     world.worker.settle()
     assert model.selected == "beta"
-    window.winfo_toplevel().event_generate("<Command-Key-9>")  # no ninth repository: nothing happens
+    press(window, "<Command-Key-9>")  # no ninth repository: nothing happens
     assert model.selected == "beta"
-    assert Group.STAGED  # keeps the import used by fixtures of this module
+
+
+def press(window, sequence: str, *, in_message: bool = False) -> None:
+    widget = window.message_box if in_message else window.winfo_toplevel()
+    assert widget.bind(sequence), f"{sequence} is not bound"  # Tk stores it as <Mod1-Key-…>
+    assert window.shortcuts[sequence]() == "break"

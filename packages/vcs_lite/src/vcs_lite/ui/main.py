@@ -6,6 +6,7 @@ Trace: DES-VCS-028, DES-VCS-029, DES-VCS-036, DES-VCS-041, REQ-VCS-103
 from __future__ import annotations
 
 import argparse
+import subprocess
 import tkinter as tk
 from collections.abc import Sequence
 from pathlib import Path
@@ -35,12 +36,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     root.title("vcs-lite")
     root.geometry("960x620")
     model = AppModel.from_settings(store.load(), git=GitCli(), worker=TkPump(root, Worker()),
-                                   confirm=lambda question: messagebox.askyesno("vcs-lite", question, parent=root),
+                                   confirm=lambda title, message: messagebox.askyesno(title, message, parent=root),
                                    save_settings=store.save)
-    MainWindow(root, model).pack(fill=tk.BOTH, expand=True)
+    MainWindow(root, model, reduce_motion=reduce_motion()).pack(fill=tk.BOTH, expand=True)
     model.refresh_all()
     _bring_to_front(root)
     root.mainloop()
+
+
+def reduce_motion() -> bool:
+    """macOS setting „Ogranicz ruch”; the busy bar then stays still (UI-REFERENCE §8, P4)."""
+    try:
+        out = subprocess.run(["defaults", "read", "com.apple.universalaccess", "reduceMotion"],
+                             capture_output=True, text=True, timeout=2, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return out.stdout.strip() == "1"
 
 
 def _bring_to_front(root: tk.Tk) -> None:

@@ -8,7 +8,25 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Callable
 
+from tkinter import font as tkfont
+
 from vcs_lite.ui import theme
+
+
+def elide_middle(text: str, font: tkfont.Font, width: int) -> str:
+    """Shorten text by replacing its middle with an ellipsis, so the start and the end stay readable."""
+    if font.measure(text) <= width:
+        return text
+    head, tail = len(text) // 2, len(text) - len(text) // 2
+    while head + tail > 0:
+        if tail >= head:
+            tail -= 1
+        else:
+            head -= 1
+        candidate = text[:head] + "…" + text[len(text) - tail:]
+        if font.measure(candidate) <= width:
+            return candidate
+    return "…"
 
 
 def _filled_rounded(canvas: tk.Canvas, x1: float, y1: float, x2: float, y2: float, r: float,

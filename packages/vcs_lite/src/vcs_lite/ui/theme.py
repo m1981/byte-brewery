@@ -100,6 +100,7 @@ TYPE = {
     "banner_title": Type(13, "bold", COLORS["conf"]),
     "banner_body": Type(12, mono=True),
     "busy_text": Type(12, color=COLORS["dim"]),
+    "conflict_chip": Type(12, "bold", COLORS["conf"]),
     "empty_glyph": Type(26, color=COLORS["empty_glyph"]),
     "empty_head": Type(15, "bold"),
     "empty_sub": Type(13, color=COLORS["dim"]),

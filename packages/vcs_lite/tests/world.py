@@ -45,8 +45,8 @@ class World:
         self.worker.settle()
         return self.model
 
-    def _confirm(self, question: str) -> bool:
-        self.questions.append(question)
+    def _confirm(self, title: str, message: str) -> bool:
+        self.questions.append((title, message))
         return self.answer
 
     def select(self, name: str) -> AppModel:

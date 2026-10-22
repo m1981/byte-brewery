@@ -21,6 +21,15 @@ from vcs_lite.core.status import FileChange, Group, RepoStatus, Side
 SIDE_LABELS = {Side.HEAD: "HEAD", Side.INDEX: "indeks", Side.WORKTREE: "kopia robocza", Side.EMPTY: "pusty"}
 
 
+def files_label(n: int) -> str:
+    """Polish plural: 1 plik, 2–4 pliki (but 12–14 plików), otherwise plików."""
+    if n == 1:
+        return "1 plik"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} pliki"
+    return f"{n} plików"
+
+
 class RepoState(Enum):
     """S-VCS-01."""
 
@@ -38,6 +47,8 @@ class RepoView:
     status: RepoStatus | None = None
     available: bool = True
     error: str | None = None
+    error_title: str | None = None   # P3: "<operation> nie powiódł się"
+    busy_label: str | None = None    # P4: the operation running now
     draft: str = ""  # DES-VCS-021: kept in memory only
     refreshed_at: datetime | None = None
 
@@ -73,9 +84,27 @@ class EmptyState:
     glyph_color: str | None = None   # theme colour name; None means the default glyph colour
 
 
+@dataclass(frozen=True)
+class Operation:
+    """What the window says while an operation runs (P4) and when it fails (P3)."""
+
+    busy: str
+    failed: str
+
+
+STAGE = Operation("Dodawanie do Staged…", "Stage nie powiódł się")
+UNSTAGE = Operation("Wycofywanie ze Staged…", "Unstage nie powiódł się")
+MARK_RESOLVED = Operation("Oznaczanie jako rozwiązany…", "Oznaczenie jako rozwiązany nie powiodło się")
+COMMIT = Operation("Zapisywanie commita…", "Commit nie powiódł się")
+PUSH = Operation("Wypychanie do origin…", "Push nie powiódł się")
+PULL = Operation("Pobieranie zmian…", "Pull nie powiódł się")
+COMPARE_FAILED = "Porównanie nie powiodło się"
+REFRESH_FAILED = "Odświeżanie nie powiodło się"
+
+
 class AppModel:
     def __init__(self, settings: Settings, *, git: GitCli, diff_tool: ExternalDiffTool, worker: Executor,
-                 confirm: Callable[[str], bool], clock: Callable[[], datetime] = datetime.now,
+                 confirm: Callable[[str, str], bool], clock: Callable[[], datetime] = datetime.now,
                  save_settings: Callable[[Settings], None] = lambda settings: None):
         self._settings = settings
         self._save_settings = save_settings
@@ -90,7 +119,7 @@ class AppModel:
         self.selected: str | None = None
 
     @classmethod
-    def from_settings(cls, settings: Settings, *, git: GitCli, worker: Executor, confirm: Callable[[str], bool],
+    def from_settings(cls, settings: Settings, *, git: GitCli, worker: Executor, confirm: Callable[[str, str], bool],
                       save_settings: Callable[[Settings], None] = lambda settings: None) -> AppModel:
         return cls(settings, git=git, diff_tool=CommandTemplateDiffTool(settings.diff_tool), worker=worker,
                    confirm=confirm, save_settings=save_settings)
@@ -214,6 +243,22 @@ class AppModel:
         return view.error if view else None
 
     @property
+    def error_title(self) -> str | None:
+        view = self._current()
+        return view.error_title if view else None
+
+    @property
+    def busy_label(self) -> str | None:
+        view = self._current()
+        return view.busy_label if view else None
+
+    def dismiss_error(self) -> None:
+        view = self._current()
+        if view:
+            view.error = view.error_title = None
+            self._changed()
+
+    @property
     def message(self) -> str:
         view = self._current()
         return view.draft if view else ""
@@ -298,6 +343,12 @@ class AppModel:
         return f"⎇ {status.branch} → {status.upstream or 'brak upstreamu'}"
 
     @property
+    def conflict_summary(self) -> str:
+        """P2: the red toolbar chip; empty without conflicts."""
+        count = len(self.files(Group.CONFLICTS))
+        return f"{files_label(count)} w konflikcie" if count else ""
+
+    @property
     def refreshed_label(self) -> str:
         view = self._current()
         return f"Odświeżono {view.refreshed_at:%H:%M}" if view and view.refreshed_at else ""
@@ -324,7 +375,7 @@ class AppModel:
 
     def _status_read(self, view: RepoView, outcome: Outcome) -> None:
         if isinstance(outcome.error, GitError):
-            view.error = str(outcome.error)  # keep the previous list, UC-VCS-02 2d
+            view.error, view.error_title = str(outcome.error), REFRESH_FAILED  # keep the previous list, UC-VCS-02 2d
         elif outcome.error is not None:
             raise outcome.error
         else:
@@ -340,8 +391,9 @@ class AppModel:
         mark as resolved from Conflicts (REQ-VCS-024)."""
         view = self._current()
         repo = self._repo(view)
-        operation = {Group.STAGED: repo.unstage, Group.CONFLICTS: repo.mark_resolved}.get(change.group, repo.stage)
-        self._run(view, lambda: operation(change))
+        operation, kind = {Group.STAGED: (repo.unstage, UNSTAGE),
+                           Group.CONFLICTS: (repo.mark_resolved, MARK_RESOLVED)}.get(change.group, (repo.stage, STAGE))
+        self._run(view, kind, lambda: operation(change))
 
     def toggle_folder(self, group: Group, folder: str) -> None:
         """Folder button or space on a folder: stage from Changes and Unversioned, unstage from Staged
@@ -351,8 +403,8 @@ class AppModel:
             return
         view = self._current()
         repo = self._repo(view)
-        operation = repo.unstage_all if group is Group.STAGED else repo.stage_all
-        self._run(view, lambda: operation(changes))
+        operation, kind = (repo.unstage_all, UNSTAGE) if group is Group.STAGED else (repo.stage_all, STAGE)
+        self._run(view, kind, lambda: operation(changes))
 
     def activate(self, change: FileChange) -> None:
         """Double click or Enter: compare the file in the external tool (DEC-VCS-040)."""
@@ -372,9 +424,9 @@ class AppModel:
 
     def _compared(self, view: RepoView, outcome: Outcome) -> None:
         if outcome.error is not None:
-            view.error = str(outcome.error)
+            view.error, view.error_title = str(outcome.error), COMPARE_FAILED
         elif outcome.value.failed:
-            view.error = outcome.value.stderr.strip()
+            view.error, view.error_title = outcome.value.stderr.strip(), COMPARE_FAILED
         self.refresh(view.name)
 
     # ---------- commit, push, pull ----------
@@ -384,25 +436,26 @@ class AppModel:
         if not self.can_commit:
             return
         view, message = self._current(), self._current().draft
-        self._run(view, lambda: self._repo(view).commit(message), on_success=lambda: self._clear_draft(view))
+        self._run(view, COMMIT, lambda: self._repo(view).commit(message), on_success=lambda: self._clear_draft(view))
 
     def commit_and_push(self) -> None:
         if not self.can_commit_and_push:
             return
         view, message = self._current(), self._current().draft
-        self._run(view, lambda: self._repo(view).commit(message), on_success=lambda: self._pushed_after_commit(view))
+        self._run(view, COMMIT, lambda: self._repo(view).commit(message), on_success=lambda: self._pushed_after_commit(view))
 
     def _pushed_after_commit(self, view: RepoView) -> None:
         self._clear_draft(view)
         if view.status.upstream is not None:
-            self._run(view, lambda: self._repo(view).push())
-        elif self._confirm(f"Gałąź {view.status.branch} nie ma upstreamu. Wypchnąć ją do origin i ustawić upstream?"):
-            self._run(view, lambda: self._repo(view).push(set_upstream=True))
+            self._run(view, PUSH, lambda: self._repo(view).push())
+        elif self._confirm(f"Gałąź {view.status.branch} nie ma upstreamu",  # P9
+                           "Commit został zapisany. Wypchnąć gałąź do origin i ustawić upstream?"):
+            self._run(view, PUSH, lambda: self._repo(view).push(set_upstream=True))
 
     def pull(self) -> None:
         if self.can_pull:
             view = self._current()
-            self._run(view, lambda: self._repo(view).pull())
+            self._run(view, PULL, lambda: self._repo(view).pull())
 
     # ---------- plumbing ----------
 
@@ -416,21 +469,24 @@ class AppModel:
     def _clear_draft(view: RepoView) -> None:
         view.draft = ""
 
-    def _run(self, view: RepoView, operation: Callable[[], GitResult], *,
+    def _run(self, view: RepoView, kind: Operation, operation: Callable[[], GitResult], *,
              on_success: Callable[[], None] | None = None) -> None:
-        """Run a repository operation; report git's message on failure, then refresh (DES-VCS-016)."""
+        """Run a repository operation; report git's message on failure, then refresh (DES-VCS-016, DES-VCS-043)."""
 
         def done(outcome: Outcome) -> None:
+            view.busy_label = None  # cleared first, so a chained operation can set its own
             result = outcome.value
             if outcome.error is not None:
-                view.error = str(outcome.error)
+                view.error, view.error_title = str(outcome.error), kind.failed
             elif not result.ok:
-                view.error = result.message
+                view.error, view.error_title = result.message, kind.failed
             else:
-                view.error = None
+                view.error = view.error_title = None
                 if on_success:
                     on_success()  # may chain the next operation (push after commit), which refreshes itself
             self.refresh(view.name)  # rejected while a chained operation holds the repository
             self._changed()
 
-        self._worker.submit(view.name, operation, done)
+        if self._worker.submit(view.name, operation, done):
+            view.busy_label = kind.busy
+            self._changed()
