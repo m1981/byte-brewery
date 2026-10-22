@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · C · Pulpit zmian</title>
+<style>
+  /* Layout: three-segment top bar (repo, branch, sync), checkbox file list, detail pane, commit form bottom-left. */
+  :root {
+    --bg: #ffffff; --bar: #24292f; --bar-ink: #f0f3f6; --bar-dim: #9aa4b1; --line: #d8dee4; --ink: #1f2328; --dim: #636c76;
+    --accent: #1f6feb; --ok: #1a7f37; --mod: #9a6700; --del: #cf222e; --ren: #0969da; --unv: #6e7781; --conf: #cf222e;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d0d7de; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 40px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 70ch; }
+  .scroll { overflow-x: auto; }
+  .window { min-width: 900px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 34px; background: var(--bar); display: flex; align-items: center; padding: 0 14px; gap: 8px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .topbar { display: grid; grid-template-columns: 1.2fr 1fr 1.2fr; background: var(--bar); color: var(--bar-ink); border-top: 1px solid #32383f; }
+  .seg { padding: 8px 16px; border-right: 1px solid #32383f; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; align-items: center; }
+  .seg:last-child { border-right: 0; }
+  .seg .ic { grid-row: span 2; font-size: 16px; color: var(--bar-dim); }
+  .seg .lbl { font-size: 11px; color: var(--bar-dim); } .seg .val { font-weight: 600; font-size: 14px; }
+  .seg .chev { grid-row: span 2; color: var(--bar-dim); }
+  .ahead { font-variant-numeric: tabular-nums; color: var(--bar-ink); font-weight: 600; }
+  .body { display: grid; grid-template-columns: 330px 1fr; height: 470px; }
+  .left { border-right: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
+  .list-h { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--dim); font-size: 12px; display: flex; justify-content: space-between; }
+  .list { overflow: auto; }
+  .sec { padding: 8px 12px 2px; font-size: 11px; font-weight: 650; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .file { display: grid; grid-template-columns: 18px 1fr 16px; gap: 8px; align-items: center; padding: 5px 12px; }
+  .file.sel { background: #ddf4ff; box-shadow: inset 3px 0 0 var(--accent); }
+  .box { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid #8c959f; display: grid; place-items: center; font-size: 10px; color: #fff; }
+  .box.on { background: var(--accent); border-color: var(--accent); }
+  .box.half { background: var(--accent); border-color: var(--accent); }
+  .fn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .fd { color: var(--dim); }
+  .mark { font: 700 11px var(--mono); text-align: center; }
+  .k-M { color: var(--mod); } .k-A { color: var(--ok); } .k-D { color: var(--del); } .k-R { color: var(--ren); } .k-U { color: var(--unv); }
+  .form { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 6px; background: #f6f8fa; }
+  input, textarea { font: inherit; border: 1px solid #d0d7de; border-radius: 6px; padding: 6px 8px; width: 100%; background: #fff; }
+  textarea { height: 56px; resize: none; }
+  .btn { font: inherit; border: 1px solid #d0d7de; background: #f6f8fa; border-radius: 6px; padding: 6px 12px; width: 100%; font-weight: 600; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary[disabled] { background: #94b9f4; border-color: #94b9f4; }
+  .why { font-size: 12px; color: var(--dim); }
+  .detail { padding: 28px 32px; display: grid; align-content: start; gap: 14px; min-width: 0; }
+  .d-path { font-size: 18px; font-weight: 650; } .d-path .fd { font-weight: 400; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #fff8c5; color: var(--mod); }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; max-width: 520px; }
+  .card h3 { margin: 0; font-size: 13px; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; }
+  kbd { font: 11px var(--mono); background: #f6f8fa; border: 1px solid #d0d7de; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+  .extra { font-size: 12px; color: #8250df; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; } .notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 4px 0; max-width: 90ch; }
+  .notes .tk { color: #1f5f9e; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>C · Pulpit zmian w stylu GitHub Desktop</h1>
+    <p class="lead">Ciemny pasek z trzema polami: repozytorium, gałąź, synchronizacja. Pole wyboru przy pliku zamiast osobnych grup Staged i Changes. Prawa strona podpowiada, co można zrobić z zaznaczonym plikiem.</p>
+  </div>
+
+  <div class="scroll"><div class="window">
+    <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+    <div class="topbar">
+      <div class="seg"><span class="ic">▣</span><span class="lbl">Repozytorium</span><span class="chev">▾</span><span class="val">alpha</span></div>
+      <div class="seg"><span class="ic">⎇</span><span class="lbl">Gałąź</span><span class="chev"></span><span class="val">main</span></div>
+      <div class="seg"><span class="ic">⇣</span><span class="lbl">Brak upstreamu</span><span class="chev"></span><span class="val">Pull niedostępny</span></div>
+    </div>
+    <div class="body">
+      <div class="left">
+        <div class="list-h"><span>7 zmienionych plików</span><span>3 do commita</span></div>
+        <div class="list">
+          <div class="sec">Do commita</div>
+          <div class="file"><span class="box half">–</span><span class="fn">both.py</span><span class="mark k-M">M</span></div>
+          <div class="file"><span class="box on">✓</span><span class="fn"><span class="fd">old_name.py → </span>renamed.py</span><span class="mark k-R">R</span></div>
+          <div class="file"><span class="box on">✓</span><span class="fn">staged.py</span><span class="mark k-M">M</span></div>
+          <div class="sec">Pozostałe</div>
+          <div class="file sel"><span class="box"></span><span class="fn">README.md</span><span class="mark k-M">M</span></div>
+          <div class="file"><span class="box"></span><span class="fn"><span class="fd">new/</span>a.txt</span><span class="mark k-U">?</span></div>
+          <div class="file"><span class="box"></span><span class="fn"><span class="fd">new/</span>b.txt</span><span class="mark k-U">?</span></div>
+        </div>
+        <div class="form">
+          <textarea placeholder="Opis zmian (wymagany)"></textarea>
+          <button class="btn primary" disabled>Commit do alpha</button>
+          <button class="btn" disabled>Commit &amp; Push</button>
+          <span class="why">Wpisz wiadomość commita.</span>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="d-path">README.md <span class="pill">zmieniony, nie w commicie</span></div>
+        <div class="card">
+          <h3>Co możesz zrobić</h3>
+          <div class="keys">
+            <kbd>spacja</kbd><span>dodaj do commita (stage)</span>
+            <kbd>dwuklik</kbd><span>porównaj w Beyond Compare: indeks ↔ kopia robocza</span>
+            <kbd>⌘↩</kbd><span>commit do alpha</span>
+          </div>
+        </div>
+        <div class="extra">Poza specyfikacją, do decyzji: licznik linii „+12 −3” z <code>git diff --numstat</code> dla zaznaczonego pliku.</div>
+      </div>
+    </div>
+  </div></div>
+
+  <section class="notes">
+    <h2>Za i przeciw</h2>
+    <ul>
+      <li>Za: najbardziej przyjazny początkującym; pole wyboru tłumaczy stage bez słowa „Staged”; duża, oczywista akcja commit.</li>
+      <li>Przeciw: plik zmieniony w indeksie i na dysku (<code>both.py</code>) ma stan pośredni „–”, mniej czytelny niż dwie grupy; repozytoria schowane w rozwijanej liście zamiast stale widocznej (wariant A z Q-VCS-009 zakładał listę po lewej).</li>
+      <li>Prawa strona nie pokazuje diffu (DEC-VCS-035), więc bez nowych danych jest głównie podpowiedzią.</li>
+    </ul>
+    <h2 style="margin-top:14px">Wykonalność w Tk 8.6</h2>
+    <ul class="tk">
+      <li>Ciemny pasek: <code>tk.Frame</code> z własnym kolorem tła i etykietami; poza motywem ttk, więc w pełni kolorowalny.</li>
+      <li>Pola wyboru w wierszach: obrazki <code>PhotoImage</code> (zaznaczone, puste, pośrednie) w kolumnie drzewa Treeview; kliknięcie w ikonę lub spacja przełącza stage.</li>
+      <li>Rozwijana lista repo: <code>ttk.Combobox</code> albo menu; liczniki zmian w tekście pozycji.</li>
+      <li>Panel szczegółów: zwykłe etykiety i ramki; licznik linii wymagałby nowej operacji gita, poza obecną specyfikacją.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

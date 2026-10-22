@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · propozycje okna</title>
+<style>
+  :root { --bg: #f4f5f7; --card: #fff; --ink: #1d1d1f; --dim: #5f6168; --line: #dfe1e6; --accent: #0a66d8;
+          --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font);
+         padding: 32px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  main { max-width: 980px; margin: 0 auto; display: grid; gap: 24px; }
+  h1 { margin: 0; font-size: 24px; text-wrap: balance; } p { margin: 0; max-width: 70ch; color: #34363c; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  a.card { display: grid; gap: 6px; padding: 18px; background: var(--card); border-radius: 12px; text-decoration: none; color: inherit; box-shadow: 0 0 0 1px var(--line); }
+  a.card:hover, a.card:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+  .tag { font-size: 12px; font-weight: 600; color: var(--accent); }
+  .card h2 { margin: 0; font-size: 17px; } .card p { color: var(--dim); font-size: 13px; }
+  .tablewrap { overflow-x: auto; background: var(--card); border-radius: 12px; box-shadow: 0 0 0 1px var(--line); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #fafafb; font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  .rec { background: #eef5ff; }
+  ul { margin: 0; padding-left: 18px; } li { margin: 4px 0; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+  <div style="display:grid;gap:8px">
+    <h1>vcs-lite — trzy propozycje wyglądu okna</h1>
+    <p>Każda pokazuje to samo repo demonstracyjne <code>alpha</code> w tym samym stanie co krok 4 listy kontrolnej. Wszystkie da się zbudować w Tk 8.6 bez nowych zależności; różnią się układem i tym, jak pokazują stage.</p>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="a-sidebar.html"><span class="tag">Rekomendacja</span><h2>A · Pasek boczny macOS</h2><p>Lista repo jak w Finderze, grupy plików z kolorowym kodem statusu, niebieska główna akcja na dole.</p></a>
+    <a class="card" href="b-pycharm.html"><span class="tag">Znajomy układ</span><h2>B · Okno Commit jak w PyCharmie</h2><p>Zakładki repo, gęste drzewo z kolorowymi nazwami plików, wiadomość pod drzewem.</p></a>
+    <a class="card" href="c-desktop.html"><span class="tag">Najprostszy</span><h2>C · Pulpit w stylu GitHub Desktop</h2><p>Ciemny pasek repo, gałąź, synchronizacja; pole wyboru przy pliku zamiast grup.</p></a>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Kryterium</th><th class="rec">A · Pasek boczny</th><th>B · PyCharm</th><th>C · Desktop</th></tr></thead>
+      <tbody>
+        <tr><td>Zgodność ze specyfikacją</td><td class="rec">pełna (E-01, wariant A z Q-VCS-009)</td><td>zakładki zamiast listy; to wariant B odrzucony w Q-VCS-009</td><td>repo w rozwijanej liście; stage jako pole wyboru</td></tr>
+        <tr><td>Stan wielu repo naraz</td><td class="rec">zawsze widoczny w pasku bocznym</td><td>liczniki na zakładkach</td><td>tylko w rozwijanej liście</td></tr>
+        <tr><td>Plik w Staged i w Changes</td><td class="rec">dwa wiersze, jak w modelu</td><td>dwa wiersze</td><td>stan pośredni „–”</td></tr>
+        <tr><td>Główna akcja</td><td class="rec">niebieski „Commit do alpha”</td><td>niebieski „Commit do alpha”</td><td>duży niebieski przycisk pod formularzem</td></tr>
+        <tr><td>Natywny wygląd macOS</td><td class="rec">największy</td><td>średni</td><td>najmniejszy (ciemny pasek)</td></tr>
+        <tr><td>Nakład w Tk</td><td class="rec">mały: Treeview, obrazki statusu, motyw aqua</td><td>mały: Notebook, tagi kolorów</td><td>średni: własny pasek, pola wyboru jako obrazki</td></tr>
+        <tr><td>Pamięć</td><td colspan="3">bez znaczenia dla limitu 60 MB; te same widżety i kilka małych obrazków</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:grid;gap:6px">
+    <h2 style="margin:0;font-size:17px">Wspólne dla wszystkich</h2>
+    <ul>
+      <li>Kolor i litera statusu przy każdym pliku: M zmieniony, A dodany, D usunięty, R przeniesiony, ? poza kontrolą, konflikt na czerwono.</li>
+      <li>Puste stany z podpowiedzią zamiast białych pól, np. „Wybierz repozytorium po lewej” albo „Brak zmian w alpha”.</li>
+      <li>Przyczyna nieaktywnego przycisku obok przycisku, nie na dole okna.</li>
+      <li>Tylko jasny motyw; tryb ciemny jest poza v1 (DEC-VCS-028).</li>
+    </ul>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · B · Okno Commit</title>
+<style>
+  /* Layout: dense tool window in the spirit of PyCharm's Commit view; message box under the tree. */
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --line: #e1e3e8; --ink: #1e1f22; --dim: #6c707e;
+    --accent: #3574f0; --sel: #d5e1fd;
+    --mod: #2a62c9; --add: #3b8a3e; --del: #8c8c8c; --unv: #c25a1b; --ren: #2a62c9; --conf: #d1343a;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d5d8de; font: 13px/1.35 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 40px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 70ch; }
+  .scroll { overflow-x: auto; }
+  .window { min-width: 860px; background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 38px; background: #ebecf0; display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .title { flex: 1; text-align: center; font-weight: 600; color: #4a4a50; margin-right: 52px; }
+  .tabs { display: flex; gap: 2px; padding: 6px 10px 0; background: #ebecf0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab { padding: 6px 12px; border-radius: 6px 6px 0 0; display: flex; gap: 6px; align-items: center; color: #3c3f45; white-space: nowrap; }
+  .tab.on { background: var(--bg); border: 1px solid var(--line); border-bottom-color: var(--bg); margin-bottom: -1px; font-weight: 600; }
+  .tab .count { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .tab .warn { color: var(--conf); font-weight: 700; }
+  .tab.add { color: var(--dim); }
+  .main { display: grid; grid-template-rows: auto 1fr auto; height: 520px; }
+  .tools { display: flex; gap: 4px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  .icon { width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #4b4f58; font-size: 14px; }
+  .icon:hover { background: #e4e6eb; }
+  .sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+  .branch { margin-left: auto; font-size: 12px; color: var(--dim); white-space: nowrap; } .branch b { color: var(--ink); font-weight: 600; }
+  .tree { overflow: auto; padding: 4px 0; background: var(--panel); }
+  .node { display: flex; align-items: center; gap: 6px; padding: 2px 10px; height: 24px; white-space: nowrap; }
+  .node.group { font-weight: 600; } .node.group .n { color: var(--dim); font-weight: 400; }
+  .node.file { padding-left: 32px; }
+  .node.sel { background: var(--sel); }
+  .caret { color: var(--dim); width: 12px; }
+  .ficon { font: 10px var(--mono); color: #fff; background: #8b93a5; border-radius: 3px; padding: 0 3px; }
+  .c-mod { color: var(--mod); } .c-add { color: var(--add); } .c-unv { color: var(--unv); } .c-ren { color: var(--ren); } .c-conf { color: var(--conf); }
+  .path { color: var(--dim); margin-left: 6px; font-size: 12px; }
+  .commit { border-top: 1px solid var(--line); background: var(--panel); padding: 8px 10px 10px; display: grid; gap: 8px; }
+  textarea { font: 13px/1.4 var(--mono); border: 1px solid #c8ccd4; border-radius: 6px; padding: 8px; resize: none; height: 78px; width: 100%; }
+  textarea:focus { outline: 2px solid #a7c1f7; border-color: var(--accent); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { font: inherit; border: 1px solid #c8ccd4; background: #fff; border-radius: 6px; padding: 4px 14px; white-space: nowrap; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn[disabled] { opacity: .45; }
+  .reason { color: var(--dim); font-size: 12px; margin-left: 6px; }
+  .count-line { margin-left: auto; color: var(--dim); font-size: 12px; }
+  kbd { font: 11px var(--mono); background: #f0f1f4; border: 1px solid #d2d5dc; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; } .notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 4px 0; max-width: 90ch; }
+  .notes .tk { color: #1f5f9e; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>B · Okno Commit jak w PyCharmie</h1>
+    <p class="lead">Dla osoby przyzwyczajonej do PyCharma: repozytoria jako zakładki, gęste drzewo zmian z kolorami nazw plików jak w IDE, wiadomość pod drzewem.</p>
+  </div>
+
+  <div class="scroll"><div class="window">
+    <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">vcs-lite</span></div>
+    <div class="tabs">
+      <span class="tab on">alpha <span class="count">7</span></span>
+      <span class="tab">beta <span class="count">1</span></span>
+      <span class="tab">gamma <span class="warn">!</span></span>
+      <span class="tab add">＋ repozytoria…</span>
+    </div>
+    <div class="main">
+      <div class="tools">
+        <span class="icon" title="Odśwież">⟳</span>
+        <span class="icon" title="Pull">⇣</span>
+        <span class="sep"></span>
+        <span class="icon" title="Rozwiń wszystko">⊞</span>
+        <span class="icon" title="Zwiń wszystko">⊟</span>
+        <span class="branch">⎇ <b>main</b> · brak upstreamu</span>
+      </div>
+      <div class="tree">
+        <div class="node group"><span class="caret">▾</span>Staged <span class="n">3 pliki</span></div>
+        <div class="node file"><span class="ficon">py</span><span class="c-mod">both.py</span></div>
+        <div class="node file"><span class="ficon">py</span><span class="c-ren">renamed.py</span><span class="path">← old_name.py</span></div>
+        <div class="node file"><span class="ficon">py</span><span class="c-mod">staged.py</span></div>
+        <div class="node group"><span class="caret">▾</span>Changes <span class="n">2 pliki</span></div>
+        <div class="node file sel"><span class="ficon">md</span><span class="c-mod">README.md</span></div>
+        <div class="node file"><span class="ficon">py</span><span class="c-mod">both.py</span></div>
+        <div class="node group"><span class="caret">▾</span>Unversioned <span class="n">2 pliki</span></div>
+        <div class="node file"><span class="ficon">txt</span><span class="c-unv">a.txt</span><span class="path">new</span></div>
+        <div class="node file"><span class="ficon">txt</span><span class="c-unv">b.txt</span><span class="path">new</span></div>
+      </div>
+      <div class="commit">
+        <textarea placeholder="Wiadomość commita"></textarea>
+        <div class="row">
+          <button class="btn primary" disabled>Commit do alpha</button>
+          <button class="btn" disabled>Commit &amp; Push</button>
+          <span class="reason">Wpisz wiadomość commita.</span>
+          <span class="count-line">3 pliki w Staged · <kbd>⌘↩</kbd></span>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <section class="notes">
+    <h2>Kolory nazw plików (jak w IDE JetBrains)</h2>
+    <div class="legend">
+      <span class="c-mod">● zmieniony</span><span class="c-add">● dodany</span><span class="c-ren">● przeniesiony</span>
+      <span class="c-unv">● poza kontrolą</span><span style="color:#8c8c8c">● usunięty</span><span class="c-conf">● konflikt</span>
+    </div>
+    <h2 style="margin-top:14px">Za i przeciw</h2>
+    <ul>
+      <li>Za: znany układ, najwięcej plików na ekranie, wiadomość blisko listy.</li>
+      <li>Przeciw: zakładki ścieśniają się przy wielu repo (wariant B z Q-VCS-009 został odrzucony na rzecz A, DEC-VCS-015); stan repo widać słabiej niż w liście bocznej.</li>
+    </ul>
+    <h2 style="margin-top:14px">Wykonalność w Tk 8.6</h2>
+    <ul class="tk">
+      <li>Zakładki: <code>ttk.Notebook</code>; jedna zakładka na repo, treść wspólna i przełączana.</li>
+      <li>Kolor nazwy pliku: tag Treeview z kolorem pierwszego planu (cały wiersz w kolorze statusu, jak w PyCharmie).</li>
+      <li>Ikony typu pliku: małe obrazki <code>PhotoImage</code> generowane raz na rozszerzenie.</li>
+      <li>Czcionka monospace w polu wiadomości: <code>tk.Text(font=("Menlo", 12))</code>.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

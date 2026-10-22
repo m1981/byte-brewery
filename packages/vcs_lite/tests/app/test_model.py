@@ -410,3 +410,116 @@ def test_at_vcs_031_file_with_markers_stays_in_conflict_with_a_message(world):
     assert paths(model, Group.CONFLICTS) == ["f.txt"]
     model.message = "merge"
     assert not model.can_commit
+
+
+# ---------- toolbar, title and status bar (DES-VCS-043, P10) ----------
+
+def test_des_vcs_043_branch_summary_names_the_upstream(world, tracked):
+    model = world.start("alpha"); world.select("alpha")
+    assert model.branch_summary == "⎇ main → origin/main"
+
+
+def test_req_vcs_020_without_upstream_pull_is_off_with_a_reason(world):
+    world.repo("alpha")
+    model = world.start("alpha"); world.select("alpha")
+    assert model.branch_summary == "⎇ main → brak upstreamu"
+    assert not model.can_pull and model.pull_disabled_reason == "Gałąź nie ma upstreamu"
+
+
+def test_uc_vcs_02_detached_head_shows_the_commit_and_explains_why(world):
+    r = world.repo("alpha")
+    r.git("checkout", "-q", "--detach"); r.write("README.md", "y\n"); r.git("add", "README.md")
+    model = world.start("alpha"); world.select("alpha")
+    model.message = "fix"
+    short = r.git("rev-parse", "--short=7", "HEAD").decode().strip()
+    assert model.branch_summary == f"⎇ odłączony HEAD · {short}"
+    assert model.pull_disabled_reason == "Odłączony HEAD: brak gałęzi do pull"
+    assert model.commit_and_push_disabled_reason == "Odłączony HEAD: brak gałęzi do wypchnięcia"
+    assert model.can_commit
+
+
+def test_req_vcs_021_window_title_names_the_selected_repository(world):
+    world.repo("alpha")
+    model = world.start("alpha")
+    assert model.window_title == "vcs-lite"
+    world.select("alpha")
+    assert model.window_title == "vcs-lite — alpha"
+
+
+def test_des_vcs_043_status_bar_shows_when_the_selected_repo_was_refreshed(world):
+    from datetime import datetime
+    world.repo("alpha")
+    world.clock = lambda: datetime(2026, 10, 22, 12, 4)
+    model = world.start("alpha")
+    assert model.refreshed_label == ""
+    world.select("alpha")
+    assert model.refreshed_label == "Odświeżono 12:04"
+
+
+# ---------- sidebar rows (UI-REFERENCE §4, P2, P4, P6) ----------
+
+def test_req_vcs_002_sidebar_line_shows_branch_and_ahead_behind_with_upstream(world, tracked):
+    world.repo("plain")
+    model = world.start("alpha", "plain")
+    assert model.sidebar_line("alpha") == "main · ↑0 ↓0"
+    assert model.sidebar_line("plain") == "main"
+
+
+def test_des_vcs_043_badges_count_changes_skip_clean_and_name_conflicts(world):
+    world.repo("alpha").write("a.py", "a\n")
+    world.repo("beta")
+    conflicted_repo(world, "gamma")
+    model = world.start("alpha", "beta", "gamma")
+    assert model.badge("alpha") == ("1", "count")
+    assert model.badge("beta") is None
+    assert model.badge("gamma") == ("konflikt", "conflict")
+
+
+def test_req_vcs_018_unavailable_repo_has_its_own_line_and_no_badge(world):
+    world.repo("alpha")
+    model = world.start("alpha", "ghost")
+    assert (model.sidebar_line("ghost"), model.badge("ghost")) == ("niedostępne", None)
+
+
+def test_req_vcs_016_busy_repo_says_so_in_the_sidebar(world):
+    staged_repo(world)
+    model = world.start("alpha"); world.select("alpha")
+    model.message = "fix"
+    model.commit()
+    assert model.sidebar_line("alpha") == "w toku…"
+
+
+# ---------- empty states of the file area (P5) ----------
+
+def test_des_vcs_043_empty_state_without_chosen_repositories(world):
+    model = world.start()
+    e = model.empty_state
+    assert (e.glyph, e.head, e.sub, e.action) == ("▣", "Wybierz repozytoria", "vcs-lite pokazuje repozytoria z folderu", "choose_repos")
+    assert e.path == str(world.root)
+
+
+def test_des_vcs_043_empty_state_without_a_selection(world):
+    world.repo("alpha")
+    e = world.start("alpha").empty_state
+    assert (e.glyph, e.head, e.sub, e.action) == ("←", "Wybierz repozytorium", "Kliknij je po lewej albo naciśnij ⌘1.", None)
+
+
+def test_des_vcs_043_empty_state_for_a_clean_repository(world):
+    world.repo("beta")
+    model = world.start("beta"); world.select("beta")
+    e = model.empty_state
+    assert (e.glyph, e.head, e.sub, e.glyph_color) == ("✓", "Brak zmian", "Kopia robocza beta jest zgodna z ostatnim commitem.", "add")
+
+
+def test_req_vcs_018_empty_state_for_an_unavailable_repository(world):
+    world.repo("alpha")
+    model = world.start("alpha", "delta"); world.select("delta")
+    e = model.empty_state
+    assert (e.glyph, e.head, e.sub, e.action) == ("⊘", "Repozytorium niedostępne", "Folder nie istnieje albo nie jest repozytorium gita.", "recheck")
+    assert e.path == str(world.root / "delta")
+
+
+def test_des_vcs_043_no_empty_state_when_there_are_changes(world):
+    world.repo("alpha").write("a.py", "a\n")
+    model = world.start("alpha"); world.select("alpha")
+    assert model.empty_state is None

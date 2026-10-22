@@ -1,12 +1,13 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-018, DES-VCS-021, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, S-VCS-01
+Trace: DES-VCS-016, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, S-VCS-01
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
@@ -38,6 +39,7 @@ class RepoView:
     available: bool = True
     error: str | None = None
     draft: str = ""  # DES-VCS-021: kept in memory only
+    refreshed_at: datetime | None = None
 
     @property
     def branch_label(self) -> str:
@@ -50,13 +52,27 @@ class RepoView:
         return len({c.path for c in self.status.changes}) if self.status else 0
 
 
+@dataclass(frozen=True)
+class EmptyState:
+    """What the file area shows instead of a list (P5)."""
+
+    glyph: str
+    head: str
+    sub: str
+    path: str | None = None
+    action: str | None = None        # "choose_repos" or "recheck"
+    glyph_color: str | None = None   # theme colour name; None means the default glyph colour
+
+
 class AppModel:
     def __init__(self, settings: Settings, *, git: GitCli, diff_tool: ExternalDiffTool, worker: Executor,
-                 confirm: Callable[[str], bool]):
+                 confirm: Callable[[str], bool], clock: Callable[[], datetime] = datetime.now):
+        self._clock = clock
         self._git = git
         self._diff_tool = diff_tool
         self._worker = worker
         self._confirm = confirm
+        self._rootdir = settings.rootdir
         self._repos = {name: RepoView(name, settings.repo_path(name)) for name in settings.repos}
         self._listeners: list[Callable[[], None]] = []
         self.selected: str | None = None
@@ -94,6 +110,45 @@ class AppModel:
         if view.status is None or not view.status.changes:
             return RepoState.CLEAN
         return RepoState.CONFLICT if view.status.has_conflicts else RepoState.CHANGES
+
+    def sidebar_line(self, name: str) -> str:
+        """Second line of a repository in the sidebar (UI-REFERENCE §4, P4)."""
+        view = self._repos[name]
+        if self._worker.busy(name):
+            return "w toku…"
+        if not view.available:
+            return "niedostępne"
+        if view.status is None:
+            return ""
+        status = view.status
+        if status.upstream and not status.detached:
+            return f"{view.branch_label} · ↑{status.ahead} ↓{status.behind}"
+        return view.branch_label
+
+    def badge(self, name: str) -> tuple[str, str] | None:
+        """(text, kind) at the right of a sidebar row: change count or conflict; none when clean (P6)."""
+        view = self._repos[name]
+        if not view.available or view.status is None:
+            return None
+        if view.status.has_conflicts:
+            return "konflikt", "conflict"
+        return (str(view.change_count), "count") if view.change_count else None
+
+    @property
+    def empty_state(self) -> EmptyState | None:
+        if not self._repos:
+            return EmptyState("▣", "Wybierz repozytoria", "vcs-lite pokazuje repozytoria z folderu",
+                              path=self._rootdir, action="choose_repos")
+        view = self._current()
+        if view is None:
+            return EmptyState("←", "Wybierz repozytorium", "Kliknij je po lewej albo naciśnij ⌘1.")
+        if not view.available:
+            return EmptyState("⊘", "Repozytorium niedostępne", "Folder nie istnieje albo nie jest repozytorium gita.",
+                              path=f"{self._rootdir}/{view.name}", action="recheck")
+        if view.status is not None and not view.status.changes:
+            return EmptyState("✓", "Brak zmian", f"Kopia robocza {view.name} jest zgodna z ostatnim commitem.",
+                              glyph_color="add")
+        return None
 
     def files(self, group: Group) -> list[FileChange]:
         view = self._current()
@@ -143,15 +198,55 @@ class AppModel:
         return self.commit_disabled_reason is None
 
     @property
+    def commit_and_push_disabled_reason(self) -> str | None:
+        reason = self.commit_disabled_reason
+        if reason is None and self._current().status.detached:
+            return "Odłączony HEAD: brak gałęzi do wypchnięcia"
+        return reason
+
+    @property
     def can_commit_and_push(self) -> bool:
+        return self.commit_and_push_disabled_reason is None
+
+    @property
+    def pull_disabled_reason(self) -> str | None:
         view = self._current()
-        return self.can_commit and bool(view and view.status and not view.status.detached)
+        if view is None:
+            return "Wybierz repozytorium."
+        if self._worker.busy(view.name):
+            return "Trwa operacja na tym repozytorium."
+        if not view.available or view.status is None:
+            return "Repozytorium jest niedostępne."
+        if view.status.detached:
+            return "Odłączony HEAD: brak gałęzi do pull"
+        if not view.status.upstream:
+            return "Gałąź nie ma upstreamu"
+        return None
 
     @property
     def can_pull(self) -> bool:
+        return self.pull_disabled_reason is None
+
+    # ---------- window chrome (DES-VCS-043) ----------
+
+    @property
+    def window_title(self) -> str:
+        return f"vcs-lite — {self.selected}" if self.selected else "vcs-lite"
+
+    @property
+    def branch_summary(self) -> str:
         view = self._current()
-        return bool(view and view.status and not view.status.detached and view.status.upstream
-                    and not self._worker.busy(view.name))
+        if view is None or view.status is None:
+            return ""
+        status = view.status
+        if status.detached:
+            return f"⎇ odłączony HEAD · {(status.oid or '')[:7]}"
+        return f"⎇ {status.branch} → {status.upstream or 'brak upstreamu'}"
+
+    @property
+    def refreshed_label(self) -> str:
+        view = self._current()
+        return f"Odświeżono {view.refreshed_at:%H:%M}" if view and view.refreshed_at else ""
 
     # ---------- selecting and refreshing ----------
 
@@ -181,6 +276,7 @@ class AppModel:
         else:
             view.available = outcome.value is not None
             view.status = outcome.value
+            view.refreshed_at = self._clock()
         self._changed()
 
     # ---------- files ----------

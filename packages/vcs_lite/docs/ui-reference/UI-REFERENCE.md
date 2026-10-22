@@ -149,7 +149,7 @@ Grupy w kolejności: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED (P1, DEC-
 | pod kursorem | `#f5f7fb` | widoczna |
 | zaznaczony | `accent-soft` | widoczna |
 
-Teksty podpowiedzi: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage”; CHANGES „spacja stage · dwuklik porównaj”; UNVERSIONED „spacja stage · dwuklik porównaj” (P7; makieta E-01 miała samo „spacja stage”). Słowa „spacja” i „dwuklik” w stylu `kbd`.
+Teksty podpowiedzi: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051; makieta E-01 miała samo „spacja unstage”); CHANGES „spacja stage · dwuklik porównaj”; UNVERSIONED „spacja stage · dwuklik porównaj” (P7; makieta E-01 miała samo „spacja stage”). Słowa „spacja” i „dwuklik” w stylu `kbd`.
 
 ### Panel commita
 Pole wiadomości z tekstem zastępczym „Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push”. Obok, w kolumnie: przycisk główny „Commit do <repo>” i pod nim „Commit & Push”. Pod spodem linia przyczyny „ⓘ <commit_disabled_reason>”; ukryta, gdy commit jest możliwy.

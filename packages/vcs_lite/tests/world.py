@@ -24,6 +24,7 @@ class World:
         self.questions: list[str] = []
         self.answer = True
         self.model: AppModel | None = None
+        self.clock = None  # None: the model uses the real clock
 
     def repo(self, name: str) -> Repo:
         r = Repo(self.root / name)
@@ -35,7 +36,8 @@ class World:
 
     def start(self, *names: str) -> AppModel:
         settings = Settings(rootdir=str(self.root), repos=names)
-        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, worker=self.worker, confirm=self._confirm)
+        extra = {"clock": self.clock} if self.clock else {}
+        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, worker=self.worker, confirm=self._confirm, **extra)
         self.model.refresh_all()
         self.worker.settle()
         return self.model
