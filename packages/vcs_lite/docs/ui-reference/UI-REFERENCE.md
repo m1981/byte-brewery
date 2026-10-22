@@ -2,7 +2,7 @@
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
 
-1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8.
+1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
 2. `E-01.png`: zrzut makiety wykonany przez użytkownika (1135 × 712 px); pokazuje, jak wartości wyglądają razem.
 3. Ten dokument: każda wartość wypisana jawnie, z odwzorowaniem w Tk 8.6 i listą przybliżeń.
 
@@ -74,9 +74,11 @@ Rodzina: systemowa macOS (`-apple-system`, SF Pro Text). Monospace: `ui-monospac
 | licznik / znacznik | 11.5 | 600 | `#3a3a40` | cyfry tabelaryczne |
 | nagłówek grupy („STAGED”) | 11 | 650 | `dim` | wersaliki, odstęp liter 0.06 em |
 | liczba w nagłówku grupy | 11 | 500 | `dim` | bez odstępu liter |
-| kwadrat statusu | 11 (mono) | 600 | `#ffffff` | jedna litera |
-| nazwa pliku | 13 | 550 | `ink` | |
-| katalog pliku i „stara → ” | 13 | 400 | `dim` | |
+| nazwa pliku | 13 | 400 | `file-mod` | kolor według statusu (§9); usunięty z przekreśleniem |
+| folder za nazwą i „← stara” | 12 | 400 | `dim` | odstęp 8 od nazwy (§9) |
+| nazwa folderu | 13 | 400 | `ink` | węzeł widoku folderów (§9) |
+| liczba plików w folderze | 12 | 400 | `dim` | „1 plik”, „2 pliki”, „5 plików” |
+| przycisk folderu („+”, „−”) | 16 | 400 | `ink` | |
 | podpowiedź przy wierszu | 11.5 | 400 | `dim` | |
 | klawisz (`kbd`) | 11 (mono) | 400 | `ink` | |
 | pole wiadomości | 13 | 400 | `ink` | |
@@ -100,9 +102,8 @@ Rodzina: systemowa macOS (`-apple-system`, SF Pro Text). Monospace: `ui-monospac
 | licznik | min. szerokość 22; padding 1 × 7; promień pełny |
 | stopka paska bocznego | przyklejona do dołu; padding 8 |
 | obszar plików | padding górny 6 |
-| nagłówek grupy | padding 10 (góra) × 16 (boki) × 4 (dół); odstęp do liczby 8 |
-| wiersz pliku | siatka: kwadrat 22 / nazwa / podpowiedź; odstęp 10; padding 5 × 16 |
-| kwadrat statusu | 18 × 18; promień 4 |
+| nagłówek grupy | zastąpione przez §9: wysokość 24 = 6 + 15 + 3; boki 16; odstęp do liczby 8 |
+| wiersz pliku | zastąpione przez §9: wysokość 24, bez kwadratu |
 | panel commita | padding 12 × 14; siatka: pole / przyciski; odstęp 8 (pion) × 12 (poziom); linia górna 1 `line` |
 | pole wiadomości | wysokość 64; padding 8 × 10; promień 8; obramowanie 1 `#c9c9cf` |
 | przyciski commita | kolumna, odstęp 6; równa szerokość |
@@ -132,24 +133,7 @@ Nagłówek „REPOZYTORIA”. Element repo: kropka stanu, nazwa (pogrubiona), dr
 Stopka: przycisk „⚙ Repozytoria…” otwiera Settings (E-02).
 
 ### Lista plików
-Grupy w kolejności: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED (P1, DEC-VCS-050). Nagłówek: nazwa wersalikami i liczba plików. Wiersz: kwadrat statusu, ścieżka (katalog w `dim`, nazwa pliku pogrubiona), podpowiedź po prawej.
-
-| Kod | Litera | Kolor kwadratu |
-|---|---|---|
-| zmieniony | M | `mod` |
-| dodany | A | `add` |
-| usunięty | D | `del` |
-| przeniesiony | R | `ren`; ścieżka „stara → **nowa**” |
-| poza kontrolą | ? | `unv` |
-| konflikt | „!” (P1) | `conf` |
-
-| Stan wiersza | Tło | Podpowiedź |
-|---|---|---|
-| zwykły | `bg` | ukryta |
-| pod kursorem | `#f5f7fb` | widoczna |
-| zaznaczony | `accent-soft` | widoczna |
-
-Teksty podpowiedzi: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051; makieta E-01 miała samo „spacja unstage”); CHANGES „spacja stage · dwuklik porównaj”; UNVERSIONED „spacja stage · dwuklik porównaj” (P7; makieta E-01 miała samo „spacja stage”). Słowa „spacja” i „dwuklik” w stylu `kbd`.
+Zastąpione przez §9 (DEC-VCS-052–057). Kolejność grup: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED. Teksty podpowiedzi przy wierszu pliku: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051); CHANGES i UNVERSIONED „spacja stage · dwuklik porównaj” (P7). Słowa „spacja” i „dwuklik” w stylu `kbd`. Tło wiersza: zwykły `bg`, pod kursorem `#f5f7fb`, zaznaczony `accent-soft`; podpowiedź widoczna pod kursorem i na zaznaczonym.
 
 ### Panel commita
 Pole wiadomości z tekstem zastępczym „Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push”. Obok, w kolumnie: przycisk główny „Commit do <repo>” i pod nim „Commit & Push”. Pod spodem linia przyczyny „ⓘ <commit_disabled_reason>”; ukryta, gdy commit jest możliwy.
@@ -188,7 +172,7 @@ Pole wiadomości z tekstem zastępczym „Opis zmian…   ⌘↩ commit · ⌘�
 Źródło: `E-01-stany.html`. Nowe wartości: kropka „w toku”, pasek postępu, znak pustego stanu `#b9bac0`; reszta to tokeny z sekcji 1.
 
 ### P1 Pliki w konflikcie
-Grupa CONFLICTS jako pierwsza na liście; nagłówek grupy w `conf` (reszta jak nagłówek grupy). Wiersz: kwadrat „!” w `conf`, nazwa pliku jak w innych grupach, podpowiedź „rozwiąż w edytorze · spacja oznacz jako rozwiązany” („spacja” w stylu `kbd`). Spacja z plikiem zawierającym znaczniki: pasek błędu P3 z tytułem „Oznaczenie jako rozwiązany nie powiodło się” i treścią „<plik>: plik nadal zawiera znaczniki konfliktu (linia N).” (REQ-VCS-024).
+Grupa CONFLICTS jako pierwsza na liście; nagłówek grupy w `conf` (reszta jak nagłówek grupy). Wiersz: nazwa pliku w kolorze `conf` (kwadrat „!” zastąpiony przez DEC-VCS-053), podpowiedź „rozwiąż w edytorze · spacja oznacz jako rozwiązany” („spacja” w stylu `kbd`). Spacja z plikiem zawierającym znaczniki: pasek błędu P3 z tytułem „Oznaczenie jako rozwiązany nie powiodło się” i treścią „<plik>: plik nadal zawiera znaczniki konfliktu (linia N).” (REQ-VCS-024).
 
 ### P2 Konflikt w pasku narzędzi
 Chip „N plik(i/ów) w konflikcie”: tło `#fbe3e1`, tekst `conf`, grubość 600, wymiary jak chip gałęzi. Zaznaczone repo w konflikcie: kropka `conf` z białą obwódką 2, znacznik „konflikt” na białym tle z tekstem `conf`. Przycisk commita nieaktywny z przyczyną „Rozwiąż konflikty przed commitem.”.
@@ -230,6 +214,7 @@ Okno modalne nad oknem głównym (`tk.Toplevel`, `transient`, `grab_set`): szero
 - nagłówek „Repozytoria do obserwowania”: 15, 650; padding 16 × 18 × 4;
 - podtytuł „z folderu `<rootdir>`”: `dim`, padding 0 × 18 × 10; ścieżka jako chip monospace 12 na `#eef0f3`, promień 5, padding 1 × 6; nieedytowalna w v1;
 - lista: linie 1 `line` u góry i u dołu; wysokość do 220 z przewijaniem; padding 4 × 0; wiersz: pole wyboru natywne / nazwa / miejsce na dodatek, odstęp 10, padding 6 × 18; kolejność alfabetyczna;
+- repo wybrane wcześniej, a nieobecne na dysku: na końcu listy, zaznaczone, nazwa w `#8e8e93`, po prawej „niedostępne” (12, `dim`); odznaczenie usuwa je z listy. Propozycja agenta z 2026-10-22, żeby Zapisz nie usuwało ich po cichu; do potwierdzenia przez użytkownika.
 - notka „Pokazane są repozytoria z pierwszego poziomu folderu. Zwykłe i ukryte foldery są pominięte.”: 12, `dim`, padding 8 × 18;
 - stopka: tło `#fafafb`, linia górna 1 `line`, padding 12 × 18, odstęp 8; po lewej „Zaznaczono N z M” (12, `dim`); po prawej „Anuluj” i „Zapisz” (przycisk domyślny).
 
@@ -243,6 +228,45 @@ Chip „⎇ odłączony HEAD · <7 znaków commita>”. Pull nieaktywny, podpowi
 - pasek błędu i puste stany: `tk.Frame` i `tk.Label` z tokenami; treść błędu w `tk.Text` tylko do odczytu, wysokość 4 linie;
 - pasek postępu: `tk.Canvas` wysokości 2 z prostokątem przesuwanym przez `after()` wyłącznie w trakcie operacji (REQ-VCS-101);
 - podpowiedzi po najechaniu: mała `tk.Toplevel` bez ramki.
+
+## 9. Lista plików w stylu PyCharma (DEC-VCS-052–057)
+
+Źródło: `E-01-lista.html`. Zastępuje kwadraty statusu, wiersze 28 pt i ścieżkę „katalog/**nazwa**” z wcześniejszych sekcji.
+
+### Kolory nazw plików
+
+| Nazwa | Wartość | Status |
+|---|---|---|
+| `file-mod` | `#002daa` | zmieniony (M, T) |
+| `file-ren` | `#002daa` | przeniesiony, skopiowany (R, C) |
+| `file-add` | `#0c7216` | dodany (A) |
+| `file-unv` | `#a92c3e` | poza kontrolą (?) |
+| `file-del` | `#6e6e73` | usunięty (D), z przekreśleniem |
+| `conf` | `#c2302a` | konflikt |
+| `folder-icon` | `#9aa0ab` | ikona folderu |
+| `folder-act-hover` | `#e6e8ee` | tło przycisku „+”/„−” na wierszu pod kursorem |
+
+`file-mod`, `file-add` i `file-unv` odczytane ze zrzutów PyCharma użytkownika; `file-ren` i `file-del` dobrane przez agenta (DEC-VCS-052).
+
+### Wymiary
+
+| Element | Wartość |
+|---|---|
+| nagłówek grupy | wysokość 24 = 6 (góra) + 15 + 3 (dół); od lewej 16 |
+| wiersz pliku i węzła folderu | wysokość 24; tekst wyśrodkowany w pionie |
+| widok płaski | nazwa pliku od 28; za nią folder nadrzędny (12, `dim`) po odstępie 8 |
+| widok folderów | strzałka 28 (szerokość 12; „▾” rozwinięty, „▸” zwinięty, `dim`); ikona 46 (16 × 13, `folder-icon`); nazwa folderu 68; pliki w folderze od 68, pliki z katalogu głównego od 46; bez folderu za nazwą |
+| zmiana nazwy | „nowa” w kolorze `file-ren`, za nią „← stara” (12, `dim`) po odstępie 8 |
+| węzeł folderu | pełna ścieżka katalogu; liczba plików po odstępie 8; najpierw węzły alfabetycznie, potem pliki z katalogu głównego |
+| przycisk folderu | „+” w CHANGES i UNVERSIONED, „−” w STAGED, brak w CONFLICTS; pole 20 × 20, promień 5, 16 od prawej; widoczny na węźle pod kursorem i zaznaczonym; tło `folder-act-hover` |
+| pole „Pokaż foldery” | natywne pole wyboru w pasku narzędzi, przed Pull |
+
+### Zachowanie
+
+- Spacja na węźle folderu: jak przycisk („+” stage wszystkich plików folderu w grupie, „−” unstage); w CONFLICTS nic.
+- Dwuklik na węźle albo kliknięcie strzałki: zwija i rozwija; klawisze ← i → na zaznaczonym węźle: zwija i rozwija.
+- Węzły domyślnie rozwinięte; stan zwinięcia pamiętany do zamknięcia okna.
+- Stan „Pokaż foldery” zapisany w ustawieniach, wspólny dla wszystkich repo (REQ-VCS-025).
 
 ## 7. Do ustalenia (rejestr w SPEC.md)
 

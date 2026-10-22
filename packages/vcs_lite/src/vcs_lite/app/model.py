@@ -1,12 +1,12 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, S-VCS-01
+Trace: DES-VCS-016, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -15,7 +15,7 @@ from vcs_lite.app.worker import Executor, Outcome
 from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool, compare
 from vcs_lite.core.gitcli import GitCli, GitResult
 from vcs_lite.core.repo import GitError, GitRepo
-from vcs_lite.core.settings import Settings
+from vcs_lite.core.settings import Settings, SettingsError, scan_rootdir
 from vcs_lite.core.status import FileChange, Group, RepoStatus, Side
 
 SIDE_LABELS = {Side.HEAD: "HEAD", Side.INDEX: "indeks", Side.WORKTREE: "kopia robocza", Side.EMPTY: "pusty"}
@@ -53,6 +53,15 @@ class RepoView:
 
 
 @dataclass(frozen=True)
+class RepoChoice:
+    """One line of the repository dialog (E-02)."""
+
+    name: str
+    chosen: bool
+    missing: bool = False  # chosen earlier but no longer a repository on disk
+
+
+@dataclass(frozen=True)
 class EmptyState:
     """What the file area shows instead of a list (P5)."""
 
@@ -66,7 +75,10 @@ class EmptyState:
 
 class AppModel:
     def __init__(self, settings: Settings, *, git: GitCli, diff_tool: ExternalDiffTool, worker: Executor,
-                 confirm: Callable[[str], bool], clock: Callable[[], datetime] = datetime.now):
+                 confirm: Callable[[str], bool], clock: Callable[[], datetime] = datetime.now,
+                 save_settings: Callable[[Settings], None] = lambda settings: None):
+        self._settings = settings
+        self._save_settings = save_settings
         self._clock = clock
         self._git = git
         self._diff_tool = diff_tool
@@ -78,10 +90,52 @@ class AppModel:
         self.selected: str | None = None
 
     @classmethod
-    def from_settings(cls, settings: Settings, *, git: GitCli, worker: Executor,
-                      confirm: Callable[[str], bool]) -> AppModel:
+    def from_settings(cls, settings: Settings, *, git: GitCli, worker: Executor, confirm: Callable[[str], bool],
+                      save_settings: Callable[[Settings], None] = lambda settings: None) -> AppModel:
         return cls(settings, git=git, diff_tool=CommandTemplateDiffTool(settings.diff_tool), worker=worker,
-                   confirm=confirm)
+                   confirm=confirm, save_settings=save_settings)
+
+    # ---------- choosing repositories (E-02, REQ-VCS-001) ----------
+
+    @property
+    def rootdir(self) -> str:
+        return self._settings.rootdir
+
+    def repo_choices(self) -> tuple[list[RepoChoice], str | None]:
+        """First-level repositories of rootdir, then chosen ones that disappeared; or the error to show."""
+        try:
+            found = scan_rootdir(self._settings.root_path)
+        except SettingsError as exc:
+            return [], str(exc)
+        chosen = set(self._settings.repos)
+        choices = [RepoChoice(name, name in chosen) for name in found]
+        choices += [RepoChoice(name, True, missing=True) for name in self._settings.repos if name not in found]
+        return choices, None
+
+    def set_repos(self, names: list[str]) -> None:
+        """Save the chosen repositories; keep the state of the ones that stay, refresh the new ones."""
+        self._settings = replace(self._settings, repos=tuple(names))
+        self._save_settings(self._settings)
+        old = self._repos
+        self._repos = {name: old.get(name) or RepoView(name, self._settings.repo_path(name)) for name in names}
+        if self.selected not in self._repos:
+            self.selected = None
+        self._changed()
+        for name in names:
+            if name not in old:
+                self.refresh(name)
+
+    # ---------- folder view (REQ-VCS-025) ----------
+
+    @property
+    def show_folders(self) -> bool:
+        return self._settings.show_folders
+
+    @show_folders.setter
+    def show_folders(self, value: bool) -> None:
+        self._settings = replace(self._settings, show_folders=value)
+        self._save_settings(self._settings)
+        self._changed()
 
     # ---------- observing ----------
 
@@ -288,6 +342,17 @@ class AppModel:
         repo = self._repo(view)
         operation = {Group.STAGED: repo.unstage, Group.CONFLICTS: repo.mark_resolved}.get(change.group, repo.stage)
         self._run(view, lambda: operation(change))
+
+    def toggle_folder(self, group: Group, folder: str) -> None:
+        """Folder button or space on a folder: stage from Changes and Unversioned, unstage from Staged
+        (REQ-VCS-026); conflicts stay per file (REQ-VCS-024)."""
+        changes = [c for c in self.files(group) if c.path.rpartition("/")[0] == folder]
+        if not changes or group is Group.CONFLICTS:
+            return
+        view = self._current()
+        repo = self._repo(view)
+        operation = repo.unstage_all if group is Group.STAGED else repo.stage_all
+        self._run(view, lambda: operation(changes))
 
     def activate(self, change: FileChange) -> None:
         """Double click or Enter: compare the file in the external tool (DEC-VCS-040)."""

@@ -1,14 +1,16 @@
-"""File list drawn on a canvas after the reference: groups, status squares, split paths, hints, keys, empty states.
+"""File list drawn on a canvas after the reference §9: names in PyCharm colours, 24 pt rows, optional folder view.
 
-Geometry (UI-REFERENCE §3): top padding 6; group header 10 + 15 + 4; rows 5 + 18 + 5 with square
-column 22, gap 10 and side padding 16; the hint is right-aligned at the same padding.
+Flat view: files from 28, the parent folder in grey after the name. Folder view: one node per directory
+(chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
+a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, T-VCS-01
+Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, T-VCS-01
 """
 
 from __future__ import annotations
 
 import tkinter as tk
+from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -20,15 +22,12 @@ from vcs_lite.ui.widgets import rounded_rect
 C, S = theme.COLORS, theme.SPACE
 
 GROUP_ORDER = (Group.CONFLICTS, Group.STAGED, Group.CHANGES, Group.UNVERSIONED)  # P1: conflicts first
-SIDE, ROW_PAD = S["row_pad"]
-G_SIDE, G_TOP, G_BOTTOM = S["group_pad"]
-HEADER_LINE = 15                                     # 11 pt at line height 1.4
-HEADER_HEIGHT = G_TOP + HEADER_LINE + G_BOTTOM       # 29
-ROW_HEIGHT = 2 * ROW_PAD + S["status_square"]        # 28
-TEXT_X = SIDE + S["row_square_column"] + S["row_gap"]  # 48
+H_TOP, H_LINE, H_BOTTOM = S["group_header"]
+HEADER_HEIGHT = H_TOP + H_LINE + H_BOTTOM   # 24
+ROW_HEIGHT = S["row_height"]                # 24
 
-LETTERS = {"M": ("M", "mod"), "T": ("M", "mod"), "A": ("A", "add"), "D": ("D", "del"),
-           "R": ("R", "ren"), "C": ("C", "ren"), "?": ("?", "unv")}
+STATUS_COLORS = {"M": "file_mod", "T": "file_mod", "A": "file_add", "D": "file_del", "R": "file_ren", "C": "file_ren",
+                 "?": "file_unv"}
 
 KBD = "kbd"
 HINTS = {
@@ -37,91 +36,122 @@ HINTS = {
     Group.CHANGES: [("spacja", KBD), (" stage · ", None), ("dwuklik", KBD), (" porównaj", None)],
     Group.UNVERSIONED: [("spacja", KBD), (" stage · ", None), ("dwuklik", KBD), (" porównaj", None)],  # P7
 }
+FOLDER_ACTIONS = {Group.STAGED: "−", Group.CHANGES: "+", Group.UNVERSIONED: "+"}  # none for conflicts (DEC-VCS-057)
 
 Key = tuple[Group, str]
 
 
 @dataclass(frozen=True)
-class FileRow:
+class ListRow:
+    kind: str                       # "file" or "folder"
     group: Group
-    path: str
-    letter: str
+    path: str                       # file path, or the directory of a folder node
     color: str
     pieces: list[tuple[str, str]] = field(compare=False)
     top: int = 0
+    x: int = S["indent_flat"]
     height: int = ROW_HEIGHT
     change: FileChange | None = field(default=None, compare=False)
+    collapsed: bool = False
 
     @property
     def key(self) -> Key:
         return self.group, self.path
 
 
-def square(change: FileChange) -> tuple[str, str]:
+def files_label(n: int) -> str:
+    """Polish plural: 1 plik, 2–4 pliki (but 12–14 plików), otherwise plików."""
+    if n == 1:
+        return "1 plik"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} pliki"
+    return f"{n} plików"
+
+
+def file_color(change: FileChange) -> str:
     if change.group is Group.CONFLICTS:
-        return "!", C["conf"]
-    letter, color = LETTERS.get(change.code, (change.code[:1], "unv"))
-    return letter, C[color]
+        return C["conf"]
+    return C[STATUS_COLORS.get(change.code, "file_unv")]
 
 
-def path_pieces(change: FileChange) -> list[tuple[str, str]]:
-    """Directory and the old name of a rename in the dim style, the file name in bold."""
-    pieces = [(f"{change.orig_path} → ", "file_dir")] if change.orig_path and change.group is Group.STAGED else []
+def file_pieces(change: FileChange, *, folder_suffix: bool) -> list[tuple[str, str]]:
+    """Name first; after it the old name of a rename, or the parent folder in the flat view (K4)."""
     folder, _, name = change.path.rpartition("/")
-    if folder:
-        pieces.append((f"{folder}/", "file_dir"))
-    pieces.append((name, "file_name"))
+    pieces = [(name, "file_name_del" if change.code == "D" and change.group is not Group.CONFLICTS else "file_name")]
+    if change.orig_path and change.group is Group.STAGED:
+        pieces.append((f"← {change.orig_path}", "file_folder"))
+    elif folder and folder_suffix:
+        pieces.append((folder, "file_folder"))
     return pieces
 
 
 class FileList(tk.Frame):
     def __init__(self, master: tk.Misc, *, on_toggle: Callable[[FileChange], None],
-                 on_activate: Callable[[FileChange], None], on_empty_action: Callable[[str], None]):
+                 on_activate: Callable[[FileChange], None], on_toggle_folder: Callable[[Group, str], None],
+                 on_empty_action: Callable[[str], None]):
         super().__init__(master, bg=C["bg"])
-        self._on_toggle, self._on_activate, self._on_empty_action = on_toggle, on_activate, on_empty_action
+        self._on_toggle, self._on_activate = on_toggle, on_activate
+        self._on_toggle_folder, self._on_empty_action = on_toggle_folder, on_empty_action
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
-        self._rows: list[FileRow] = []
-        self._headers: list[tuple[str, int]] = []
+        self._rows: list[ListRow] = []
+        self._headers: list[tuple[str, int, int]] = []   # title, count, top
         self._empty: list[str] = []
+        self._collapsed: set[Key] = set()
+        self._content_height = 1
         self.selected_key: Key | None = None
         self.hovered_key: Key | None = None
-        self._follow: Key | None = None  # file moved by space: follow it until it shows up in another group
+        self._follow: Key | None = None  # row moved by space: follow it until it shows up in another group
         self._model: AppModel | None = None
+        self._empty_button: tk.Button | None = None
         self._bind()
 
     def _bind(self) -> None:
         c = self.canvas
-        c.bind("<Button-1>", lambda e: (c.focus_set(), self.click(e.y)))
+        c.bind("<Button-1>", lambda e: (c.focus_set(), self.click(e.y, e.x)))
         c.bind("<Double-Button-1>", lambda e: self.double_click(e.y))
         c.bind("<Motion>", lambda e: self.hover(e.y))
         c.bind("<Leave>", lambda e: self.hover(-1))
-        c.bind("<Up>", lambda e: self.press_up())
-        c.bind("<Down>", lambda e: self.press_down())
-        c.bind("<space>", lambda e: self.press_space())
-        c.bind("<Return>", lambda e: self.press_return())
+        for key, action in (("<Up>", self.press_up), ("<Down>", self.press_down), ("<Left>", self.press_left),
+                            ("<Right>", self.press_right), ("<space>", self.press_space), ("<Return>", self.press_return)):
+            c.bind(key, lambda e, a=action: a())
         c.bind("<MouseWheel>", lambda e: c.yview_scroll(-e.delta, "units"))
         c.bind("<Configure>", lambda e: self._model and self.render(self._model))
 
     # ---------- reading what was drawn ----------
 
-    def rows(self) -> list[FileRow]:
+    def rows(self) -> list[ListRow]:
         return list(self._rows)
 
     def headers(self) -> list[tuple[str, int]]:
-        return list(self._headers)
+        return [(title, count) for title, count, _ in self._headers]
 
     def empty_texts(self) -> list[str]:
         return list(self._empty)
 
     def hint_texts(self) -> list[str]:
-        return ["".join(text for text, _ in HINTS[row.group]) for row in self._rows if row.key in self._hint_keys()]
+        shown = self._marked_keys()
+        return ["".join(t for t, _ in HINTS[r.group]) for r in self._rows if r.kind == "file" and r.key in shown]
+
+    def empty_action_enabled(self) -> bool:
+        return self._empty_button is not None and str(self._empty_button.cget("state")) == tk.NORMAL
+
+    def run_empty_action(self) -> None:
+        if self._empty_button is not None:
+            self._empty_button.invoke()
+
+    def action_glyph(self) -> str | None:
+        row = self._action_row()
+        return FOLDER_ACTIONS.get(row.group) if row else None
 
     # ---------- interaction ----------
 
-    def _row_at(self, y: int) -> FileRow | None:
+    def _row_at(self, y: int) -> ListRow | None:
         y = self.canvas.canvasy(y)
         return next((r for r in self._rows if r.top <= y < r.top + r.height), None)
+
+    def _row(self, key: Key | None) -> ListRow | None:
+        return next((r for r in self._rows if r.key == key), None)
 
     def select_key(self, key: Key | None) -> None:
         self._follow = None
@@ -129,10 +159,23 @@ class FileList(tk.Frame):
         self._redraw_rows()
         self._scroll_into_view()
 
-    def click(self, y: int) -> None:
+    def click(self, y: int, x: int = 0) -> None:
         row = self._row_at(y)
-        if row:
+        if not row:
+            return
+        if row.kind == "folder" and x >= self._action_left() and FOLDER_ACTIONS.get(row.group):
             self.select_key(row.key)
+            self.click_action()
+        elif row.kind == "folder" and row.x <= x < row.x + S["chevron_width"]:
+            self._toggle_collapsed(row)
+        else:
+            self.select_key(row.key)
+
+    def click_action(self) -> None:
+        row = self._action_row()
+        if row and FOLDER_ACTIONS.get(row.group):
+            self._on_toggle_folder(row.group, row.path)
+            self._follow = row.key
 
     def hover(self, y: int) -> None:
         row = self._row_at(y) if y >= 0 else None
@@ -143,20 +186,42 @@ class FileList(tk.Frame):
 
     def double_click(self, y: int) -> None:
         row = self._row_at(y)
-        if row:
-            self.select_key(row.key)
+        if not row:
+            return
+        self.select_key(row.key)
+        if row.kind == "folder":
+            self._toggle_collapsed(row)
+        else:
             self._on_activate(row.change)
 
     def press_return(self) -> None:
-        row = self._selected_row()
-        if row:
+        row = self._row(self.selected_key)
+        if row and row.kind == "folder":
+            self._toggle_collapsed(row)
+        elif row:
             self._on_activate(row.change)
 
     def press_space(self) -> None:
-        row = self._selected_row()
-        if row:
-            self._on_toggle(row.change)
-            self._follow = row.key
+        row = self._row(self.selected_key)
+        if not row:
+            return
+        if row.kind == "folder":
+            if FOLDER_ACTIONS.get(row.group):
+                self._on_toggle_folder(row.group, row.path)
+                self._follow = row.key
+            return
+        self._on_toggle(row.change)
+        self._follow = row.key
+
+    def press_left(self) -> None:
+        row = self._row(self.selected_key)
+        if row and row.kind == "folder" and not row.collapsed:
+            self._toggle_collapsed(row)
+
+    def press_right(self) -> None:
+        row = self._row(self.selected_key)
+        if row and row.kind == "folder" and row.collapsed:
+            self._toggle_collapsed(row)
 
     def press_down(self) -> None:
         self._move(+1)
@@ -171,42 +236,75 @@ class FileList(tk.Frame):
         index = keys.index(self.selected_key) + step if self.selected_key in keys else (0 if step > 0 else len(keys) - 1)
         self.select_key(keys[max(0, min(index, len(keys) - 1))])
 
-    def _selected_row(self) -> FileRow | None:
-        return next((r for r in self._rows if r.key == self.selected_key), None)
+    def _toggle_collapsed(self, row: ListRow) -> None:
+        self._collapsed.symmetric_difference_update({row.key})
+        if self._model:
+            self.render(self._model)
+
+    def _action_row(self) -> ListRow | None:
+        """The folder row whose button is visible: the hovered one first, else the selected one."""
+        for key in (self.hovered_key, self.selected_key):
+            row = self._row(key)
+            if row and row.kind == "folder":
+                return row
+        return None
 
     def _scroll_into_view(self) -> None:
-        row = self._selected_row()
-        if not row:
-            return
+        row = self._row(self.selected_key)
         c = self.canvas
-        view_top, view_height = c.canvasy(0), c.winfo_height()
-        if view_height <= 1:
+        if not row or c.winfo_height() <= 1:
             return
+        view_top, view_height = c.canvasy(0), c.winfo_height()
         if row.top < view_top:
             c.yview_moveto(row.top / self._content_height)
         elif row.top + row.height > view_top + view_height:
             c.yview_moveto((row.top + row.height - view_height) / self._content_height)
 
-    # ---------- drawing ----------
+    # ---------- building rows ----------
 
     def render(self, model: AppModel) -> None:
         self._model = model
-        self._rows, self._headers, self._header_tops, self._empty = [], [], [], []
+        self._rows, self._headers, self._empty = [], [], []
         y = S["files_pad_top"]
         for group in GROUP_ORDER:
             changes = model.files(group)
             if not changes:
                 continue
-            self._headers.append((group.value.upper(), len(changes)))
-            self._header_tops.append(y)
+            self._headers.append((group.value.upper(), len(changes), y))
             y += HEADER_HEIGHT
-            for change in changes:
-                letter, color = square(change)
-                self._rows.append(FileRow(group, change.path, letter, color, path_pieces(change), y, ROW_HEIGHT, change))
-                y += ROW_HEIGHT
+            y = self._add_folder_rows(group, changes, y) if model.show_folders else self._add_flat_rows(changes, y)
         self._content_height = max(y, 1)
         self._keep_selection()
         self._redraw_all(model)
+
+    def _add_flat_rows(self, changes: list[FileChange], y: int) -> int:
+        for change in changes:
+            self._rows.append(ListRow("file", change.group, change.path, file_color(change),
+                                      file_pieces(change, folder_suffix=True), y, S["indent_flat"], change=change))
+            y += ROW_HEIGHT
+        return y
+
+    def _add_folder_rows(self, group: Group, changes: list[FileChange], y: int) -> int:
+        by_folder: dict[str, list[FileChange]] = defaultdict(list)
+        for change in changes:
+            by_folder[change.path.rpartition("/")[0]].append(change)
+        for folder in sorted(f for f in by_folder if f):  # folders first, alphabetically
+            members = by_folder[folder]
+            collapsed = (group, folder) in self._collapsed
+            self._rows.append(ListRow("folder", group, folder, C["ink"],
+                                      [(folder, "folder_name"), (files_label(len(members)), "folder_count")],
+                                      y, S["indent_chevron"], collapsed=collapsed))
+            y += ROW_HEIGHT
+            if not collapsed:
+                for change in members:
+                    self._rows.append(ListRow("file", group, change.path, file_color(change),
+                                              file_pieces(change, folder_suffix=False), y, S["indent_child"], change=change))
+                    y += ROW_HEIGHT
+        for change in by_folder.get("", []):  # then files at the repository root
+            self._rows.append(ListRow("file", group, change.path, file_color(change),
+                                      file_pieces(change, folder_suffix=False), y, S["indent_icon"], change=change))
+            y += ROW_HEIGHT
+        return y
 
     def _keep_selection(self) -> None:
         keys = {r.key for r in self._rows}
@@ -220,61 +318,85 @@ class FileList(tk.Frame):
         if self.hovered_key not in keys:
             self.hovered_key = None
 
+    # ---------- drawing ----------
+
     def _width(self) -> int:
         w = self.canvas.winfo_width()
         return w if w > 1 else 700
 
+    def _action_left(self) -> int:
+        return self._width() - S["row_side"] - S["folder_act"]
+
+    def _marked_keys(self) -> set[Key]:
+        return {k for k in (self.selected_key, self.hovered_key) if k is not None}
+
     def _redraw_all(self, model: AppModel) -> None:
         c = self.canvas
         c.delete("all")
+        self._empty_button = None
         empty = model.empty_state
         if empty and not self._rows:
             self._draw_empty(empty)
             c.configure(scrollregion=(0, 0, self._width(), c.winfo_height()))
             return
-        for (title, count), top in zip(self._headers, self._header_tops):
+        for title, count, top in self._headers:
             self._draw_header(title, count, top)
         self._redraw_rows()
         c.configure(scrollregion=(0, 0, self._width(), self._content_height))
 
     def _draw_header(self, title: str, count: int, top: int) -> None:
         color = C["conf"] if title == Group.CONFLICTS.value.upper() else theme.TYPE["group_header"].color
-        y = top + G_TOP + HEADER_LINE / 2
-        self.canvas.create_text(G_SIDE, y, anchor=tk.W, text=title, font=theme.font("group_header"), fill=color)
-        x = G_SIDE + theme.font("group_header").measure(title) + S["group_count_gap"]
+        y = top + H_TOP + H_LINE / 2
+        side = S["group_side"]
+        self.canvas.create_text(side, y, anchor=tk.W, text=title, font=theme.font("group_header"), fill=color)
+        x = side + theme.font("group_header").measure(title) + S["group_count_gap"]
         self.canvas.create_text(x, y, anchor=tk.W, text=str(count), font=theme.font("group_count"),
                                 fill=theme.TYPE["group_count"].color)
-
-    def _hint_keys(self) -> set[Key]:
-        return {k for k in (self.selected_key, self.hovered_key) if k is not None}
 
     def _redraw_rows(self) -> None:
         c = self.canvas
         c.delete("row")
-        width = self._width()
-        hinted = self._hint_keys()
+        width, marked, action_row = self._width(), self._marked_keys(), self._action_row()
         for row in self._rows:
             fill = C["accent_soft"] if row.key == self.selected_key else (
                 C["row_hover"] if row.key == self.hovered_key else C["bg"])
             c.create_rectangle(0, row.top, width, row.top + row.height, fill=fill, outline="", tags=("row",))
-            self._draw_square(row)
-            x = TEXT_X
             middle = row.top + row.height / 2
-            for text, role in row.pieces:
-                c.create_text(x, middle, anchor=tk.W, text=text, font=theme.font(role),
-                              fill=theme.TYPE[role].color, tags=("row",))
-                x += theme.font(role).measure(text)
-            if row.key in hinted:
-                self._draw_hint(row, width - SIDE, middle)
+            if row.kind == "folder":
+                self._draw_folder(row, middle)
+                if row is action_row and FOLDER_ACTIONS.get(row.group):
+                    self._draw_action(FOLDER_ACTIONS[row.group], middle)
+            else:
+                self._draw_pieces(row, row.x, middle)
+                if row.key in marked:
+                    self._draw_hint(row, width - S["row_side"], middle)
 
-    def _draw_square(self, row: FileRow) -> None:
-        size = S["status_square"]
-        x1, y1 = SIDE, row.top + ROW_PAD
-        rounded_rect(self.canvas, x1, y1, x1 + size, y1 + size, S["status_square_radius"], fill=row.color, tags=("row",))
-        self.canvas.create_text(x1 + size / 2, y1 + size / 2, text=row.letter, font=theme.font("status_square"),
-                                fill=theme.TYPE["status_square"].color, tags=("row",))
+    def _draw_pieces(self, row: ListRow, x: float, middle: float) -> None:
+        for index, (text, role) in enumerate(row.pieces):
+            if index:
+                x += S["suffix_gap"]
+            color = row.color if role in ("file_name", "file_name_del") else theme.TYPE[role].color
+            self.canvas.create_text(x, middle, anchor=tk.W, text=text, font=theme.font(role), fill=color, tags=("row",))
+            x += theme.font(role).measure(text)
 
-    def _draw_hint(self, row: FileRow, right: float, middle: float) -> None:
+    def _draw_folder(self, row: ListRow, middle: float) -> None:
+        c = self.canvas
+        c.create_text(row.x + S["chevron_width"] / 2, middle, text="▸" if row.collapsed else "▾",
+                      font=theme.font("folder_count"), fill=C["dim"], tags=("row",))
+        w, h = S["folder_icon"]
+        left, top = S["indent_icon"], middle - h / 2
+        rounded_rect(c, left, top, left + w * 0.45, top + 3, 1.5, fill=C["folder_icon"], tags=("row",))   # tab
+        rounded_rect(c, left, top + 2, left + w, top + h, 2, fill=C["folder_icon"], tags=("row",))        # body
+        self._draw_pieces(row, S["indent_child"], middle)
+
+    def _draw_action(self, glyph: str, middle: float) -> None:
+        size, left = S["folder_act"], self._action_left()
+        rounded_rect(self.canvas, left, middle - size / 2, left + size, middle + size / 2, S["folder_act_radius"],
+                     fill=C["folder_act_hover"], tags=("row",))
+        self.canvas.create_text(left + size / 2, middle, text=glyph, font=theme.font("folder_act"),
+                                fill=theme.TYPE["folder_act"].color, tags=("row",))
+
+    def _draw_hint(self, row: ListRow, right: float, middle: float) -> None:
         c = self.canvas
         pad_x, _ = S["kbd_pad"]
         kbd_font, hint_font = theme.font("kbd"), theme.font("hint")
@@ -313,6 +435,6 @@ class FileList(tk.Frame):
         if empty.action:
             label = "⚙ Wybierz repozytoria…" if empty.action == "choose_repos" else "⟳ Sprawdź ponownie"
             button = tk.Button(c, text=label, highlightbackground=C["bg"], command=lambda: self._on_empty_action(empty.action),
-                               default="active" if empty.action == "choose_repos" else "normal",
-                               state=tk.DISABLED if empty.action == "choose_repos" else tk.NORMAL)  # Settings dialog: UI-2
+                               default="active" if empty.action == "choose_repos" else "normal")
             c.create_window(width / 2, y + button_height / 2, window=button)
+            self._empty_button = button

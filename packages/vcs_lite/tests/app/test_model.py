@@ -523,3 +523,92 @@ def test_des_vcs_043_no_empty_state_when_there_are_changes(world):
     world.repo("alpha").write("a.py", "a\n")
     model = world.start("alpha"); world.select("alpha")
     assert model.empty_state is None
+
+
+
+# ---------- folders (REQ-VCS-025, REQ-VCS-026) ----------
+
+def folders_repo(world):
+    r = world.repo("alpha")
+    r.write("spec/a.json", "1\n"); r.write("spec/b.json", "2\n"); r.write("top.txt", "t\n")
+    return r
+
+
+def test_at_vcs_033_folder_button_stages_every_file_of_the_folder(world):
+    folders_repo(world)
+    model = world.start("alpha"); world.select("alpha")
+    model.toggle_folder(Group.UNVERSIONED, "spec"); world.worker.settle()
+    assert paths(model, Group.STAGED) == ["spec/a.json", "spec/b.json"]
+    assert paths(model, Group.UNVERSIONED) == ["top.txt"]
+
+
+def test_req_vcs_026_minus_in_staged_unstages_the_folder(world):
+    r = folders_repo(world)
+    r.git("add", "spec")
+    model = world.start("alpha"); world.select("alpha")
+    model.toggle_folder(Group.STAGED, "spec"); world.worker.settle()
+    assert paths(model, Group.STAGED) == []
+
+
+def test_req_vcs_026_folder_in_conflicts_does_nothing(world):
+    conflicted_repo(world)
+    model = world.start("gamma"); world.select("gamma")
+    queued = len(world.worker.queued)
+    model.toggle_folder(Group.CONFLICTS, "")
+    assert len(world.worker.queued) == queued
+
+
+def test_req_vcs_025_folder_view_choice_is_saved(world):
+    world.repo("alpha")
+    saved = []
+    settings = Settings(rootdir=str(world.root), repos=("alpha",))
+    model = AppModel(settings, git=world.git, diff_tool=world.tool, worker=world.worker,
+                     confirm=lambda q: True, save_settings=saved.append)
+    assert model.show_folders is False
+    model.show_folders = True
+    assert model.show_folders is True and saved[-1].show_folders is True and saved[-1].repos == ("alpha",)
+
+
+# ---------- choosing repositories (E-02, P8, REQ-VCS-001) ----------
+
+def make_rootdir_contents(world):
+    for name in ("gamma", "alpha", "beta"):
+        world.repo(name)
+    (world.root / "zdjecia").mkdir()
+    Repo(world.root / ".ukryte").path.mkdir()
+    (world.root / ".ukryte" / ".git").mkdir()
+
+
+def test_at_vcs_001_choices_list_first_level_repositories_with_the_current_choice(world):
+    make_rootdir_contents(world)
+    model = world.start("alpha")
+    choices, error = model.repo_choices()
+    assert error is None
+    assert [(c.name, c.chosen, c.missing) for c in choices] == [("alpha", True, False), ("beta", False, False), ("gamma", False, False)]
+
+
+def test_req_vcs_018_chosen_repository_missing_from_disk_stays_listed(world):
+    make_rootdir_contents(world)
+    model = world.start("alpha", "delta")
+    choices, _ = model.repo_choices()
+    assert (choices[-1].name, choices[-1].chosen, choices[-1].missing) == ("delta", True, True)
+
+
+def test_uc_vcs_01_missing_rootdir_is_reported(world, tmp_path):
+    model = AppModel(Settings(rootdir=str(tmp_path / "nope")), git=world.git, diff_tool=world.tool,
+                     worker=world.worker, confirm=lambda q: True)
+    choices, error = model.repo_choices()
+    assert choices == [] and str(tmp_path / "nope") in error
+
+
+def test_at_vcs_001_saving_the_choice_updates_the_list_and_settings(world):
+    make_rootdir_contents(world)
+    saved = []
+    world.save_settings = saved.append
+    model = world.start("alpha")
+    world.select("alpha")
+    model.set_repos(["beta", "gamma"]); world.worker.settle()
+    assert model.repo_names == ["beta", "gamma"]
+    assert model.selected is None
+    assert saved[-1].repos == ("beta", "gamma")
+    assert model.view("beta").status is not None  # newly chosen repositories are refreshed

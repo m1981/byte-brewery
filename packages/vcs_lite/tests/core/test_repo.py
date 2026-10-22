@@ -238,3 +238,25 @@ def test_req_vcs_024_conflict_resolved_by_deleting_the_file_uses_git_rm(repo, gr
     assert gr.mark_resolved(entry(gr, Group.CONFLICTS, "f.txt")).ok
     st = gr.status()
     assert not st.has_conflicts and [(c.path, c.code) for c in st.group(Group.STAGED)] == [("f.txt", "D")]
+
+
+
+# ---------- whole folders (REQ-VCS-026) ----------
+
+def test_req_vcs_026_stage_all_adds_every_file_in_one_git_call(repo, gr):
+    repo.write("a.txt", "a\n"); repo.commit()
+    repo.write("spec/a.json", "1\n"); repo.write("spec/b.json", "2\n")
+    changes = gr.status().group(Group.UNVERSIONED)
+    calls = gr.git.call_count
+    assert gr.stage_all(changes).ok
+    assert gr.git.call_count == calls + 1
+    assert [c.path for c in gr.status().group(Group.STAGED)] == ["spec/a.json", "spec/b.json"]
+
+
+def test_req_vcs_026_unstage_all_restores_renames_too(repo, gr):
+    repo.write("d/old.py", "x\n" * 10); repo.write("d/k.py", "k\n"); repo.commit()
+    repo.git("mv", "d/old.py", "d/new.py"); repo.write("d/k.py", "k2\n"); repo.git("add", "d/k.py")
+    assert gr.unstage_all(gr.status().group(Group.STAGED)).ok
+    st = gr.status()
+    assert st.group(Group.STAGED) == []
+    assert sorted(c.path for c in st.group(Group.UNVERSIONED)) == ["d/new.py"]

@@ -4,7 +4,7 @@ Source: docs/ui-reference/UI-REFERENCE.md (sections 1, 2, 3, 8) and E-01.html.
 Approximations allowed by section 6: sizes rounded to whole points, weights >= 550 drawn bold,
 no letter spacing, transparency replaced by computed colours.
 
-Trace: DES-VCS-042, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049
+Trace: DES-VCS-042, DES-VCS-045, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053
 """
 
 from __future__ import annotations
@@ -54,6 +54,14 @@ COLORS = {
     # states outside the mock-up (section 8)
     "busy_ring": "#84b2eb",           # white 50 % over accent
     "empty_glyph": "#b9bac0",
+    # file list in PyCharm colours (section 9)
+    "file_mod": "#002daa",
+    "file_ren": "#002daa",
+    "file_add": "#0c7216",
+    "file_unv": "#a92c3e",
+    "file_del": "#6e6e73",
+    "folder_icon": "#9aa0ab",
+    "folder_act_hover": "#e6e8ee",
 }
 
 
@@ -63,6 +71,7 @@ class Type:
     weight: str = "normal"
     color: str = COLORS["ink"]
     mono: bool = False
+    overstrike: bool = False
 
 
 TYPE = {
@@ -76,9 +85,12 @@ TYPE = {
     "badge": Type(12, "bold", COLORS["chip_ink"]),
     "group_header": Type(11, "bold", COLORS["dim"]),
     "group_count": Type(11, color=COLORS["dim"]),
-    "status_square": Type(11, "bold", COLORS["on_accent"], mono=True),
-    "file_name": Type(13, "bold"),
-    "file_dir": Type(13, color=COLORS["dim"]),
+    "file_name": Type(13, color=COLORS["file_mod"]),         # coloured by status (section 9)
+    "file_name_del": Type(13, color=COLORS["file_del"], overstrike=True),
+    "file_folder": Type(12, color=COLORS["dim"]),
+    "folder_name": Type(13),
+    "folder_count": Type(12, color=COLORS["dim"]),
+    "folder_act": Type(16),
     "hint": Type(12, color=COLORS["dim"]),
     "kbd": Type(11, mono=True),
     "message": Type(13),
@@ -108,10 +120,13 @@ SPACE = {
     "badge_min_width": 22, "badge_pad": (7, 1),
     "side_foot_pad": 8,
     "files_pad_top": 6,
-    "group_pad": (16, 10, 4),          # sides, top, bottom
-    "group_count_gap": 8,
-    "row_pad": (16, 5), "row_gap": 10, "row_square_column": 22,
-    "status_square": 18, "status_square_radius": 4,
+    # file list (section 9)
+    "group_header": (6, 15, 3),        # top, text line, bottom: 24
+    "group_side": 16, "group_count_gap": 8,
+    "row_height": 24, "row_side": 16,
+    "indent_flat": 28, "indent_chevron": 28, "chevron_width": 12, "indent_icon": 46, "indent_child": 68,
+    "folder_icon": (16, 13), "suffix_gap": 8,
+    "folder_act": 20, "folder_act_radius": 5,
     "commit_pad": (14, 12), "commit_gap": (12, 8),
     "message_height": 64, "message_pad": (10, 8), "message_radius": 8,
     "commit_buttons_gap": 6,
@@ -136,7 +151,7 @@ def font(role: str) -> tkfont.Font:
     if role not in _fonts:
         t = TYPE[role]
         family = MONO_FAMILY if t.mono else tkfont.nametofont("TkDefaultFont").actual("family")
-        _fonts[role] = tkfont.Font(family=family, size=t.size, weight=t.weight)
+        _fonts[role] = tkfont.Font(family=family, size=t.size, weight=t.weight, overstrike=t.overstrike)
     return _fonts[role]
 
 

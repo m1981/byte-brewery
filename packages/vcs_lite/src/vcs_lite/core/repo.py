@@ -1,6 +1,6 @@
 """Operations on one repository: status, diff sides, stage, unstage, commit, push, pull.
 
-Trace: DES-VCS-007, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, REQ-VCS-005, REQ-VCS-024, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
+Trace: DES-VCS-007, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
 """
 
 from __future__ import annotations
@@ -67,10 +67,17 @@ class GitRepo:
         return self.content(change.left, left_path), self.content(change.right, change.path)
 
     def stage(self, change: FileChange) -> GitResult:
-        return self.git.run(self.path, "add", "--", change.path)  # also records deletions
+        return self.stage_all([change])
+
+    def stage_all(self, changes: list[FileChange]) -> GitResult:
+        """One `git add` for all files; it also records deletions (REQ-VCS-026)."""
+        return self.git.run(self.path, "add", "--", *(c.path for c in changes))
 
     def unstage(self, change: FileChange) -> GitResult:
-        paths = [p for p in (change.orig_path, change.path) if p]
+        return self.unstage_all([change])
+
+    def unstage_all(self, changes: list[FileChange]) -> GitResult:
+        paths = [p for c in changes for p in (c.orig_path, c.path) if p]
         if self.status().oid is None:  # no HEAD to restore from
             return self.git.run(self.path, "rm", "-q", "--cached", "--", *paths)
         return self.git.run(self.path, "restore", "--staged", "--", *paths)

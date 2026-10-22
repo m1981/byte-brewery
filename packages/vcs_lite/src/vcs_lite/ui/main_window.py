@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, E-01
+Trace: DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, E-01, E-02
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from tkinter import ttk
 from vcs_lite.app.model import AppModel
 from vcs_lite.ui import theme
 from vcs_lite.ui.file_list import FileList
+from vcs_lite.ui.settings_dialog import RepoDialog
 from vcs_lite.ui.sidebar import RepoSidebar
 from vcs_lite.ui.widgets import Pill, Tooltip, kbd
 
@@ -33,6 +34,7 @@ class MainWindow(tk.Frame):
         super().__init__(master, bg=C["bg"])
         self.model = model
         self._shown_repo: str | None = None
+        self.settings_dialog: RepoDialog | None = None
         self._placeholder = False
         self._build()
         model.subscribe(self.render)
@@ -60,6 +62,11 @@ class MainWindow(tk.Frame):
         self.refresh_button.pack(side=tk.RIGHT)
         self.pull_button = button(bar, "⇣ Pull", C["panel"], command=self.model.pull)
         self.pull_button.pack(side=tk.RIGHT, padx=(0, S["toolbar_gap"]))
+        self.show_folders = tk.BooleanVar(value=self.model.show_folders)
+        self.folders_check = tk.Checkbutton(bar, text="Pokaż foldery", variable=self.show_folders,
+                                            command=self.toggle_folders, bg=C["panel"], highlightbackground=C["panel"],
+                                            font=theme.font("body"), fg=C["ink"])  # native checkbox (DEC-VCS-055)
+        self.folders_check.pack(side=tk.RIGHT, padx=(0, S["toolbar_gap"]))
         Tooltip(self.pull_button, lambda: self.model.pull_disabled_reason)
         return bar
 
@@ -73,14 +80,14 @@ class MainWindow(tk.Frame):
         files = tk.Frame(middle, bg=C["bg"])
         files.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
-                                  on_empty_action=self._empty_action)
+                                  on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action)
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
 
     def _build_repo_list(self, sidebar: tk.Frame) -> None:
         foot = tk.Frame(sidebar, bg=C["sidebar"], padx=S["side_foot_pad"], pady=S["side_foot_pad"])
         foot.pack(side=tk.BOTTOM, fill=tk.X)
-        self.settings_button = button(foot, "⚙ Repozytoria…", C["sidebar"], state=tk.DISABLED)  # dialog in UI-2
+        self.settings_button = button(foot, "⚙ Repozytoria…", C["sidebar"], command=self.open_settings)
         self.settings_button.pack(side=tk.LEFT)
         self.sidebar = RepoSidebar(sidebar, on_select=self.model.select)
         self.sidebar.pack(fill=tk.BOTH, expand=True)
@@ -169,8 +176,23 @@ class MainWindow(tk.Frame):
         elif self.focus_get() is not self.message_box:
             self._show_placeholder()
 
+    def toggle_folders(self) -> None:
+        self.model.show_folders = self.show_folders.get()
+
+    def open_settings(self) -> RepoDialog:
+        if self.settings_dialog is None:
+            self.settings_dialog = RepoDialog(self, self.model, on_close=self._settings_closed)
+        else:
+            self.settings_dialog.lift()
+        return self.settings_dialog
+
+    def _settings_closed(self) -> None:
+        self.settings_dialog = None
+
     def _empty_action(self, action: str) -> None:
-        if action == "recheck" and self.model.selected:
+        if action == "choose_repos":
+            self.open_settings()
+        elif action == "recheck" and self.model.selected:
             self.model.refresh(self.model.selected)
 
     # ---------- drawing the model ----------

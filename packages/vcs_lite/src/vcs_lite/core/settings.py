@@ -1,6 +1,6 @@
 """Which repositories are watched: scanning rootdir and persisting the choice.
 
-Trace: DES-VCS-019, DES-VCS-020, DES-VCS-037, REQ-VCS-001, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
+Trace: DES-VCS-019, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
 """
 
 from __future__ import annotations
@@ -36,6 +36,7 @@ class Settings:
     rootdir: str = DEFAULT_ROOTDIR
     repos: tuple[str, ...] = ()
     diff_tool: tuple[str, ...] = BEYOND_COMPARE
+    show_folders: bool = False
 
     @property
     def root_path(self) -> Path:
@@ -45,7 +46,8 @@ class Settings:
         return self.root_path / name
 
     def to_dict(self) -> dict[str, Any]:
-        return {"rootdir": self.rootdir, "repos": list(self.repos), "diff_tool": list(self.diff_tool)}
+        return {"rootdir": self.rootdir, "repos": list(self.repos), "diff_tool": list(self.diff_tool),
+                "show_folders": self.show_folders}
 
     @classmethod
     def from_dict(cls, data: Any) -> Settings:
@@ -56,10 +58,14 @@ class Settings:
         rootdir = data.get("rootdir", defaults.rootdir)
         if not isinstance(rootdir, str):
             raise ValueError("„rootdir” musi być tekstem")
+        show_folders = data.get("show_folders", defaults.show_folders)
+        if not isinstance(show_folders, bool):
+            raise ValueError("„show_folders” musi być wartością true albo false")
         return cls(
             rootdir=rootdir,
             repos=_strings(data, "repos", defaults.repos),
             diff_tool=_strings(data, "diff_tool", defaults.diff_tool),
+            show_folders=show_folders,
         )
 
 

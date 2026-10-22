@@ -257,3 +257,20 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then widoczny jest komunikat zawierający "f.txt" i "linia 1"
     And "f.txt" pozostaje w grupie Conflicts
     And przycisk commita jest nieaktywny
+
+  @AT_VCS_032 @confirmed @REQ_VCS_025 @DEC_VCS_055 @VER_VCS_015
+  Scenario: Widok folderów grupuje pliki i jest zapamiętany
+    Given repozytorium "alpha" ma nowe pliki "spec-evidence/a.json" i "spec-evidence/b.json" oraz zmieniony "README.md"
+    When użytkownik zaznacza „Pokaż foldery”
+    Then w grupie Unversioned jest węzeł "spec-evidence" z liczbą „2 pliki” i dwoma plikami pod nim
+    And "README.md" w grupie Changes nie ma węzła folderu
+    When narzędzie zostaje zamknięte i uruchomione ponownie
+    Then „Pokaż foldery” jest zaznaczone
+
+  @AT_VCS_033 @confirmed @REQ_VCS_026 @DEC_VCS_056 @VER_VCS_015
+  Scenario: Przycisk przy folderze robi stage wszystkich jego plików
+    Given widok folderów jest włączony
+    And w grupie Unversioned jest węzeł "spec-evidence" z plikami "a.json" i "b.json"
+    When użytkownik najeżdża na węzeł "spec-evidence" i klika „+”
+    Then "spec-evidence/a.json" i "spec-evidence/b.json" są w grupie Staged
+    And grupa Unversioned nie zawiera węzła "spec-evidence"

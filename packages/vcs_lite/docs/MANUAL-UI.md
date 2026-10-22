@@ -25,7 +25,7 @@ Lista kontrolna dla VER-VCS-013 i części ręcznej DES-VCS-032. Wykonuje ją u�
 | 1 | Okno startuje samo. | Wygląd zgodny ze wzorcem `ui-reference/E-01.png`: pasek narzędzi, pasek boczny repozytoriów, lista plików, panel commita, pasek stanu; lista repo pusta przed pierwszym wyborem w Settings. | tak, całe okno | DES-VCS-022, DES-VCS-042 |
 | 2 | Kliknij **⚙ Repozytoria…**. | Lista zawiera `alpha`, `beta`, `gamma`; nie zawiera `zdjecia`, `.ukryte` ani `alpha/nested`. | tak, okno Settings | AT-VCS-018, AT-VCS-022 |
 | 3 | Zaznacz `alpha`, `beta`, `gamma`; **Zapisz**. | Trzy repo z nazwą gałęzi i liczbą zmian; `gamma` oznaczone jako konflikt. | tak, lista repo | REQ-VCS-002, AT-VCS-001 |
-| 4 | Kliknij `alpha`. | Grupy Staged, Changes, Unversioned; plik zmieniony w obu miejscach w obu grupach; pliki z nowego folderu osobno; brak pliku `.log`. | tak, lista plików | T-VCS-01, AT-VCS-003, AT-VCS-005, AT-VCS-006 |
+| 4 | Kliknij `alpha`. | Grupy Staged, Changes, Unversioned; nazwy plików w kolorach z `ui-reference/UI-REFERENCE.md` §9, bez kwadratów, wiersze co 24 pt; plik zmieniony w obu miejscach w obu grupach; pliki z nowego folderu osobno, z szarym „new” za nazwą; brak pliku `.log`. | tak, lista plików | T-VCS-01, AT-VCS-003, AT-VCS-005, AT-VCS-006 |
 | 5 | Zaznacz plik w Changes, naciśnij **spację**; potem spację na nim w Staged. | Plik przechodzi do Staged i z powrotem do Changes. | nie | AT-VCS-029 |
 | 6 | **Dwuklik** na pliku w Changes; obejrzyj okno BC i zamknij je. | Beyond Compare z tytułami `plik (indeks)` i `plik (kopia robocza)`; po zamknięciu lista się odświeża. | tak, okno BC | AT-VCS-004, AT-VCS-027 |
 | 7 | Bez wiadomości spójrz na przycisk commita. | „Commit do alpha” nieaktywny, obok przyczyna „Wpisz wiadomość commita.”. | tak, pasek commita | AT-VCS-011 |
@@ -36,6 +36,7 @@ Lista kontrolna dla VER-VCS-013 i części ręcznej DES-VCS-032. Wykonuje ją u�
 | 12 | Napisz „gotowe do 12”; agent usuwa `beta` i zmienia plik w `alpha`; kliknij w okno vcs-lite. | `beta` wyszarzone („niedostępne”); `alpha` pokazuje nową zmianę bez Refresh. | tak, lista repo | AT-VCS-002, REQ-VCS-015 |
 | 13 | Zostaw okno minutę bez ruchu; napisz „gotowe do 13”. | Agent mierzy pamięć (limit 60 MB) i brak wywołań gita w bezczynności. | nie | AT-VCS-016, REQ-VCS-101 |
 | 14 | W `gamma` zaznacz `f.txt` (w konflikcie) i naciśnij **spację**. Napisz „gotowe do 14”; agent usuwa znaczniki z `f.txt`. Ponownie spacja na `f.txt`. | Za pierwszym razem pasek błędu: „f.txt: plik nadal zawiera znaczniki konfliktu (linia 1).”, plik zostaje w Conflicts. Za drugim razem plik przechodzi do Staged, a Commit staje się aktywny po wpisaniu wiadomości. | tak, po pierwszej spacji | AT-VCS-031, AT-VCS-030 |
+| 15 | W `alpha` zaznacz **Pokaż foldery**. Najedź na węzeł `new` w Unversioned i kliknij „+”. Zamknij i uruchom okno ponownie. | Węzeł `new` z „2 pliki”, pliki pod nim od 68 pt; „+” widoczny tylko pod kursorem; po kliknięciu oba pliki w Staged pod węzłem `new` z „−”; po restarcie pole nadal zaznaczone. | tak, z kursorem na węźle | AT-VCS-032, AT-VCS-033 |
 
 ## Kolejne małe kroki budowy okna
 
@@ -43,7 +44,7 @@ Lista kontrolna dla VER-VCS-013 i części ręcznej DES-VCS-032. Wykonuje ją u�
 |---|---|---|
 | UI-1 | Szkielet okna: lista repo, pusty obszar plików, pasek commita; uruchamianie i odpytywanie `Worker` tylko w trakcie operacji. | 1 |
 | UI-2 | Okno Settings z zapisem wyboru. | 2, 3 |
-| UI-3 | Drzewo plików z grupami po wyborze repo. | 4 |
+| UI-3 | Drzewo plików z grupami po wyborze repo, kolory PyCharma, widok folderów. | 4, 15 |
 | UI-4 | Spacja (stage, unstage) i dwuklik (porównanie w Beyond Compare). | 5, 6 |
 | UI-5 | Pasek commita: przyczyna nieaktywności, szkice, skróty, commit. | 7, 8, 9 |
 | UI-6 | Konflikty, Commit & Push, Pull. | 10, 11, 14 |

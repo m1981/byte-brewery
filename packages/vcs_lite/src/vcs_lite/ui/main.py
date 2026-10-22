@@ -35,7 +35,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     root.title("vcs-lite")
     root.geometry("960x620")
     model = AppModel.from_settings(store.load(), git=GitCli(), worker=TkPump(root, Worker()),
-                                   confirm=lambda question: messagebox.askyesno("vcs-lite", question, parent=root))
+                                   confirm=lambda question: messagebox.askyesno("vcs-lite", question, parent=root),
+                                   save_settings=store.save)
     MainWindow(root, model).pack(fill=tk.BOTH, expand=True)
     model.refresh_all()
     _bring_to_front(root)

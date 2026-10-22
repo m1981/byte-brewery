@@ -1,0 +1,76 @@
+"""Keyboard shortcuts of the commit bar and the repository list (REQ-VCS-022)."""
+
+from __future__ import annotations
+
+from test_main_window import root, tk_root, world  # noqa: F401 - shared fixtures
+
+from vcs_lite.core.status import Group
+from vcs_lite.ui.main_window import MainWindow
+
+
+def staged(world, name):  # noqa: F811
+    r = world.repo(name)
+    r.write("a.py", "a\n"); r.commit()
+    r.write("a.py", "a2\n"); r.git("add", "a.py")
+    return r
+
+
+def test_req_vcs_022_cmd_return_in_the_message_commits_without_a_new_line(root, world):  # noqa: F811
+    r = staged(world, "alpha")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    window.type_message("fix a")
+    window.message_box.event_generate("<Command-Return>")
+    world.worker.settle()
+    assert r.git("log", "-1", "--format=%s").strip() == b"fix a"
+    assert model.message == "" and "\n" not in window.message_box.get("1.0", "end-1c")
+
+
+def test_req_vcs_022_cmd_return_anywhere_in_the_window_commits(root, world):  # noqa: F811
+    r = staged(world, "alpha")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    window.type_message("fix a")
+    window.winfo_toplevel().event_generate("<Command-Return>")
+    world.worker.settle()
+    assert r.git("log", "-1", "--format=%s").strip() == b"fix a"
+
+
+def test_req_vcs_022_cmd_return_does_nothing_when_commit_is_not_possible(root, world):  # noqa: F811
+    r = staged(world, "alpha")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    before = r.git("rev-parse", "HEAD")
+    window.winfo_toplevel().event_generate("<Command-Return>")  # empty message
+    world.worker.settle()
+    assert r.git("rev-parse", "HEAD") == before
+
+
+def test_req_vcs_022_cmd_shift_return_commits_and_pushes(root, world, tmp_path):  # noqa: F811
+    from conftest import Repo
+    bare = tmp_path / "origin.git"
+    Repo(tmp_path).git("init", "-q", "--bare", "-b", "main", str(bare))
+    r = staged(world, "alpha")
+    r.git("remote", "add", "origin", str(bare)); r.git("push", "-q", "-u", "origin", "main")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    window.type_message("fix a")
+    window.message_box.event_generate("<Command-Shift-Return>")
+    world.worker.settle()
+    assert Repo(bare).git("log", "-1", "--format=%s", "main").strip() == b"fix a"
+
+
+def test_req_vcs_022_cmd_digit_selects_that_repository(root, world):  # noqa: F811
+    world.repo("alpha"); world.repo("beta")
+    model = world.start("alpha", "beta")
+    window = MainWindow(root, model)
+    window.winfo_toplevel().event_generate("<Command-Key-2>")
+    world.worker.settle()
+    assert model.selected == "beta"
+    window.winfo_toplevel().event_generate("<Command-Key-9>")  # no ninth repository: nothing happens
+    assert model.selected == "beta"
+    assert Group.STAGED  # keeps the import used by fixtures of this module

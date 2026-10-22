@@ -43,9 +43,11 @@ TYPE_ROWS = {
     "licznik / znacznik": "badge",
     "nagłówek grupy („STAGED”)": "group_header",
     "liczba w nagłówku grupy": "group_count",
-    "kwadrat statusu": "status_square",
     "nazwa pliku": "file_name",
-    "katalog pliku i „stara → ”": "file_dir",
+    "folder za nazwą i „← stara”": "file_folder",
+    "nazwa folderu": "folder_name",
+    "liczba plików w folderze": "folder_count",
+    "przycisk folderu („+”, „−”)": "folder_act",
     "podpowiedź przy wierszu": "hint",
     "klawisz (`kbd`)": "kbd",
     "pole wiadomości": "message",
@@ -80,3 +82,10 @@ def test_des_vcs_042_typography_follows_the_reference(row):
 
 def test_des_vcs_042_every_typography_row_is_mapped():
     assert {r[0] for r in typography_rows()} == set(TYPE_ROWS) | NATIVE_ROWS
+
+
+def test_des_vcs_045_file_colours_follow_section_9():
+    rows = dict(re.findall(r"^\| `([a-z-]+)` \| `(#[0-9a-f]{6})` \| [^|]+\|$", section("## 9."), re.M))
+    for name, value in rows.items():
+        assert theme.COLORS[name.replace("-", "_")] == value, name
+    assert len(rows) == 8

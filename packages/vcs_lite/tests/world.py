@@ -25,6 +25,7 @@ class World:
         self.answer = True
         self.model: AppModel | None = None
         self.clock = None  # None: the model uses the real clock
+        self.save_settings = None  # None: settings are not saved
 
     def repo(self, name: str) -> Repo:
         r = Repo(self.root / name)
@@ -37,6 +38,8 @@ class World:
     def start(self, *names: str) -> AppModel:
         settings = Settings(rootdir=str(self.root), repos=names)
         extra = {"clock": self.clock} if self.clock else {}
+        if self.save_settings:
+            extra["save_settings"] = self.save_settings
         self.model = AppModel(settings, git=self.git, diff_tool=self.tool, worker=self.worker, confirm=self._confirm, **extra)
         self.model.refresh_all()
         self.worker.settle()

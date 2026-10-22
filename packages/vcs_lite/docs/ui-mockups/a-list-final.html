@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · lista plików PyCharm</title>
+<style>
+  /* E-01 tokens, file list after DEC-VCS-052–056: no squares, colour names, 24 pt rows, folder view, folder stage. */
+  :root {
+    --bg: #ffffff; --chrome: #ececee; --sidebar: #f2f2f5; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73;
+    --accent: #0a66d8; --accent-soft: #e3eefc; --row-hover: #f5f7fb; --conf: #c2302a;
+    --file-mod: #002daa; --file-add: #0c7216; --file-unv: #a92c3e; --file-ren: #002daa; --file-del: #6e6e73;
+    --folder: #9aa0ab;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1120px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 78ch; }
+  h2.sec { font-size: 16px; margin: 0; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 84ch; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 18px; }
+  .pane { background: var(--bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 10px 26px rgba(0,0,0,.14); }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: #fafafb; }
+  .bar .t { font-weight: 650; font-size: 15px; } .spacer { flex: 1; }
+  .check { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #b8b8be; background: #fff; display: grid; place-items: center; font-size: 10px; color: #fff; }
+  .box.on { background: var(--accent); border-color: var(--accent); }
+  .list { padding: 6px 0 10px; }
+  /* group header 24: 6 + 15 + 3 */
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .group.conf { color: var(--conf); }
+  /* rows 24 */
+  .row { height: 24px; display: flex; align-items: center; padding-right: 16px; white-space: nowrap; position: relative; }
+  .row.sel { background: var(--accent-soft); } .row.hover { background: var(--row-hover); }
+  .x28 { padding-left: 28px; } .x46 { padding-left: 46px; } .x68 { padding-left: 68px; }
+  .fn { font-weight: 400; }
+  .M { color: var(--file-mod); } .A { color: var(--file-add); } .U { color: var(--file-unv); } .R { color: var(--file-ren); }
+  .D { color: var(--file-del); text-decoration: line-through; } .X { color: var(--conf); }
+  .fd { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .hint { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+  .folder { padding-left: 28px; display: flex; align-items: center; height: 24px; padding-right: 16px; }
+  .chev { width: 12px; color: var(--dim); font-size: 10px; }
+  .ficon { width: 16px; height: 13px; margin-left: 6px; flex: none; }
+  .folder .name { margin-left: 6px; } .folder .cnt { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .act { margin-left: auto; width: 20px; height: 20px; display: grid; place-items: center; font-size: 16px; color: var(--ink); border-radius: 5px; }
+  .folder.hover { background: var(--row-hover); } .folder.hover .act { background: #e6e8ee; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>Lista plików po zmianach K1–K4, F1–F3</h1>
+    <p class="lead">Bez kwadratów, kolor statusu na nazwie, zwykła czcionka, wiersze co 24 pt, folder za nazwą. Obok widok „Pokaż foldery” z przyciskiem stage całego folderu pod kursorem. Reszta okna jak we wzorcu E-01.</p>
+  </div>
+
+  <div class="pair">
+    <section>
+      <h2 class="sec">Widok płaski</h2>
+      <p class="cap">Pliki od 28 pt (wcięcie 12 pod nagłówkiem grupy). Zaznaczony wiersz z podpowiedzią klawiszy.</p>
+      <div class="pane">
+        <div class="bar"><span class="t">alpha</span><span class="spacer"></span><span class="check"><span class="box"></span>Pokaż foldery</span></div>
+        <div class="list">
+          <div class="group">Staged <span class="n">4</span></div>
+          <div class="row x28"><span class="fn M">both.py</span></div>
+          <div class="row x28"><span class="fn D">obsolete.py</span></div>
+          <div class="row x28"><span class="fn A">REF-GTD_system_modeling.md</span><span class="fd">doc/sessions</span></div>
+          <div class="row x28"><span class="fn R">renamed.py</span><span class="fd">← old_name.py</span></div>
+          <div class="group">Changes <span class="n">3</span></div>
+          <div class="row x28 sel"><span class="fn M">README.md</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+          <div class="row x28"><span class="fn M">both.py</span></div>
+          <div class="row x28"><span class="fn M">przypadki-uzycia.md</span><span class="fd">gtd2</span></div>
+          <div class="group">Unversioned <span class="n">3</span></div>
+          <div class="row x28"><span class="fn U">Model śledzalności człowiek + agent.md</span><span class="fd">gtd2</span></div>
+          <div class="row x28"><span class="fn U">openai-context-20261022.json</span><span class="fd">spec-evidence</span></div>
+          <div class="row x28"><span class="fn U">openai-readers-20261022.json</span><span class="fd">spec-evidence</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="sec">Widok „Pokaż foldery”</h2>
+      <p class="cap">Strzałka 28, ikona 46, nazwa folderu 68. Pliki w folderze od 68, pliki z katalogu głównego od 46. Kursor nad „spec-evidence” pokazuje „+” (stage 2 plików); nad „doc/sessions” w Staged „−”.</p>
+      <div class="pane">
+        <div class="bar"><span class="t">alpha</span><span class="spacer"></span><span class="check"><span class="box on">✓</span>Pokaż foldery</span></div>
+        <div class="list">
+          <div class="group">Staged <span class="n">4</span></div>
+          <div class="folder hover"><span class="chev">▾</span><svg class="ficon" viewBox="0 0 16 13"><path d="M1 2.5C1 1.7 1.7 1 2.5 1h3.6l1.5 1.6h5.9c.8 0 1.5.7 1.5 1.5v6.4c0 .8-.7 1.5-1.5 1.5h-11C1.7 12 1 11.3 1 10.5z" fill="#9aa0ab"/></svg><span class="name">doc/sessions</span><span class="cnt">1 plik</span><span class="act" title="Unstage folderu">−</span></div>
+          <div class="row x68"><span class="fn A">REF-GTD_system_modeling.md</span></div>
+          <div class="row x46"><span class="fn M">both.py</span></div>
+          <div class="row x46"><span class="fn D">obsolete.py</span></div>
+          <div class="row x46"><span class="fn R">renamed.py</span><span class="fd">← old_name.py</span></div>
+          <div class="group">Changes <span class="n">3</span></div>
+          <div class="folder"><span class="chev">▾</span><svg class="ficon" viewBox="0 0 16 13"><path d="M1 2.5C1 1.7 1.7 1 2.5 1h3.6l1.5 1.6h5.9c.8 0 1.5.7 1.5 1.5v6.4c0 .8-.7 1.5-1.5 1.5h-11C1.7 12 1 11.3 1 10.5z" fill="#9aa0ab"/></svg><span class="name">gtd2</span><span class="cnt">1 plik</span></div>
+          <div class="row x68"><span class="fn M">przypadki-uzycia.md</span></div>
+          <div class="row x46 sel"><span class="fn M">README.md</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+          <div class="row x46"><span class="fn M">both.py</span></div>
+          <div class="group">Unversioned <span class="n">3</span></div>
+          <div class="folder"><span class="chev">▸</span><svg class="ficon" viewBox="0 0 16 13"><path d="M1 2.5C1 1.7 1.7 1 2.5 1h3.6l1.5 1.6h5.9c.8 0 1.5.7 1.5 1.5v6.4c0 .8-.7 1.5-1.5 1.5h-11C1.7 12 1 11.3 1 10.5z" fill="#9aa0ab"/></svg><span class="name">gtd2</span><span class="cnt">1 plik</span></div>
+          <div class="folder hover"><span class="chev">▾</span><svg class="ficon" viewBox="0 0 16 13"><path d="M1 2.5C1 1.7 1.7 1 2.5 1h3.6l1.5 1.6h5.9c.8 0 1.5.7 1.5 1.5v6.4c0 .8-.7 1.5-1.5 1.5h-11C1.7 12 1 11.3 1 10.5z" fill="#9aa0ab"/></svg><span class="name">spec-evidence</span><span class="cnt">2 pliki</span><span class="act" title="Stage folderu">+</span></div>
+          <div class="row x68"><span class="fn U">openai-context-20261022.json</span></div>
+          <div class="row x68"><span class="fn U">openai-readers-20261022.json</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2 class="sec">Konflikt bez kwadratu</h2>
+    <p class="cap">Nazwa w kolorze konfliktu; nagłówek grupy czerwony jak dotąd. Bez przycisku przy folderze (oznaczanie jako rozwiązany zostaje per plik, REQ-VCS-024).</p>
+    <div class="pane" style="max-width:520px"><div class="list">
+      <div class="group conf">Conflicts <span class="n">1</span></div>
+      <div class="row x28 sel"><span class="fn X">f.txt</span><span class="hint">rozwiąż w edytorze · <kbd>spacja</kbd> oznacz jako rozwiązany</span></div>
+    </div></div>
+  </section>
+
+  <section class="notes">
+    <h2>Wartości (trafią do wzorca, UI-REFERENCE §9)</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Element</th><th>Wartość</th></tr></thead>
+      <tbody>
+        <tr><td>kolory nazw</td><td>zmieniony i przeniesiony <code>#002daa</code>; dodany <code>#0c7216</code>; poza kontrolą <code>#a92c3e</code>; usunięty <code>#6e6e73</code> przekreślony; konflikt <code>#c2302a</code></td></tr>
+        <tr><td>nazwa pliku</td><td>13, zwykła (400), kolor statusu</td></tr>
+        <tr><td>folder za nazwą, „← stara nazwa”</td><td>12, <code>dim</code>, odstęp 8</td></tr>
+        <tr><td>wiersz pliku i węzła</td><td>wysokość 24; tekst wyśrodkowany w pionie</td></tr>
+        <tr><td>nagłówek grupy</td><td>wysokość 24: 6 + 15 + 3</td></tr>
+        <tr><td>wcięcia</td><td>widok płaski: pliki 28; foldery: strzałka 28 (szer. 12), ikona 46 (16 × 13, <code>#9aa0ab</code>), nazwa folderu 68; pliki w folderze 68, z katalogu głównego 46</td></tr>
+        <tr><td>węzeł folderu</td><td>nazwa 13 <code>ink</code>; liczba plików 12 <code>dim</code>, odstęp 8 („1 plik”, „2 pliki”, „5 plików”); kolejność: foldery alfabetycznie, potem pliki z katalogu głównego</td></tr>
+        <tr><td>przycisk folderu</td><td>„+” (Changes, Unversioned) albo „−” (Staged), 16, <code>ink</code>, pole 20 × 20, 16 od prawej krawędzi; tło <code>#e6e8ee</code> po najechaniu na wiersz</td></tr>
+        <tr><td>pole „Pokaż foldery”</td><td>natywne pole wyboru w pasku narzędzi, przed Pull</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>
