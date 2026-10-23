@@ -114,3 +114,24 @@ def test_des_vcs_042_short_folder_path_is_shown_whole(tk_root):  # noqa: F811
     assert elide_middle("~/PycharmProjects", font, 300) == "~/PycharmProjects"
     shortened = elide_middle("/a/very/long/path/to/the/folder/PycharmProjects", font, 150)
     assert shortened.startswith("/a/") and shortened.endswith("Projects") and font.measure(shortened) <= 150
+
+
+def descendants(widget):
+    for child in widget.winfo_children():
+        yield child
+        yield from descendants(child)
+
+
+def test_des_vcs_042_wheel_scrolls_the_list_over_the_names_too(root, world):  # noqa: F811
+    for i in range(20):
+        world.repo(f"repo{i:02}")
+    window = MainWindow(root, world.start("repo00"))
+    dialog = window.open_settings()
+    canvas = dialog.list_canvas
+    dialog.update_idletasks()
+    check = next(w for w in descendants(canvas) if w.winfo_class() == "Checkbutton")
+    check.event_generate("<MouseWheel>", delta=-3)
+    assert canvas.yview()[0] > 0
+    [rows] = canvas.find_all()
+    assert float(canvas.itemcget(rows, "width")) == canvas.winfo_reqwidth()  # rows span the whole list
+    dialog.cancel()

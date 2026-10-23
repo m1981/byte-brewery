@@ -72,9 +72,9 @@ class RepoDialog(tk.Toplevel):
     def _build_list(self, choices) -> None:
         holder = tk.Frame(self, bg=C["bg"], width=S["dialog_width"])
         holder.pack(fill=tk.X)
-        canvas = tk.Canvas(holder, bg=C["bg"], highlightthickness=0, bd=0, width=S["dialog_width"])
+        canvas = self.list_canvas = tk.Canvas(holder, bg=C["bg"], highlightthickness=0, bd=0, width=S["dialog_width"])
         inner = tk.Frame(canvas, bg=C["bg"])
-        canvas.create_window(0, 0, window=inner, anchor=tk.NW)
+        canvas.create_window(0, 0, window=inner, anchor=tk.NW, width=S["dialog_width"])  # rows span the list
         for choice in choices:
             var = tk.BooleanVar(value=choice.chosen)
             row = tk.Frame(inner, bg=C["bg"])
@@ -90,7 +90,13 @@ class RepoDialog(tk.Toplevel):
         needed = inner.winfo_reqheight() + 8
         canvas.configure(height=min(needed, S["dialog_list_height"]), scrollregion=(0, 0, S["dialog_width"], needed))
         canvas.pack(fill=tk.X, pady=4)
-        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(-e.delta, "units"))
+        # Tk sends the wheel to the widget under the pointer, not to its parent: every row widget scrolls.
+        scroll = lambda e: canvas.yview_scroll(-e.delta, "units")  # noqa: E731
+        pending = [canvas]
+        while pending:
+            widget = pending.pop()
+            widget.bind("<MouseWheel>", scroll)
+            pending.extend(widget.winfo_children())
 
     def _build_footer(self, can_save: bool) -> None:
         foot = tk.Frame(self, bg=C["panel"], padx=PAD_X, pady=12)
