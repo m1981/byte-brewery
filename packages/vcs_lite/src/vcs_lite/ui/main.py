@@ -1,6 +1,6 @@
 """Entry point and composition root: settings, git, worker, model and the main window.
 
-Trace: DES-VCS-028, DES-VCS-029, DES-VCS-034, DES-VCS-036, DES-VCS-041, DES-VCS-055, REQ-VCS-033, REQ-VCS-103
+Trace: DES-VCS-062, REQ-VCS-104, DEC-VCS-112, DES-VCS-028, DES-VCS-029, DES-VCS-034, DES-VCS-036, DES-VCS-041, DES-VCS-055, REQ-VCS-033, REQ-VCS-103
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ from vcs_lite.ui.main_window import MainWindow
 from vcs_lite.ui.pump import TkPump, tk_later
 from vcs_lite.ui.tkenv import prepare_tk
 
+WINDOW_ICON = Path(__file__).with_name("icon.png")   # written by tools/make_app.py (DES-VCS-061)
+
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="vcs-lite", description="Lekki panel VCS dla repozytoriów gita.")
@@ -37,6 +39,7 @@ def build(settings_path: Path) -> tuple[tk.Tk, AppModel, TkPump]:
     root = tk.Tk()
     root.title("vcs-lite")
     root.geometry("960x620")
+    set_window_icon(root, WINDOW_ICON)
     pump, git = TkPump(root, Worker()), GitCli()
     model = AppModel.from_settings(store.load(), git=git, worker=pump,
                                    confirm=lambda title, message: ask(root, title, message),
@@ -53,6 +56,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     model.refresh_all()
     _bring_to_front(root)
     root.mainloop()
+
+
+def set_window_icon(root: tk.Misc, icon: Path) -> bool:
+    """The logo in the Dock when vcs-lite starts from a terminal (DEC-VCS-112); Tk copies the image, so no
+    reference is kept. A missing or broken file leaves the default icon and never stops the start."""
+    if not icon.is_file():
+        return False
+    try:
+        root.iconphoto(True, tk.PhotoImage(master=root, file=str(icon)))
+    except tk.TclError:
+        return False
+    return True
 
 
 def ask(root: tk.Tk, title: str, message: str) -> bool:
