@@ -30,3 +30,9 @@ frontend/.streamlit/secrets.toml
 /view*.md
 /view*/
 .aider*
+/bin/node_modules/typescript/lib/
+/.DS_Store
+/packages/vcs_lite/docs/.DS_Store
+/packages/vcs_lite/.DS_Store
+/packages/prompt_extractor/tests/ref_chats/.DS_Store
+/packages/.DS_Store
