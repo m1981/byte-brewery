@@ -36,3 +36,8 @@ frontend/.streamlit/secrets.toml
 /packages/vcs_lite/.DS_Store
 /packages/prompt_extractor/tests/ref_chats/.DS_Store
 /packages/.DS_Store
+/bin/node_modules/.bin/
+/bin/node_modules/typescript/
+/bin/node_modules/.package-lock.json
+/bin/package-lock.json
+/my-chats/
