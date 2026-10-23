@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 
 from vcs_lite.core.difftool import (
-    BEYOND_COMPARE,
     CommandTemplateDiffTool,
     DiffResult,
     DiffToolError,
@@ -20,7 +19,7 @@ from vcs_lite.core.difftool import (
 
 
 class FakeTool:
-    """Stands in for Beyond Compare: records what it was given and what it saw on disk."""
+    """Stands in for a command-line diff tool: records what it was given and what it saw on disk."""
 
     def __init__(self, result: DiffResult = DiffResult(0, "")):
         self.result = result
@@ -61,9 +60,11 @@ def test_des_vcs_037_titles_with_braces_are_inserted_literally():
     assert tool.command(Path("l"), Path("r"), "x{right}y", "-") == ["d", "x{right}y"]
 
 
-def test_des_vcs_037_default_command_is_beyond_compare():
-    assert BEYOND_COMPARE[0] == "/Applications/Beyond Compare.app/Contents/MacOS/bcomp"
-    assert "{left}" in BEYOND_COMPARE and "{right}" in BEYOND_COMPARE
+def test_des_vcs_037_the_plugin_has_no_default_command():
+    from vcs_lite.core import difftool
+    assert not hasattr(difftool, "BEYOND_COMPARE")  # Beyond Compare is gone (DEC-VCS-102)
+    with pytest.raises(TypeError):
+        CommandTemplateDiffTool()
 
 
 def test_des_vcs_036_any_cli_tool_can_be_plugged_in(recorder, tmp_path):
@@ -89,7 +90,7 @@ def test_des_vcs_039_exit_code_and_stderr_are_reported(tmp_path):
 
 
 def test_des_vcs_039_nonzero_exit_without_stderr_is_not_a_failure():
-    # Diff tools signal "files differ" with a non-zero code (Beyond Compare uses several such codes).
+    # Diff tools signal "files differ" with a non-zero code (Beyond Compare used several such codes, OBS-VCS-008).
     assert not DiffResult(11, "").failed
 
 

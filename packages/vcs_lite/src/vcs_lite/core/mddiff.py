@@ -5,14 +5,14 @@ list), table row, code block, front matter or rule. Blocks are equal when their 
 whitespace, so re-wrapped lines are not a change. Inside a changed stretch, blocks of the same kind are paired
 by similarity; changed words are wrapped in private-use sentinels that the page renderer turns into <ins>/<del>.
 
-Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-081, DEC-VCS-088
+Trace: DES-VCS-049, DES-VCS-056, REQ-VCS-031, REQ-VCS-033, DEC-VCS-078, DEC-VCS-081, DEC-VCS-088
 """
 
 from __future__ import annotations
 
 import difflib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from markdown_it import MarkdownIt
@@ -63,6 +63,8 @@ class Block:
     cells: tuple[str, ...] = ()  # table rows
     table: int = 0             # rows of one table share it
     quote: int = 0             # blockquote nesting
+    line: int = field(default=0, compare=False)   # first and last line in the file, 1-based (DES-VCS-056)
+    end: int = field(default=0, compare=False)
 
 
 @dataclass(frozen=True)
@@ -75,7 +77,8 @@ class Change:
 
 def parse_blocks(text: str) -> list[Block]:
     meta, body = _split_front_matter(text)
-    blocks = [Block("meta", meta, meta)] if meta is not None else []
+    offset = text[: len(text) - len(body)].count("\n")   # lines before the body: front matter and blank lines
+    blocks = [Block("meta", meta, meta, line=1, end=meta.count("\n") + 3)] if meta is not None else []
     tokens = MARKDOWN.parse(body)
     lists: list[bool] = []          # ordered flags of the open lists
     quote = table = 0
@@ -93,26 +96,29 @@ def parse_blocks(text: str) -> list[Block]:
         elif kind == "paragraph_open":
             content = tokens[index + 1].content
             if item_number is None:
-                blocks.append(Block("paragraph", content, _collapse(content), len(lists), quote=quote))
+                blocks.append(Block("paragraph", content, _collapse(content), len(lists), quote=quote, **_source_lines(tok, offset)))
             else:
                 content = TASK.sub(lambda m: "☐" if m[1] == " " else "☑", content)
-                blocks.append(Block("item", content, _collapse(content), len(lists), lists[-1], item_number, quote=quote))
+                blocks.append(Block("item", content, _collapse(content), len(lists), lists[-1], item_number,
+                                    quote=quote, **_source_lines(tok, offset)))
                 item_number = None
         elif kind == "heading_open":
             content = tokens[index + 1].content
-            blocks.append(Block("heading", content, f"{tok.tag} {_collapse(content)}", len(lists), tag=tok.tag, quote=quote))
+            blocks.append(Block("heading", content, f"{tok.tag} {_collapse(content)}", len(lists), tag=tok.tag,
+                                quote=quote, **_source_lines(tok, offset)))
         elif kind in ("fence", "code_block"):
-            blocks.append(Block("code", tok.content, tok.content, len(lists), tag=tok.info.strip(), quote=quote))
+            blocks.append(Block("code", tok.content, tok.content, len(lists), tag=tok.info.strip(), quote=quote,
+                                **_source_lines(tok, offset)))
             item_number = None
         elif kind == "hr":
-            blocks.append(Block("hr", "", "---", quote=quote))
+            blocks.append(Block("hr", "", "---", quote=quote, **_source_lines(tok, offset)))
         elif kind == "tr_open":
             header = tokens[index - 1].type == "thead_open"
             if header:
                 table += 1
             cells = tuple(_row_cells(tokens, index))
             blocks.append(Block("header" if header else "row", " | ".join(cells), _collapse(" | ".join(cells)),
-                                cells=cells, table=table, quote=quote))
+                                cells=cells, table=table, quote=quote, **_source_lines(tok, offset)))
     return blocks
 
 
@@ -178,6 +184,11 @@ def _similarity(a: Block, b: Block) -> float:
     if a.kind != b.kind:
         return 0.0
     return difflib.SequenceMatcher(None, a.key, b.key, autojunk=False).ratio()
+
+
+def _source_lines(tok, offset: int) -> dict[str, int]:
+    """First and last line of a block token in the file; markdown-it counts from the body, 0-based, end excluded."""
+    return {"line": offset + tok.map[0] + 1, "end": offset + tok.map[1]} if tok.map else {}
 
 
 def _split_front_matter(text: str) -> tuple[str | None, str]:

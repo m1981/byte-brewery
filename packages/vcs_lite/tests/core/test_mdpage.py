@@ -247,3 +247,32 @@ def test_req_vcs_032_reading_mode_shows_the_whole_document_without_marks():
     assert "Sekcja 1<" in body and "Sekcja 12<" in body and 'class="fold"' not in body
     assert "Bez zmian" not in body and '<span class="stats">' not in html
     assert '<span class="sides">plan.md (kopia robocza)</span>' in html
+
+
+def test_des_vcs_056_reading_at_a_line_marks_the_block_holding_it_and_scrolls_to_it():
+    text = "# Plan\n\nPierwszy akapit\nw dwóch liniach.\n\nDrugi akapit.\n"
+    body = rendered(page(text, text, read=True, line=4))
+    assert body.count('id="hit"') == 1
+    assert re.search(r'<div class="blk same hit" id="hit"><p>Pierwszy akapit', body)
+    assert "scrollIntoView" in page(text, text, read=True, line=4)
+
+
+def test_des_vcs_056_a_line_between_blocks_marks_the_block_before_it():
+    text = "| a |\n|---|\n| 1 |\n| 2 |\n\n\nKoniec.\n"
+    body = rendered(page(text, text, read=True, line=5))
+    assert '<tr class="same hit" id="hit"><td>2</td>' in body
+
+
+def test_des_vcs_056_without_a_line_nothing_is_marked():
+    text = "# Plan\n"
+    assert 'id="hit"' not in rendered(page(text, text, read=True))
+
+
+def test_des_vcs_056_line_argument_reaches_the_page(tmp_path, monkeypatch):
+    doc = tmp_path / "a.md"
+    doc.write_text("# A\n\nB\n", encoding="utf-8")
+    monkeypatch.setattr(mdpage, "PAGES", tmp_path / "pages")
+    mdpage.main([str(doc), str(doc), "a.md (kopia robocza)", "a.md (kopia robocza)", "--read", "--line", "3",
+                 "--no-open"])
+    [written] = (tmp_path / "pages").glob("*.html")
+    assert 'id="hit"><p>B</p>' in written.read_text(encoding="utf-8")

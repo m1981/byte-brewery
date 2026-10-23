@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from conftest import GIT_ENV, Repo
+from fakes import FakeDiffTool
 from world import World
 
 from vcs_lite.app.model import AppModel, RepoState
@@ -117,17 +118,16 @@ def test_at_vcs_029_double_click_opens_compare_and_space_stages(world):
     assert paths(model, Group.STAGED) == [] and paths(model, Group.CHANGES) == ["app.py"]
 
 
-def test_at_vcs_039_double_click_on_markdown_opens_the_rendered_diff(world):
+def test_at_vcs_039_double_click_on_markdown_opens_the_rendered_diff_and_on_text_the_side_by_side_one(world):
     a = world.repo("alpha")
     a.write("README.md", "# Plan\n\nNowy akapit.\n"); a.write("app.py", "x\n")
     model = world.start("alpha"); world.select("alpha")
     model.activate(change(model, Group.CHANGES, "README.md")); world.worker.settle()
     assert [c["right"] for c in world.md_tool.calls] == [a.path / "README.md"] and world.tool.calls == []
     assert world.md_tool.calls[0]["right_title"] == "README.md (kopia robocza)"
-    model.activate(change(model, Group.CHANGES, "README.md"), source=True); world.worker.settle()
     model.activate(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
-    assert [c["right"].name for c in world.tool.calls] == ["README.md", "app.py"]  # source and other files: Beyond Compare
-    assert len(world.md_tool.calls) == 1
+    assert [c["right"].name for c in world.tool.calls] == ["app.py"] and len(world.md_tool.calls) == 1
+    assert world.tool.calls[0]["left_title"] == "app.py (pusty)"   # a new file: one column (DES-VCS-059)
 
 
 def test_req_vcs_031_markdown_is_recognised_by_its_extension():
@@ -163,25 +163,26 @@ def test_at_vcs_027_temp_files_disappear_and_the_repo_is_refreshed_after_closing
 def test_at_vcs_028_change_saved_in_the_tool_is_visible_after_closing(world):
     a = world.repo("alpha")
     a.write("app.py", "a\n"); a.commit(); a.write("app.py", "b\n")
-    world.tool.edit_right = lambda right: right.write_text(right.read_text() + "# poprawka\n")
+    world.external = FakeDiffTool(edit_right=lambda right: right.write_text(right.read_text() + "# poprawka\n"))
     model = world.start("alpha"); world.select("alpha")
-    model.activate(change(model, Group.CHANGES, "app.py")); world.worker.settle()
+    model.activate(change(model, Group.CHANGES, "app.py"), external=True); world.worker.settle()
     assert "# poprawka" in (a.path / "app.py").read_text()
     assert paths(model, Group.CHANGES) == ["app.py"]
 
 
-def test_at_vcs_025_missing_diff_tool_gives_a_message_and_the_app_keeps_working(world, tmp_path):
+def test_at_vcs_025_missing_external_tool_gives_a_message_and_the_app_keeps_working(world, tmp_path):
     world.repo("alpha").write("app.py", "changed\n")
-    settings = Settings(rootdir=str(world.root), repos=("alpha",), diff_tool=("/nonexistent/inny-diff", "{left}", "{right}"))
+    settings = Settings(rootdir=str(world.root), repos=("alpha",),
+                        external_diff_tool=("/nonexistent/inny-diff", "{left}", "{right}"))
     model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda title, message: False)
     model.select("alpha"); world.worker.settle()
-    model.activate(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
+    model.activate(change(model, Group.UNVERSIONED, "app.py"), external=True); world.worker.settle()
     assert "/nonexistent/inny-diff" in model.error
     model.toggle(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
     assert paths(model, Group.STAGED) == ["app.py"]
 
 
-def test_at_vcs_026_the_diff_tool_can_be_swapped_in_settings(world, tmp_path):
+def test_at_vcs_026_an_external_tool_plugs_in_through_the_settings(world, tmp_path):
     out = tmp_path / "args.json"
     script = tmp_path / "inny_diff.py"
     script.write_text(textwrap.dedent(f"""
@@ -189,10 +190,15 @@ def test_at_vcs_026_the_diff_tool_can_be_swapped_in_settings(world, tmp_path):
         json.dump(sys.argv[1:], open({str(out)!r}, "w"))
     """))
     world.repo("alpha").write("app.py", "changed\n")
-    settings = Settings(rootdir=str(world.root), repos=("alpha",), diff_tool=(sys.executable, str(script), "{left}", "{right}"))
+    plain = AppModel.from_settings(Settings(rootdir=str(world.root), repos=("alpha",)), git=world.git,
+                                   worker=world.worker, confirm=lambda title, message: False)
+    assert not plain.has_external_tool
+    settings = Settings(rootdir=str(world.root), repos=("alpha",),
+                        external_diff_tool=(sys.executable, str(script), "{left}", "{right}"))
     model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda title, message: False)
+    assert model.has_external_tool
     model.select("alpha"); world.worker.settle()
-    model.activate(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
+    model.activate(change(model, Group.UNVERSIONED, "app.py"), external=True); world.worker.settle()
     left, right = json.loads(out.read_text())
     assert Path(left).name == "app.py" and right == str(world.root / "alpha" / "app.py")
 
@@ -792,10 +798,12 @@ def test_req_vcs_032_tracked_files_are_read_only_in_the_project_view(project, wo
 def test_req_vcs_032_reading_opening_and_revealing_project_files(project, world):
     model = project
     root = world.root / "alpha"
-    model.read("docs/plan.md"); world.worker.settle()
+    model.open_file("docs/plan.md"); world.worker.settle()
     assert world.md_reader.calls[0]["right"] == root / "docs" / "plan.md"
     assert world.md_reader.calls[0]["right_title"] == "docs/plan.md (kopia robocza)"
-    model.open_file("src/app.py"); model.reveal("src/app.py"); world.worker.settle()
+    model.open_file("src/app.py"); world.worker.settle()
+    assert world.text_reader.calls[0]["right"] == root / "src" / "app.py"   # text in the browser (REQ-VCS-034)
+    model.open_in_app("src/app.py"); model.reveal("src/app.py"); world.worker.settle()
     assert world.opened == [["open", str(root / "src" / "app.py")], ["open", "-R", str(root / "src" / "app.py")]]
 
 
@@ -804,5 +812,85 @@ def test_req_vcs_032_a_failing_open_shows_the_error(project, world):
     def refuse(command):
         raise OSError("brak aplikacji do otwarcia")
     model._opener = refuse
-    model.open_file("src/app.py"); world.worker.settle()
+    model.open_in_app("src/app.py"); world.worker.settle()
     assert model.error_title == "Otwieranie nie powiodło się" and "brak aplikacji" in model.error
+
+
+# ---------- where a file opens (REQ-VCS-034, DES-VCS-060) ----------
+
+PNG = b"\x89PNG\r\n\x1a\nobraz"
+
+
+@pytest.fixture
+def typed(world):
+    """Changed logo.png, a new ikona.png staged then changed again, unversioned opis.pdf and dane.bin,
+    unchanged notatki.txt, archiwum.zip and stare.png (deleted in Changes)."""
+    r = world.repo("alpha")
+    for name in ("logo.png", "stare.png"):
+        (r.path / name).write_bytes(PNG + b"1")
+    r.write("notatki.txt", "notatki\n"); (r.path / "archiwum.zip").write_bytes(b"PK\3\4\0\0")
+    r.commit("files")
+    (r.path / "logo.png").write_bytes(PNG + b"2")
+    (r.path / "ikona.png").write_bytes(PNG + b"indeks"); r.git("add", "ikona.png")
+    (r.path / "ikona.png").write_bytes(PNG + b"dysk")
+    (r.path / "opis.pdf").write_bytes(b"%PDF-1.4\n"); (r.path / "dane.bin").write_bytes(b"\0\1\2")
+    (r.path / "stare.png").unlink()
+    model = world.start("alpha"); world.select("alpha")
+    return model, r
+
+
+def test_at_vcs_045_the_kind_of_file_decides_where_it_opens(typed, world):
+    model, r = typed
+    model.activate(change(model, Group.CHANGES, "logo.png")); world.worker.settle()
+    assert world.browsed == [r.path / "logo.png"]
+    model.activate(change(model, Group.STAGED, "ikona.png")); world.worker.settle()
+    copy = world.browsed[-1]
+    assert copy.name == "ikona.png" and copy.read_bytes() == PNG + b"indeks" and world.copies in copy.parents
+    model.activate(change(model, Group.UNVERSIONED, "opis.pdf")); world.worker.settle()
+    assert world.browsed[-1] == r.path / "opis.pdf"
+    model.open_file("notatki.txt"); model.open_file("archiwum.zip"); world.worker.settle()
+    assert world.text_reader.calls[0]["right"] == r.path / "notatki.txt"
+    assert world.opened == [["open", str(r.path / "archiwum.zip")]]
+    model.open_in_app("logo.png"); world.worker.settle()
+    assert world.opened[-1] == ["open", str(r.path / "logo.png")]
+    assert world.tool.calls == [] and world.md_tool.calls == []   # no page of differences for any of them
+
+
+def test_des_vcs_060_a_deleted_image_shows_its_last_version(typed, world):
+    model, r = typed
+    model.activate(change(model, Group.CHANGES, "stare.png")); world.worker.settle()
+    assert world.browsed[-1].read_bytes() == PNG + b"1"
+
+
+def test_des_vcs_060_images_and_pdfs_open_in_the_browser_also_unchanged(typed, world):
+    model, r = typed
+    (r.path / "logo.png").write_bytes(PNG + b"1")   # back as committed
+    model.open_file("logo.png"); world.worker.settle()
+    assert world.browsed == [r.path / "logo.png"]
+
+
+def test_des_vcs_060_a_failing_browser_shows_the_error(typed, world):
+    model, _ = typed
+    def refuse(path):
+        raise OSError("brak przeglądarki")
+    model._browser = refuse
+    model.activate(change(model, Group.CHANGES, "logo.png")); world.worker.settle()
+    assert model.error_title == "Otwieranie nie powiodło się" and "brak przeglądarki" in model.error
+
+
+def test_at_vcs_007_binary_file_has_no_diff_but_can_be_staged(typed, world):
+    from vcs_lite.core.textpage import render_page
+    model, r = typed
+    model.activate(change(model, Group.UNVERSIONED, "dane.bin")); world.worker.settle()
+    [call] = world.tool.calls
+    page = render_page(call["left_bytes"], call["right_bytes"], file_name="dane.bin", left_title=call["left_title"],
+                       right_title=call["right_title"])
+    assert "Brak podglądu zmian" in page and "3 B" in page
+    model.toggle(change(model, Group.UNVERSIONED, "dane.bin")); world.worker.settle()
+    assert "dane.bin" in paths(model, Group.STAGED)
+
+
+def test_des_vcs_060_text_search_match_opens_the_text_page_at_its_line(typed, world):
+    model, r = typed
+    model.open_match("notatki.txt", 1); world.worker.settle()
+    assert world.text_reader.calls[0]["line"] == 1

@@ -1,6 +1,6 @@
 """Small drawn widgets of the reference: rounded pills (chip, badge, kbd) and hover tooltips.
 
-Trace: DES-VCS-042, DES-VCS-051, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
+Trace: DES-VCS-042, DES-VCS-051, DES-VCS-057, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
 """
 
 from __future__ import annotations
@@ -169,6 +169,37 @@ class SegmentedControl(tk.Canvas):
             ink = C["ink"] if i == chosen else theme.TYPE["segment"].color
             self.create_text(lefts[i] + self._widths[i] / 2, height / 2, text=label, font=theme.font("segment"),
                              fill=ink, tags=("label",))
+
+
+class Toggle(tk.Canvas):
+    """A small on/off switch drawn like the chips: "Aa" and "W" of the search window (E-04, section 10)."""
+
+    def __init__(self, parent: tk.Misc, text: str, on_change: Callable[[bool], None], *, role: str = "toggle",
+                 parent_bg: str):
+        width, height = theme.SPACE["toggle"]
+        super().__init__(parent, bg=parent_bg, highlightthickness=0, bd=0, width=width, height=height)
+        self._text, self._role, self._on_change = text, role, on_change
+        self.on = False
+        self.bind("<Button-1>", lambda e: self.click())
+        self._draw()
+
+    def set(self, on: bool) -> None:
+        self.on = on
+        self._draw()
+
+    def click(self) -> None:
+        self.set(not self.on)
+        self._on_change(self.on)
+
+    def _draw(self) -> None:
+        C = theme.COLORS
+        width, height = theme.SPACE["toggle"]
+        self.delete("all")
+        if self.on:
+            rounded_rect(self, 0, 0, width - 1, height - 1, theme.SPACE["toggle_radius"], fill=C["toggle_on"],
+                         outline=C["toggle_on_edge"])
+        self.create_text(width / 2, height / 2, text=self._text, font=theme.font(self._role),
+                         fill=C["accent"] if self.on else theme.TYPE[self._role].color)
 
 
 class Tooltip:

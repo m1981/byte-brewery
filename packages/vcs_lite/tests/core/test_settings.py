@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from vcs_lite.core.difftool import BEYOND_COMPARE
 from vcs_lite.core.settings import (
     DEFAULT_ROOTDIR,
     RootDirNotFound,
@@ -78,7 +77,7 @@ def test_uc_vcs_01_missing_rootdir_is_reported_with_its_path(tmp_path):
 
 def test_des_vcs_019_defaults_when_no_settings_file_exists(tmp_path):
     settings = SettingsStore(tmp_path / "settings.json").load()
-    assert settings == Settings(rootdir=DEFAULT_ROOTDIR, repos=(), diff_tool=BEYOND_COMPARE, list_view="changes")
+    assert settings == Settings(rootdir=DEFAULT_ROOTDIR, repos=(), external_diff_tool=(), list_view="changes")
     assert DEFAULT_ROOTDIR == "~/PycharmProjects"
 
 
@@ -91,11 +90,23 @@ def test_at_vcs_001_chosen_repositories_survive_a_restart(tmp_path, rootdir):
     assert SettingsStore(path).load().repos == ("alpha", "gamma")
 
 
-def test_des_vcs_037_diff_tool_command_is_stored_in_settings(tmp_path):
+def test_des_vcs_037_external_tool_is_stored_only_when_set(tmp_path):
     path = tmp_path / "settings.json"
-    SettingsStore(path).save(Settings(diff_tool=("/usr/local/bin/inny-diff", "{left}", "{right}")))
-    assert json.loads(path.read_text())["diff_tool"] == ["/usr/local/bin/inny-diff", "{left}", "{right}"]
-    assert SettingsStore(path).load().diff_tool == ("/usr/local/bin/inny-diff", "{left}", "{right}")
+    SettingsStore(path).save(Settings())
+    assert {"external_diff_tool", "diff_tool"}.isdisjoint(json.loads(path.read_text()))
+    SettingsStore(path).save(Settings(external_diff_tool=("/usr/local/bin/inny-diff", "{left}", "{right}")))
+    assert json.loads(path.read_text())["external_diff_tool"] == ["/usr/local/bin/inny-diff", "{left}", "{right}"]
+    assert SettingsStore(path).load().external_diff_tool == ("/usr/local/bin/inny-diff", "{left}", "{right}")
+
+
+def test_des_vcs_019_the_old_beyond_compare_key_is_not_read(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"repos": ["alpha"], "diff_tool": ["/Applications/Beyond Compare.app/Contents/MacOS/bcomp",
+                                                                  "{left}", "{right}"]}))
+    settings = SettingsStore(path).load()
+    assert settings.repos == ("alpha",) and settings.external_diff_tool == ()
+    SettingsStore(path).save(settings)
+    assert "diff_tool" not in json.loads(path.read_text())
 
 
 def test_des_vcs_019_rootdir_keeps_tilde_and_expands_on_use():
@@ -138,7 +149,7 @@ def test_req_vcs_017_saving_settings_writes_nothing_into_repositories(tmp_path, 
     assert sorted(p.name for p in repo.rglob("*")) == before
 
 
-@pytest.mark.parametrize("data", [{"repos": "alpha"}, {"rootdir": 5}, {"diff_tool": [1, 2]}, {"show_folders": "yes"}, {"list_view": "drzewo"}, ["not", "an", "object"]])
+@pytest.mark.parametrize("data", [{"repos": "alpha"}, {"rootdir": 5}, {"external_diff_tool": [1, 2]}, {"show_folders": "yes"}, {"list_view": "drzewo"}, ["not", "an", "object"]])
 def test_des_vcs_019_values_of_the_wrong_type_are_reported(tmp_path, data):
     path = tmp_path / "settings.json"
     path.write_text(json.dumps(data))

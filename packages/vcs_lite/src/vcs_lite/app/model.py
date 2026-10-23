@@ -1,6 +1,6 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-016, DES-VCS-046, DES-VCS-055, DES-VCS-056, DES-VCS-060, REQ-VCS-033, REQ-VCS-034, DEC-VCS-095, DEC-VCS-098, DEC-VCS-100, DEC-VCS-106, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
@@ -12,9 +12,12 @@ from enum import Enum
 from pathlib import Path
 
 from vcs_lite.app.worker import Executor, Outcome
+from vcs_lite.core import pagekit
+from vcs_lite.core.browser import show
 from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool, compare
+from vcs_lite.core.filekind import Kind, is_text, kind_of
 from vcs_lite.core.gitcli import GitCli, GitResult
-from vcs_lite.core.mdview import MarkdownDiffTool, open_with_macos
+from vcs_lite.core.pageview import DocumentReader, MarkdownDiffTool, TextDiffTool, open_with_macos
 from vcs_lite.core.repo import GitError, GitRepo
 from vcs_lite.core.settings import Settings, SettingsError, scan_rootdir
 from vcs_lite.core.status import FileChange, Group, RepoStatus, Side
@@ -33,7 +36,7 @@ def files_label(n: int) -> str:
 
 def is_markdown(path: str) -> bool:
     """Files opened as a rendered diff by a double click (REQ-VCS-031)."""
-    return Path(path).suffix.lower() == ".md"
+    return kind_of(path) is Kind.MARKDOWN
 
 
 class RepoState(Enum):
@@ -125,18 +128,26 @@ OPEN_FAILED = "Otwieranie nie powiodło się"
 
 
 class AppModel:
-    def __init__(self, settings: Settings, *, git: GitCli, diff_tool: ExternalDiffTool, worker: Executor,
-                 confirm: Callable[[str, str], bool], clock: Callable[[], datetime] = datetime.now,
+    def __init__(self, settings: Settings, *, git: GitCli, worker: Executor, confirm: Callable[[str, str], bool],
+                 clock: Callable[[], datetime] = datetime.now,
                  save_settings: Callable[[Settings], None] = lambda settings: None,
-                 markdown_tool: ExternalDiffTool | None = None, markdown_reader: ExternalDiffTool | None = None,
+                 diff_tool: ExternalDiffTool | None = None, markdown_tool: ExternalDiffTool | None = None,
+                 markdown_reader: DocumentReader | None = None, text_reader: DocumentReader | None = None,
+                 external_tool: ExternalDiffTool | None = None, browser: Callable[[Path], None] = show,
+                 keep_copy: Callable[[bytes, str], Path] = pagekit.keep_copy,
                  opener: Callable[[list[str]], None] = open_with_macos):
+        """Pages in the browser by default (DEC-VCS-102): side-by-side diff, Markdown diff, readers of both.
+        `external_tool` is the optional command-line plugin (DEC-VCS-106); `browser` shows images and PDFs."""
         self._settings = settings
         self._save_settings = save_settings
         self._clock = clock
         self._git = git
-        self._diff_tool = diff_tool
-        self._markdown_tool = markdown_tool or MarkdownDiffTool(theme=lambda: self._settings.markdown_theme)
-        self._markdown_reader = markdown_reader or MarkdownDiffTool(read=True, theme=lambda: self._settings.markdown_theme)
+        self._diff_tool = diff_tool or TextDiffTool(theme=self._page_theme)
+        self._markdown_tool = markdown_tool or MarkdownDiffTool(theme=self._page_theme)
+        self._markdown_reader = markdown_reader or MarkdownDiffTool(read=True, theme=self._page_theme)
+        self._text_reader = text_reader or TextDiffTool(read=True, theme=self._page_theme)
+        self._external_tool = external_tool
+        self._browser, self._keep_copy = browser, keep_copy
         self._opener = opener
         self._worker = worker
         self._confirm = confirm
@@ -148,8 +159,18 @@ class AppModel:
     @classmethod
     def from_settings(cls, settings: Settings, *, git: GitCli, worker: Executor, confirm: Callable[[str, str], bool],
                       save_settings: Callable[[Settings], None] = lambda settings: None) -> AppModel:
-        return cls(settings, git=git, diff_tool=CommandTemplateDiffTool(settings.diff_tool), worker=worker,
-                   confirm=confirm, save_settings=save_settings)
+        external = CommandTemplateDiffTool(settings.external_diff_tool) if settings.external_diff_tool else None
+        return cls(settings, git=git, worker=worker, confirm=confirm, save_settings=save_settings,
+                   external_tool=external)
+
+    def _page_theme(self) -> str:
+        """Read at every opening, so a change in the menu applies to the next page (DEC-VCS-083)."""
+        return self._settings.markdown_theme
+
+    @property
+    def has_external_tool(self) -> bool:
+        """The command-line diff tool plugin is set in the settings (DEC-VCS-106)."""
+        return self._external_tool is not None
 
     # ---------- choosing repositories (E-02, REQ-VCS-001) ----------
 
@@ -287,10 +308,26 @@ class AppModel:
         view = self._current()
         if self.list_view != "project" or view is None or view.status is None:
             return []
+        changes = self._changes_by_path(view)
+        return [ProjectFile(path, changes.get(path)) for path in sorted(set(view.tracked) | set(changes))]
+
+    def change_of(self, path: str) -> FileChange | None:
+        """The change a file shows outside its group, as in the project tree: a search match's colour."""
+        view = self._current()
+        return self._changes_by_path(view).get(path) if view and view.status else None
+
+    @staticmethod
+    def _changes_by_path(view: RepoView) -> dict[str, FileChange]:
         changes: dict[str, FileChange] = {}
         for group in reversed(PROJECT_CHANGE_ORDER):  # the earlier group wins
             changes.update({c.path: c for c in view.status.group(group)})
-        return [ProjectFile(path, changes.get(path)) for path in sorted(set(view.tracked) | set(changes))]
+        return changes
+
+    @property
+    def selected_path(self) -> Path | None:
+        """Where „Szukaj w plikach” searches: the selected repository, while it is one (DEC-VCS-094)."""
+        view = self._current()
+        return view.path if view and view.available else None
 
     def files(self, group: Group) -> list[FileChange]:
         view = self._current()
@@ -488,29 +525,73 @@ class AppModel:
         repo = self._repo(view)
         self._run(view, IGNORE, lambda: repo.ignore(files, members))
 
-    def activate(self, change: FileChange, *, source: bool = False) -> None:
-        """Double click or Enter: compare the file in the external tool (DEC-VCS-040); a Markdown file as a
-        rendered diff, unless its source is asked for (REQ-VCS-031)."""
+    def activate(self, change: FileChange, *, external: bool = False) -> None:
+        """Double click or Enter: the change in the browser, by the kind of file (REQ-VCS-034): Markdown as
+        a rendered diff (REQ-VCS-031), an image or PDF as the file itself, anything else side by side
+        (REQ-VCS-023). `external` uses the command-line plugin instead (DEC-VCS-106)."""
         view = self._current()
         if change.left is None or change.right is None:
             return
-        tool = self._markdown_tool if is_markdown(change.path) and not source else self._diff_tool
+        kind = kind_of(change.path)
+        if external:
+            if self._external_tool is None:
+                return
+            tool = self._external_tool
+        elif kind.shown_as_file:
+            self._show_change(view, change)
+            return
+        else:
+            tool = self._markdown_tool if kind is Kind.MARKDOWN else self._diff_tool
         # Its own key, so the repository stays usable while the diff window is open.
         self._worker.submit(f"{view.name}:diff:{change.group.value}:{change.path}",
                             lambda: self._compare(view, change, tool),
                             lambda outcome: self._compared(view, outcome))
 
-    def read(self, path: str) -> None:
-        """A Markdown file without changes, shown as a rendered document (REQ-VCS-032)."""
+    def open_file(self, path: str, line: int | None = None) -> None:
+        """A file without changes, by its kind (REQ-VCS-034): Markdown read as a document, an image or PDF in
+        the browser, text as a page with line numbers, anything else (and a folder) in its application. With
+        a line, a page scrolls to it (a search match, DES-VCS-056)."""
         view = self._current()
+        full, kind = view.path / path, kind_of(path)
+        if kind is Kind.MARKDOWN:
+            self._read(view, self._markdown_reader, path, line)
+        elif kind.shown_as_file:
+            self._show(view, path, lambda: full)
+        elif is_text(full):
+            self._read(view, self._text_reader, path, line)
+        else:
+            self.open_in_app(path)
+
+    def open_match(self, path: str, line: int) -> None:
+        """Enter on a search match opens it like the project tree does, at the line (DEC-VCS-095, DEC-VCS-098)."""
+        self.open_file(path, line)
+
+    def _read(self, view: RepoView, reader: DocumentReader, path: str, line: int | None) -> None:
         full, title = view.path / path, f"{path} ({SIDE_LABELS[Side.WORKTREE]})"
+        reader = reader if line is None else reader.at_line(line)
         self._worker.submit(f"{view.name}:read:{path}",
-                            lambda: compare(self._markdown_reader, full, full, name=full.name, left_title=title,
-                                            right_title=title),
+                            lambda: compare(reader, full, full, name=full.name, left_title=title, right_title=title),
                             lambda outcome: self._compared(view, outcome))
 
-    def open_file(self, path: str) -> None:
-        """The file or folder in its default macOS application (DEC-VCS-090)."""
+    def _show_change(self, view: RepoView, change: FileChange) -> None:
+        """An image or PDF of a group: the right side of T-VCS-01, or the left one when the file is gone.
+        A version that is not on disk is kept as a copy first (DEC-VCS-100)."""
+        side, path = change.right, change.path
+        if side is Side.EMPTY:  # deleted: its last version
+            side = change.left
+            path = change.orig_path if side is Side.HEAD and change.orig_path else change.path
+
+        def file() -> Path:
+            content = self._repo(view).content(side, path)
+            return content if isinstance(content, Path) else self._keep_copy(content, Path(path).name)
+        self._show(view, f"{change.group.value}:{change.path}", file)
+
+    def _show(self, view: RepoView, key: str, file: Callable[[], Path]) -> None:
+        self._worker.submit(f"{view.name}:show:{key}", lambda: self._browser(file()),
+                            lambda outcome: self._opened(view, outcome))
+
+    def open_in_app(self, path: str) -> None:
+        """The file or folder in its default macOS application, e.g. to edit it (DEC-VCS-090, DEC-VCS-104)."""
         self._open(["open"], path)
 
     def reveal(self, path: str) -> None:

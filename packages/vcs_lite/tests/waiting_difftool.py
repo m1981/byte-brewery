@@ -1,4 +1,4 @@
-"""Stands in for Beyond Compare in tests/measure_footprint.py: the compare stays open until the tool is killed."""
+"""Stands in for a diff tool plugin in tests/measure_footprint.py: the compare stays open until the tool is killed."""
 
 import signal
 import sys

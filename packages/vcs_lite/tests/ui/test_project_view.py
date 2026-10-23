@@ -45,7 +45,7 @@ def test_at_vcs_040_project_view_shows_unchanged_files_and_opens_them(shown, wor
     assert world.md_reader.calls[0]["right"] == r.path / "docs" / "plan.md"
     fl.double_click(row(window, "src").top + 5)
     fl.double_click(row(window, "src/app.py").top + 5); world.worker.settle()
-    assert world.opened == [["open", str(r.path / "src" / "app.py")]]
+    assert world.text_reader.calls[0]["right"] == r.path / "src" / "app.py" and world.opened == []  # REQ-VCS-034
 
 
 def test_req_vcs_032_tree_is_nested_and_indented(shown):
@@ -105,13 +105,28 @@ def test_req_vcs_032_menu_opens_reveals_and_compares(shown, world):
     window, _, r = shown
     fl = window.file_list
     menu = fl.prepare_menu(row(window, "src").top + 5)
-    assert [(label, enabled) for label, enabled, _ in menu] == [("Otwórz", True), ("Pokaż w Finderze", True)]
+    assert [(label, enabled) for label, enabled, _ in menu] == [("Otwórz", True), ("Otwórz w aplikacji", True),
+                                                                ("Pokaż w Finderze", True)]
     next(command for label, _, command in menu if label == "Pokaż w Finderze")(); world.worker.settle()
     assert world.opened == [["open", "-R", str(r.path / "src")]]
     menu = fl.prepare_menu(row(window, "README.md").top + 5)
-    assert [label for label, _, _ in menu] == ["Otwórz", "Pokaż w Finderze", "Porównaj", "Porównaj źródło"]
+    assert [label for label, _, _ in menu] == ["Otwórz", "Otwórz w aplikacji", "Pokaż w Finderze", "Porównaj"]
 
 
 def test_req_vcs_032_change_groups_stay_a_flat_list(shown):
     window, _, _ = shown
     assert [(r.kind, r.path) for r in window.file_list.rows() if r.group is Group.CHANGES] == [("file", "README.md")]
+
+
+def test_req_vcs_034_images_and_pdfs_say_show_instead_of_compare(root, world):  # noqa: F811
+    r = world.repo("alpha")
+    (r.path / "logo.png").write_bytes(b"\x89PNG"); (r.path / "opis.pdf").write_bytes(b"%PDF")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    fl = window.file_list
+    for name in ("logo.png", "opis.pdf"):
+        fl.hover(next(x for x in fl.rows() if x.path == name).top + 5)
+        assert fl.hint_texts() == ["spacja stage · dwuklik pokaż"]
+    fl.double_click(next(x for x in fl.rows() if x.path == "logo.png").top + 5); world.worker.settle()
+    assert world.browsed == [r.path / "logo.png"]

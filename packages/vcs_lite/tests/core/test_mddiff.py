@@ -128,3 +128,16 @@ def test_des_vcs_049_huge_rewrites_skip_pairing():
     old = "".join(f"- stary punkt {i}\n" for i in range(100))
     new = "".join(f"- nowy punkt {i}\n" for i in range(100))
     assert {c.state for c in diff_blocks(old, new)} == {State.DEL, State.ADD}
+
+
+# ---------- source lines of blocks (DES-VCS-056) ----------
+
+def test_des_vcs_056_blocks_know_their_first_and_last_line_in_the_file():
+    text = "---\ntytul: x\n---\n\n# Plan\n\nAkapit\nw dwóch.\n\n- punkt\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n```py\nx\n```\n"
+    assert [(b.kind, b.line, b.end) for b in parse_blocks(text)] == [
+        ("meta", 1, 3), ("heading", 5, 5), ("paragraph", 7, 8), ("item", 10, 10), ("header", 12, 12),
+        ("row", 14, 14), ("code", 16, 18)]
+
+
+def test_des_vcs_056_lines_do_not_change_how_blocks_compare():
+    assert states("Akapit.\n", "\n\n\nAkapit.\n") == [("same", "Akapit.")]

@@ -91,3 +91,57 @@ def test_des_vcs_047_lines_from_parallel_calls_never_interleave(repo, tmp_path):
     for t in threads:
         t.join()
     assert [json.loads(line)["cmd"] for line in log.read_text().splitlines()] == ["version"] * 40
+
+
+# ---------- streamed output (DES-VCS-053) ----------
+
+def test_des_vcs_053_stream_gives_lines_as_git_writes_them(repo):
+    repo.write("a.txt", "one\ntwo\n")
+    repo.git("add", "a.txt")
+    g = cli()
+    with g.stream(repo.path, "grep", "-n", "-e", "o") as out:
+        lines = list(out)
+    assert lines == [b"a.txt:1:one", b"a.txt:2:two"]
+    assert out.result.ok and not out.result.stopped and g.call_count == 1
+
+
+def test_des_vcs_053_leaving_early_stops_git(repo):
+    repo.write("big.txt", "x\n" * 200_000)
+    repo.git("add", "big.txt")
+    with cli().stream(repo.path, "grep", "-n", "-e", "x") as out:
+        first = next(iter(out))
+    assert first == b"big.txt:1:x"
+    assert out.result.stopped and out.process_finished
+
+
+def test_des_vcs_053_errors_keep_the_exit_code_and_stderr(repo):
+    with cli().stream(repo.path, "grep", "-e", "x", "--", ":(glob") as out:
+        assert list(out) == []
+    assert out.result.returncode == 128 and "pathspec" in out.result.message and not out.result.stopped
+
+
+def test_des_vcs_053_stream_reads_without_optional_locks(repo):
+    repo.git("config", "alias.env", "!env")
+    with cli().stream(repo.path, "env") as out:
+        lines = list(out)
+    assert b"GIT_OPTIONAL_LOCKS=0" in lines and b"GIT_TERMINAL_PROMPT=0" in lines
+
+
+def test_des_vcs_053_stream_has_a_time_limit(repo):
+    repo.git("config", "alias.slow", "!sleep 5")
+    with cli().stream(repo.path, "slow", timeout=0.3) as out:
+        assert list(out) == []
+    assert not out.result.ok and "limit czasu" in out.result.message
+
+
+def test_des_vcs_053_stream_is_logged_like_any_call(repo, tmp_path):
+    log = tmp_path / "git.log"
+    with GitCli(env={**GIT_ENV, GIT_LOG_ENV: str(log)}).stream(repo.path, "version") as out:
+        list(out)
+    assert [json.loads(line)["cmd"] for line in log.read_text().splitlines()] == ["version"]
+
+
+def test_des_vcs_053_missing_git_is_a_result_not_an_exception(repo):
+    with GitCli(git="/no/such/git", env=GIT_ENV).stream(repo.path, "version") as out:
+        assert list(out) == []
+    assert out.result.returncode == 127 and "/no/such/git" in out.result.message

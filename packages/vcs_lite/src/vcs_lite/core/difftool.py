@@ -1,6 +1,9 @@
-"""External diff tool behind a port, so Beyond Compare can be swapped for any CLI tool.
+"""The diff tool port, the command-line plugin, and the temp files of the sides (DES-VCS-036–039).
 
-Trace: DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039, DES-VCS-049, REQ-VCS-023
+Pages in the browser plug in here (core/pageview.py); a command-line tool is an optional plugin set in
+the settings (DEC-VCS-106).
+
+Trace: DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039, DES-VCS-049, DES-VCS-059, REQ-VCS-023, DEC-VCS-106
 """
 
 from __future__ import annotations
@@ -13,15 +16,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, Union
-
-# DES-VCS-037. The -title1/-title2 syntax of BC4 on macOS was checked by hand (OBS-VCS-008).
-BEYOND_COMPARE = (
-    "/Applications/Beyond Compare.app/Contents/MacOS/bcomp",
-    "{left}",
-    "{right}",
-    "-title1={left_title}",
-    "-title2={right_title}",
-)
 
 # bytes: content from git (HEAD, index or an empty side), shown from a read-only temp file.
 # Path: the working-tree file itself, editable in the tool (DEC-VCS-039).
@@ -67,7 +61,7 @@ class _Process:
 class CommandTemplateDiffTool:
     """Runs a command given as an argument list with {left}, {right}, {left_title}, {right_title}."""
 
-    def __init__(self, argv: Sequence[str] = BEYOND_COMPARE):
+    def __init__(self, argv: Sequence[str]):
         self.argv = list(argv)
 
     def command(self, left: Path, right: Path, left_title: str, right_title: str) -> list[str]:

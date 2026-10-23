@@ -4,7 +4,7 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, T-VCS-01
+Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from vcs_lite.app.model import AppModel, EmptyState, RepoState, files_label, is_markdown
+from vcs_lite.core.filekind import kind_of
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import elide, elide_middle, rounded_rect
@@ -37,6 +38,8 @@ HINTS = {
     Group.CHANGES: [("spacja", KBD), (" stage · ", None), ("dwuklik", KBD), (" porównaj", None)],
     Group.UNVERSIONED: [("spacja", KBD), (" stage · ", None), ("dwuklik", KBD), (" porównaj", None)],  # P7
 }
+SHOW_HINT = {group: [*hint[:-1], (" pokaż", None)] for group, hint in HINTS.items() if hint[-1][1] is None}
+# images and PDFs: the browser shows the file itself, there is nothing to compare (DEC-VCS-100)
 FOLDER_ACTIONS = {Group.STAGED: "−", Group.CHANGES: "+", Group.UNVERSIONED: "+"}  # none for conflicts (DEC-VCS-057)
 PROJECT = "projekt"         # the group of the project tree rows (REQ-VCS-032)
 DIRS = ("folder", "pdir")
@@ -131,15 +134,17 @@ class FileList(tk.Frame):
                  on_empty_action: Callable[[str], None],
                  on_toggle_many: Callable[[Group, list[FileChange]], None] = lambda group, changes: None,
                  on_ignore: Callable[[list[str], list[str]], None] = lambda files, folders: None,
-                 on_compare_source: Callable[[FileChange], None] = lambda change: None,
-                 on_read: Callable[[str], None] = lambda path: None, on_open: Callable[[str], None] = lambda path: None,
+                 on_compare_external: Callable[[FileChange], None] | None = None,
+                 on_open: Callable[[str], None] = lambda path: None,
+                 on_open_in_app: Callable[[str], None] = lambda path: None,
                  on_reveal: Callable[[str], None] = lambda path: None):
+        """`on_compare_external` is set only when the diff tool plugin is (DEC-VCS-106)."""
         super().__init__(master, bg=C["bg"])
         self._on_toggle, self._on_activate = on_toggle, on_activate
         self._on_toggle_folder, self._on_empty_action = on_toggle_folder, on_empty_action
         self._on_toggle_many, self._on_ignore = on_toggle_many, on_ignore
-        self._on_compare_source = on_compare_source
-        self._on_read, self._on_open, self._on_reveal = on_read, on_open, on_reveal
+        self._on_compare_external = on_compare_external
+        self._on_open, self._on_open_in_app, self._on_reveal = on_open, on_open_in_app, on_reveal
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self._rows: list[ListRow] = []
@@ -214,7 +219,8 @@ class FileList(tk.Frame):
     @staticmethod
     def _hints(row: ListRow) -> list[tuple[str, str | None]]:
         if row.change is not None:
-            return HINTS[row.change.group]
+            shown = kind_of(row.path).shown_as_file and row.change.group in SHOW_HINT
+            return SHOW_HINT[row.change.group] if shown else HINTS[row.change.group]
         return READ_HINT if is_markdown(row.path) else OPEN_HINT
 
     def empty_action_enabled(self) -> bool:
@@ -349,13 +355,11 @@ class FileList(tk.Frame):
             self._open_row(row)
 
     def _open_row(self, row: ListRow) -> None:
-        """Double click and Enter: fold a folder; compare a changed file; read or open one without changes."""
+        """Double click and Enter: fold a folder; compare a changed file; open one without changes by its kind."""
         if row.kind in DIRS:
             self._toggle_collapsed(row)
         elif row.change is not None:
             self._on_activate(row.change)
-        elif is_markdown(row.path):
-            self._on_read(row.path)
         else:
             self._on_open(row.path)
 
@@ -412,23 +416,37 @@ class FileList(tk.Frame):
             (f"Unstage{count}", free and group is Group.STAGED, self.press_space),
             ("Oznacz jako rozwiązany", free and group is Group.CONFLICTS and single_file, self.press_space),
             ("Porównaj", compare_ok, self.press_return),
+            *self._external_entry(rows[0].change, compare_ok),
+            ("Otwórz w aplikacji", single_file and self._on_disk(rows[0].path),
+             lambda: self._on_open_in_app(rows[0].path)),
         ]
-        if single_file and is_markdown(rows[0].path):  # "Porównaj" is the rendered diff; the source goes to the tool
-            entries.append(("Porównaj źródło", compare_ok, lambda: self._on_compare_source(rows[0].change)))
         entries.append((f"Dodaj do .gitignore{self._ignore_count(rows)}", free and group is Group.UNVERSIONED,
                         lambda: self._ignore_selection(rows)))
         return entries
 
     def _project_menu(self, row: ListRow, *, single: bool) -> list[tuple[str, bool, Callable[[], None]]]:
-        """A row of the project tree: open it, show it in Finder, and compare it when it changed (REQ-VCS-032)."""
+        """A row of the project tree: open it by its kind or in its application, show it in Finder, and
+        compare it when it changed (REQ-VCS-032, REQ-VCS-034)."""
         entries = [("Otwórz", single, lambda: self._on_open(row.path)),
+                   ("Otwórz w aplikacji", single, lambda: self._on_open_in_app(row.path)),
                    ("Pokaż w Finderze", single, lambda: self._on_reveal(row.path))]
         change = row.change
         if single and change is not None and change.group is not Group.CONFLICTS:
             entries.append(("Porównaj", True, lambda: self._on_activate(change)))
-            if is_markdown(row.path):
-                entries.append(("Porównaj źródło", True, lambda: self._on_compare_source(change)))
+            entries += self._external_entry(change, True)
         return entries
+
+    def _external_entry(self, change: FileChange | None, enabled: bool) -> list[tuple[str, bool, Callable[[], None]]]:
+        """„Porównaj w narzędziu zewnętrznym”, only while the plugin is set (DEC-VCS-106)."""
+        if self._on_compare_external is None or change is None:
+            return []
+        compare = self._on_compare_external
+        return [("Porównaj w narzędziu zewnętrznym", enabled, lambda: compare(change))]
+
+    def _on_disk(self, path: str) -> bool:
+        """The working copy exists, so there is something to open in an application (DEC-VCS-104)."""
+        repo = self._model.selected_path if self._model else None
+        return repo is not None and (repo / path).exists()
 
     @staticmethod
     def _ignore_count(rows: list[ListRow]) -> str:

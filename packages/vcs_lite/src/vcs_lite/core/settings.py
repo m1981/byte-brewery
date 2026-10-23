@@ -1,6 +1,6 @@
 """Which repositories are watched: scanning rootdir and persisting the choice.
 
-Trace: DES-VCS-019, DES-VCS-049, REQ-VCS-031, DEC-VCS-091, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
+Trace: DES-VCS-019, DES-VCS-049, DEC-VCS-106, REQ-VCS-031, DEC-VCS-091, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
 """
 
 from __future__ import annotations
@@ -11,8 +11,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
-from vcs_lite.core.difftool import BEYOND_COMPARE
 
 DEFAULT_ROOTDIR = "~/PycharmProjects"
 MARKDOWN_THEMES = ("system", "light", "dark")  # the rendered Markdown diff page (REQ-VCS-031)
@@ -37,7 +35,7 @@ class RootDirNotFound(SettingsError):
 class Settings:
     rootdir: str = DEFAULT_ROOTDIR
     repos: tuple[str, ...] = ()
-    diff_tool: tuple[str, ...] = BEYOND_COMPARE
+    external_diff_tool: tuple[str, ...] = ()   # the diff tool plugin, off by default (DEC-VCS-106)
     list_view: str = "changes"
     markdown_theme: str = "system"
 
@@ -49,12 +47,16 @@ class Settings:
         return self.root_path / name
 
     def to_dict(self) -> dict[str, Any]:
-        return {"rootdir": self.rootdir, "repos": list(self.repos), "diff_tool": list(self.diff_tool),
-                "list_view": self.list_view, "markdown_theme": self.markdown_theme}
+        data = {"rootdir": self.rootdir, "repos": list(self.repos), "list_view": self.list_view,
+                "markdown_theme": self.markdown_theme}
+        if self.external_diff_tool:
+            data["external_diff_tool"] = list(self.external_diff_tool)
+        return data
 
     @classmethod
     def from_dict(cls, data: Any) -> Settings:
-        """Missing keys take defaults; values of the wrong type raise ValueError."""
+        """Missing keys take defaults; values of the wrong type raise ValueError. The old key "diff_tool"
+        (Beyond Compare) is not read, so it cannot bring the removed tool back (DEC-VCS-106)."""
         if not isinstance(data, dict):
             raise ValueError("oczekiwano obiektu JSON")
         defaults = cls()
@@ -73,7 +75,7 @@ class Settings:
         return cls(
             rootdir=rootdir,
             repos=_strings(data, "repos", defaults.repos),
-            diff_tool=_strings(data, "diff_tool", defaults.diff_tool),
+            external_diff_tool=_strings(data, "external_diff_tool", defaults.external_diff_tool),
             list_view=list_view,
             markdown_theme=markdown_theme,
         )

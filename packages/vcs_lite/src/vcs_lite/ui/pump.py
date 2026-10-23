@@ -1,6 +1,6 @@
 """Bridges Worker and the Tk event loop: results are drained on the Tk thread, polling only while work runs.
 
-Trace: DES-VCS-017, REQ-VCS-016, REQ-VCS-101
+Trace: DES-VCS-017, DES-VCS-055, REQ-VCS-016, REQ-VCS-033, REQ-VCS-101
 """
 
 from __future__ import annotations
@@ -42,3 +42,11 @@ class TkPump:
         self._worker.drain()
         if self._worker.pending:
             self._schedule()
+
+
+def tk_later(widget: tk.Misc) -> Callable[[int, Callable[[], None]], Callable[[], None]]:
+    """Tk's after() in the shape SearchSession expects: schedule a callback, get the function that cancels it."""
+    def later(ms: int, callback: Callable[[], None]) -> Callable[[], None]:
+        ident = widget.after(ms, callback)
+        return lambda: widget.after_cancel(ident)
+    return later

@@ -1,4 +1,4 @@
-"""The rendered Markdown diff run as its own short process (REQ-VCS-031, DES-VCS-049)."""
+"""Pages in the browser run as their own short processes (REQ-VCS-031, REQ-VCS-023, DES-VCS-049, DES-VCS-059)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from vcs_lite.core.difftool import compare
-from vcs_lite.core.mdview import MarkdownDiffTool
+from vcs_lite.core.pageview import MarkdownDiffTool, TextDiffTool
 
 
 def test_des_vcs_049_runs_the_page_module_with_the_sides_and_titles():
@@ -49,3 +49,33 @@ def test_req_vcs_032_the_reader_asks_for_the_reading_mode():
     argv = MarkdownDiffTool(open_browser=False, read=True).command(
         Path("/r/a.md"), Path("/r/a.md"), "a.md (kopia robocza)", "a.md (kopia robocza)")
     assert "--read" in argv
+
+
+def test_des_vcs_056_reader_at_a_line_passes_it_and_keeps_its_settings():
+    reader = MarkdownDiffTool(open_browser=False, read=True, theme=lambda: "dark")
+    argv = reader.at_line(12).command(Path("/r/a.md"), Path("/r/a.md"), "a", "a")
+    assert argv[-4:] == ["--theme", "dark", "--line", "12"] and "--read" in argv and "--no-open" in argv
+    assert "--line" not in reader.command(Path("/r/a.md"), Path("/r/a.md"), "a", "a")
+
+
+# ---------- text files (DES-VCS-059) ----------
+
+def test_des_vcs_059_text_tool_runs_the_text_page_module():
+    argv = TextDiffTool(open_browser=False).command(Path("/tmp/vcs-lite-x/left/a.py"), Path("/repo/a.py"), "a.py (indeks)",
+                                                    "a.py (kopia robocza)")
+    assert argv[:3] == [sys.executable, "-m", "vcs_lite.core.textpage"] and "--base" not in argv
+    assert argv[3:7] == ["/tmp/vcs-lite-x/left/a.py", "/repo/a.py", "a.py (indeks)", "a.py (kopia robocza)"]
+
+
+def test_des_vcs_059_text_reader_at_a_line_with_the_theme(tmp_path):
+    reader = TextDiffTool(open_browser=False, read=True, theme=lambda: "light")
+    argv = reader.at_line(7).command(Path("/r/a.py"), Path("/r/a.py"), "a", "a")
+    assert "--read" in argv and argv[-4:] == ["--theme", "light", "--line", "7"]
+
+
+def test_des_vcs_059_the_text_page_is_written_without_errors(tmp_path):
+    right = tmp_path / "a.py"
+    right.write_text("x = 2\n", encoding="utf-8")
+    result = compare(TextDiffTool(open_browser=False), b"x = 1\n", right, name="a.py",
+                     left_title="a.py (indeks)", right_title="a.py (kopia robocza)")
+    assert result.returncode == 0 and not result.failed, result.stderr

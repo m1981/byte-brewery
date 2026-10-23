@@ -1,10 +1,11 @@
 """Footprint and refresh time of vcs-lite under the conditions of REQ-VCS-100 (DES-VCS-034, DES-VCS-047).
 
-Usage: python tests/measure_footprint.py [--bcomp] [--idle SECONDS]
+Usage: python tests/measure_footprint.py [--idle SECONDS]
 
 Builds 3 repositories in a temporary folder (one with 300 changed files, among them one of 2000 lines),
 starts vcs-lite in its own process group, refreshes the big repository 1 + 5 times, opens the long file
-in the diff tool and announces "ready". From then on the app is idle: `footprint -j` samples only the
+in the diff tool plugin (a stand-in that waits, so the compare stays open; a browser page would end at once
+and would open a tab) and announces "ready". From then on the app is idle: `footprint -j` samples only the
 vcs-lite process once a second, and the git call log must stay silent. Prints one JSON object; it only
 measures, tests/test_footprint.py judges.
 """
@@ -37,8 +38,6 @@ CHANGES = 300
 LONG_FILE, LONG_LINES = "dlugi.py", 2000
 REFRESHES = 5
 READY_TIMEOUT, TOOL_TIMEOUT, SETTLE_TIMEOUT, TERM_GRACE = 90.0, 60.0, 30.0, 3.0
-BCOMP = ["/Applications/Beyond Compare.app/Contents/MacOS/bcomp", "{left}", "{right}",
-         "-title1={left_title}", "-title2={right_title}"]
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
            "GIT_AUTHOR_NAME": "Pomiar", "GIT_AUTHOR_EMAIL": "pomiar@example.invalid",
            "GIT_COMMITTER_NAME": "Pomiar", "GIT_COMMITTER_EMAIL": "pomiar@example.invalid"}
@@ -51,7 +50,7 @@ def git(repo: Path, *args: str) -> str:
                           capture_output=True, text=True, check=True).stdout
 
 
-def build_environment(base: Path, *, bcomp: bool) -> Path:
+def build_environment(base: Path) -> Path:
     rootdir = base / "root"
     big = rootdir / BIG
     big.mkdir(parents=True)
@@ -71,9 +70,9 @@ def build_environment(base: Path, *, bcomp: bool) -> Path:
         (repo / "a.txt").write_text("a\n")
         git(repo, "add", "-A"); git(repo, "commit", "-q", "-m", "base")
         (repo / "a.txt").write_text("a2\n")
-    tool = BCOMP if bcomp else [sys.executable, str(HERE / "waiting_difftool.py"), "{left}", "{right}"]
+    tool = [sys.executable, str(HERE / "waiting_difftool.py"), "{left}", "{right}"]
     settings = base / "settings.json"
-    settings.write_text(json.dumps({"rootdir": str(rootdir), "repos": [BIG, *OTHERS], "diff_tool": tool}))
+    settings.write_text(json.dumps({"rootdir": str(rootdir), "repos": [BIG, *OTHERS], "external_diff_tool": tool}))
     return settings
 
 
@@ -91,7 +90,7 @@ def run_child(settings: Path) -> None:
     settle(root, pump)
     times = [timed_refresh(root, model, pump) for _ in range(REFRESHES + 1)][1:]  # the first one is cold
     changes = sum(len(model.files(group)) for group in Group)
-    model.activate(next(c for c in model.files(Group.CHANGES) if c.path == LONG_FILE))
+    model.activate(next(c for c in model.files(Group.CHANGES) if c.path == LONG_FILE), external=True)
     wait_for_diff_tool(root)
     append_log(os.environ[GIT_LOG_ENV], {"t": time.monotonic(), "pid": os.getpid(), "event": "ready"})
     print(json.dumps({"ready": True, "pid": os.getpid(), "refresh_s": times, "changes": changes,
@@ -134,10 +133,10 @@ def wait_for_diff_tool(root) -> None:
 
 # ---------- the measuring process ----------
 
-def measure(*, bcomp: bool = False, idle: int = 5) -> dict:
+def measure(*, idle: int = 5) -> dict:
     with tempfile.TemporaryDirectory(prefix="vcs-lite-pomiar-") as tmp:
         base = Path(tmp)
-        settings = build_environment(base, bcomp=bcomp)
+        settings = build_environment(base)
         log = base / "git.log"
         env = {**os.environ, **GIT_ENV, GIT_LOG_ENV: str(log), "PYTHONPATH": str(SRC)}
         proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "--child", str(settings)],
@@ -160,7 +159,7 @@ def measure(*, bcomp: bool = False, idle: int = 5) -> dict:
         "date": datetime.now().astimezone().isoformat(timespec="seconds"),
         "python": platform.python_version(), "tk": ready["tk"], "macos": platform.mac_ver()[0],
         "git": git(HERE, "--version").strip(), "commit": source_version(),
-        "diff_tool": "bcomp" if bcomp else "atrapa (tests/waiting_difftool.py)",
+        "diff_tool": "wtyczka external_diff_tool z atrapą (tests/waiting_difftool.py)",
         "changes": ready["changes"], "idle_s": idle,
         "footprint_mib": [round(s, 1) for s in samples], "footprint_mib_max": round(max(samples), 1),
         "refresh_s": [round(t, 3) for t in ready["refresh_s"]],
@@ -215,14 +214,13 @@ def source_version() -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--bcomp", action="store_true", help="prawdziwy Beyond Compare zamiast atrapy")
     parser.add_argument("--idle", type=int, default=5, help="sekundy bezczynności z próbkami co 1 s")
     parser.add_argument("--child", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.child:
         run_child(args.child)
     else:
-        print(json.dumps(measure(bcomp=args.bcomp, idle=args.idle), indent=2, ensure_ascii=False))
+        print(json.dumps(measure(idle=args.idle), indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

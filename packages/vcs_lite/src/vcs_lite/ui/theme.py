@@ -4,7 +4,7 @@ Source: docs/ui-reference/UI-REFERENCE.md (sections 1, 2, 3, 8) and E-01.html.
 Approximations allowed by section 6: sizes rounded to whole points, weights >= 550 drawn bold,
 no letter spacing, transparency replaced by computed colours.
 
-Trace: DES-VCS-042, DES-VCS-045, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068, DEC-VCS-089, DEC-VCS-092
+Trace: DES-VCS-042, DES-VCS-045, DES-VCS-057, DEC-VCS-097, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068, DEC-VCS-089, DEC-VCS-092
 """
 
 from __future__ import annotations
@@ -65,6 +65,8 @@ COLORS = {
     "file_del": "#6e6e73",
     "folder_icon": "#9aa0ab",
     "folder_act_hover": "#e6e8ee",
+    # the search window E-04 (section 10, DEC-VCS-097)
+    "hit": "#fde68a", "toggle_on": "#dbe8fb", "toggle_on_edge": "#b9d2f5", "placeholder": "#a0a0a6",
 }
 
 
@@ -113,6 +115,10 @@ TYPE = {
     "path": Type(12, color=COLORS["dim"], mono=True),
     "dialog_title": Type(15, "bold"),
     "dialog_note": Type(12, color=COLORS["dim"]),
+    # section 10
+    "toggle": Type(12, "bold", COLORS["chip_ink"]),
+    "toggle_mono": Type(12, "bold", COLORS["chip_ink"], mono=True),
+    "placeholder": Type(13, color=COLORS["placeholder"]),
 }
 
 # Section 3, in points. Pairs are (horizontal, vertical) unless named otherwise.
@@ -147,6 +153,10 @@ SPACE = {
     "busy_bar_height": 2, "busy_bar_share": 0.3, "busy_bar_period_ms": 1200,
     "empty_pad": (24, 40), "empty_gap": 6, "empty_text_width": 46,
     "dialog_width": 420, "dialog_list_height": 220,
+    # section 10
+    "search_window": (720, 420), "search_bar_pad": (14, 10), "search_gap": 10, "search_field_pad": (8, 4),
+    "toggle": (24, 20), "toggle_radius": 5, "mask_width": 150, "mask_label_gap": 6,
+    "where_share": 0.45, "where_gap": 12, "line_number_gap": 4, "results_pad_top": 4,
 }
 
 MONO_FAMILY = "Menlo"

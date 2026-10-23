@@ -9,6 +9,8 @@ from __future__ import annotations
 import pytest
 from test_main_window import conflicted, root, world  # noqa: F401 - shared fixtures
 
+from fakes import FakeDiffTool
+
 from vcs_lite.core.status import Group
 from vcs_lite.ui.main_window import MainWindow
 
@@ -54,7 +56,7 @@ def test_des_vcs_024_g20_right_click_outside_the_selection_selects_only_that_row
     menu = fl.prepare_menu(y(window, (C, "c1.txt")))
     assert set(fl.selected_keys) == {(C, "c1.txt")}
     assert entries(menu) == {"Stage": True, "Unstage": False, "Oznacz jako rozwiązany": False, "Porównaj": True,
-                             "Dodaj do .gitignore": False}
+                             "Otwórz w aplikacji": True, "Dodaj do .gitignore": False}
 
 
 def test_at_vcs_037_g21_right_click_inside_the_selection_acts_on_all_of_it(listed, world):  # noqa: F811
@@ -64,7 +66,7 @@ def test_at_vcs_037_g21_right_click_inside_the_selection_acts_on_all_of_it(liste
     menu = fl.prepare_menu(y(window, (U, "u2.txt")))
     assert set(fl.selected_keys) == {(U, "u1.txt"), (U, "u2.txt")}
     assert entries(menu) == {"Stage (2)": True, "Unstage (2)": False, "Oznacz jako rozwiązany": False, "Porównaj": False,
-                             "Dodaj do .gitignore (2)": True}
+                             "Otwórz w aplikacji": False, "Dodaj do .gitignore (2)": True}
     run(menu, "Stage (2)", world)
     assert {"u1.txt", "u2.txt"} <= {c.path for c in model.files(S)}
 
@@ -99,7 +101,7 @@ def test_des_vcs_024_conflict_offers_mark_resolved_and_no_compare(root, world): 
     world.select("gamma")
     menu = window.file_list.prepare_menu(y(window, (Group.CONFLICTS, "f.txt")))
     assert entries(menu) == {"Stage": False, "Unstage": False, "Oznacz jako rozwiązany": True, "Porównaj": False,
-                             "Dodaj do .gitignore": False}
+                             "Otwórz w aplikacji": True, "Dodaj do .gitignore": False}  # edit to resolve
     run(menu, "Oznacz jako rozwiązany", world)
     assert "linia 1" in model.error  # the markers are still there (REQ-VCS-024)
 
@@ -110,7 +112,7 @@ def test_des_vcs_024_busy_repository_offers_no_operation(listed):
     fl.select_key((U, "u1.txt")); fl.press_space()  # pending in the manual worker
     menu = fl.prepare_menu(y(window, (U, "u2.txt")))
     assert entries(menu) == {"Stage": False, "Unstage": False, "Oznacz jako rozwiązany": False, "Porównaj": True,
-                             "Dodaj do .gitignore": False}
+                             "Otwórz w aplikacji": True, "Dodaj do .gitignore": False}
 
 
 def test_des_vcs_024_right_click_on_empty_space_opens_nothing(listed):
@@ -164,20 +166,39 @@ def test_req_vcs_030_g16_write_error_shows_the_banner_and_keeps_the_file(listed,
         ignore.chmod(0o644)
 
 
-# ---------- Markdown (REQ-VCS-031) ----------
+# ---------- browser, plugin, application (REQ-VCS-023, REQ-VCS-034, DEC-VCS-106) ----------
 
-def test_req_vcs_031_markdown_offers_the_source_compare_in_beyond_compare(listed, world):  # noqa: F811
+def test_req_vcs_031_markdown_has_no_source_compare_any_more(listed, world):  # noqa: F811
     window, model = listed
     (world.root / "alpha" / "NOTES.md").write_text("# Notatki\n")
     model.refresh_all(); world.worker.settle()
     menu = window.file_list.prepare_menu(y(window, (U, "NOTES.md")))
-    assert entries(menu)["Porównaj"] and entries(menu)["Porównaj źródło"]
-    run(menu, "Porównaj źródło", world)
-    assert [c["right"].name for c in world.tool.calls] == ["NOTES.md"] and world.md_tool.calls == []
+    assert "Porównaj źródło" not in entries(menu)
     run(menu, "Porównaj", world)
     assert [c["right"].name for c in world.md_tool.calls] == ["NOTES.md"]
 
 
-def test_req_vcs_031_other_files_have_no_source_compare(listed):
+def test_at_vcs_026_external_tool_entry_appears_only_when_set(listed, root, world):  # noqa: F811
     window, _ = listed
-    assert "Porównaj źródło" not in entries(window.file_list.prepare_menu(y(window, (C, "c1.txt"))))
+    assert "Porównaj w narzędziu zewnętrznym" not in entries(window.file_list.prepare_menu(y(window, (C, "c1.txt"))))
+    world.external = FakeDiffTool()
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    menu = window.file_list.prepare_menu(y(window, (C, "c1.txt")))
+    assert list(entries(menu))[4] == "Porównaj w narzędziu zewnętrznym"   # right after „Porównaj”
+    run(menu, "Porównaj w narzędziu zewnętrznym", world)
+    assert [c["right"].name for c in world.external.calls] == ["c1.txt"] and world.tool.calls == []
+
+
+def test_req_vcs_034_open_in_app_from_the_menu(listed, world):  # noqa: F811
+    window, _ = listed
+    run(window.file_list.prepare_menu(y(window, (C, "c1.txt"))), "Otwórz w aplikacji", world)
+    assert world.opened == [["open", str(world.root / "alpha" / "c1.txt")]]
+
+
+def test_req_vcs_034_no_open_in_app_for_a_file_gone_from_disk(listed, world):  # noqa: F811
+    window, model = listed
+    (world.root / "alpha" / "c1.txt").unlink()
+    model.refresh_all(); world.worker.settle()
+    assert not entries(window.file_list.prepare_menu(y(window, (C, "c1.txt"))))["Otwórz w aplikacji"]

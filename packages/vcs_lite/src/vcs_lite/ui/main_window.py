@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-018, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
+Trace: DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
@@ -9,8 +9,11 @@ import tkinter as tk
 from tkinter import ttk
 
 from vcs_lite.app.model import AppModel
+from vcs_lite.app.search import SearchSession
 from vcs_lite.ui import theme
-from vcs_lite.ui.file_list import FileList
+from vcs_lite.ui.file_list import FileList, file_color
+from vcs_lite.ui.keys import DoubleShift
+from vcs_lite.ui.search_dialog import SearchDialog
 from vcs_lite.ui.settings_dialog import RepoDialog
 from vcs_lite.ui.sidebar import RepoSidebar
 from vcs_lite.ui.widgets import Pill, SegmentedControl, Tooltip, kbd, rounded_rect
@@ -35,9 +38,13 @@ def button(parent: tk.Misc, text: str, parent_bg: str, **options) -> tk.Button:
 
 
 class MainWindow(tk.Frame):
-    def __init__(self, master: tk.Misc, model: AppModel, *, reduce_motion: bool = False):
+    def __init__(self, master: tk.Misc, model: AppModel, *, reduce_motion: bool = False,
+                 search: SearchSession | None = None):
         super().__init__(master, bg=C["bg"])
         self.model = model
+        self._search = search                  # None: no search window (REQ-VCS-033)
+        self.search_dialog: SearchDialog | None = None
+        self.double_shift = DoubleShift(self.open_search)
         self._reduce_motion = reduce_motion
         self._busy_after: str | None = None   # pending after() of the animation
         self._busy_shown = False
@@ -49,6 +56,7 @@ class MainWindow(tk.Frame):
         self._focus_after: str | None = None   # pending refresh after coming back
         self._build()
         self._bind_shortcuts()
+        self._bind_search()
         self._bind_focus_refresh()
         self._build_menu()
         model.subscribe(self.render)
@@ -102,8 +110,10 @@ class MainWindow(tk.Frame):
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
                                   on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action,
                                   on_toggle_many=self.model.toggle_many, on_ignore=self.model.add_to_gitignore,
-                                  on_compare_source=lambda change: self.model.activate(change, source=True),
-                                  on_read=self.model.read, on_open=self.model.open_file, on_reveal=self.model.reveal)
+                                  on_compare_external=(lambda change: self.model.activate(change, external=True))
+                                  if self.model.has_external_tool else None,
+                                  on_open=self.model.open_file, on_open_in_app=self.model.open_in_app,
+                                  on_reveal=self.model.reveal)
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
 
@@ -185,7 +195,7 @@ class MainWindow(tk.Frame):
         bar = tk.Frame(self, bg=C["chrome"], padx=px, pady=py)
         self.refreshed = theme.label(bar, "statusbar", bg=C["chrome"])
         self.refreshed.pack(side=tk.LEFT, padx=(0, gap))
-        theme.label(bar, "statusbar", "Dwuklik: porównanie w Beyond Compare", bg=C["chrome"]).pack(side=tk.LEFT, padx=(0, gap))
+        theme.label(bar, "statusbar", "Dwuklik: porównanie w przeglądarce", bg=C["chrome"]).pack(side=tk.LEFT, padx=(0, gap))
         kbd(bar, "⌘1", C["chrome"]).pack(side=tk.LEFT)
         theme.label(bar, "statusbar", "–", bg=C["chrome"]).pack(side=tk.LEFT)
         kbd(bar, "⌘9", C["chrome"]).pack(side=tk.LEFT)
@@ -240,9 +250,13 @@ class MainWindow(tk.Frame):
     # ---------- menu bar (DEC-VCS-083) ----------
 
     def _build_menu(self) -> None:
-        """Widok → Lista plików and Motyw diffu Markdown; on macOS the bar sits at the top of the screen."""
+        """Edycja → Szukaj w plikach, Widok → Lista plików and Motyw stron w przeglądarce; on macOS the bar
+        sits at the top of the screen."""
         top = self.winfo_toplevel()
         self.menubar = tk.Menu(top)
+        self.edit_menu = tk.Menu(self.menubar, tearoff=0)
+        self.edit_menu.add_command(label="Szukaj w plikach…", accelerator="Command-Shift-F", command=self.open_search)
+        self.menubar.add_cascade(label="Edycja", menu=self.edit_menu)
         self.view_menu = tk.Menu(self.menubar, tearoff=0)
         self.list_view_menu = tk.Menu(self.view_menu, tearoff=0)
         self.list_view = tk.StringVar(self, value=self.model.list_view)
@@ -255,7 +269,7 @@ class MainWindow(tk.Frame):
         for value, label in MARKDOWN_THEMES:
             self.theme_menu.add_radiobutton(label=label, value=value, variable=self.markdown_theme,
                                             command=self._markdown_theme_chosen)
-        self.view_menu.add_cascade(label="Motyw diffu Markdown", menu=self.theme_menu)
+        self.view_menu.add_cascade(label="Motyw stron w przeglądarce", menu=self.theme_menu)  # DEC-VCS-107
         self.menubar.add_cascade(label="Widok", menu=self.view_menu)
         top.configure(menu=self.menubar)
 
@@ -316,6 +330,44 @@ class MainWindow(tk.Frame):
             sequence = f"<Command-Key-{digit}>"
             self.shortcuts[sequence] = self._shortcut(lambda index=digit - 1: self._select_index(index))
             top.bind(sequence, self.shortcuts[sequence])
+
+    # ---------- search in files (REQ-VCS-033, DES-VCS-057) ----------
+
+    def _bind_search(self) -> None:
+        """Every key and click of the window passes the double-Shift detector; ⌘⇧F opens the window too."""
+        top = self.winfo_toplevel()
+        top.bind("<KeyPress>", lambda e: self.key_pressed(e.keysym), add="+")
+        top.bind("<KeyRelease>", lambda e: self.key_released(e.keysym), add="+")
+        top.bind("<ButtonPress>", lambda e: self.pointer_pressed(), add="+")
+        for sequence in ("<Command-Shift-F>", "<Command-Shift-f>"):
+            top.bind(sequence, lambda e: (self.open_search(), "break")[1])
+
+    def key_pressed(self, keysym: str) -> None:
+        self.double_shift.press(keysym)
+
+    def key_released(self, keysym: str) -> None:
+        self.double_shift.release(keysym)
+
+    def pointer_pressed(self) -> None:
+        self.double_shift.other()
+
+    def open_search(self) -> SearchDialog | None:
+        """The search window over the selected repository; the open one comes to the front again."""
+        if self._search is None or self.model.selected_path is None:
+            return None
+        if self.search_dialog is None:
+            self.search_dialog = SearchDialog(self, self._search, repo=self.model.selected, color_of=self._file_color,
+                                              on_close=self._search_closed)
+        else:
+            self.search_dialog.lift()
+        return self.search_dialog
+
+    def _file_color(self, path: str) -> str:
+        change = self.model.change_of(path)
+        return file_color(change) if change else C["ink"]
+
+    def _search_closed(self) -> None:
+        self.search_dialog = None
 
     def _shortcut(self, action):
         def handler(_event=None):
