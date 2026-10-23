@@ -216,3 +216,23 @@ def test_req_vcs_031_changed_words_are_underlined_not_filled():
     assert "ins code { box-shadow:0 0 0 1.5px var(--add); } del code { box-shadow:0 0 0 1.5px var(--del); }" in css
     assert "ins a, del a { text-decoration:none; }" in css  # the change line stands in for the link underline
     assert "--add-word" not in css and "--del-word" not in css  # no word fill any more
+
+
+# ---------- <br> (DEC-VCS-088) ----------
+
+def test_req_vcs_031_br_breaks_a_line_in_tables_and_text():
+    body = rendered(page("x\n", "| Treść |\n|---|\n| linia 1<br>linia 2 |\n\ntekst<br/>dalej<BR />koniec\n"))
+    assert "linia 1<br />" in body and "linia 2" in body and "&lt;br" not in body.split("<pre")[0]
+    assert "tekst<br />" in body and "dalej<br />" in body
+
+
+def test_req_vcs_031_br_stays_literal_in_code_and_other_tags_stay_text():
+    body = rendered(page("x\n", "W kodzie `a<br>b`.\n\n```\nc<br>d\n```\n\n<b>gruby</b> i <br onclick=\"x\">\n"))
+    assert "<code>a&lt;br&gt;b</code>" in body and "c&lt;br&gt;d" in body
+    assert "&lt;b&gt;gruby&lt;/b&gt;" in body and "&lt;br onclick=" in body and "onclick=\"x\">" not in body
+
+
+def test_req_vcs_031_br_lines_are_compared_like_words():
+    body = rendered(page("| A |\n|---|\n| D1. stara<br>D2. bez zmian |\n", "| A |\n|---|\n| D1. nowa<br>D2. bez zmian |\n"))
+    assert "<del>stara</del>" in body and "<ins>nowa</ins>" in body and "<br />" in body
+    assert not any(ch in body for ch in "\ue000\ue001\ue002\ue003")

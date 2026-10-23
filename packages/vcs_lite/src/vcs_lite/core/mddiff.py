@@ -5,7 +5,7 @@ list), table row, code block, front matter or rule. Blocks are equal when their 
 whitespace, so re-wrapped lines are not a change. Inside a changed stretch, blocks of the same kind are paired
 by similarity; changed words are wrapped in private-use sentinels that the page renderer turns into <ins>/<del>.
 
-Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-081
+Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-081, DEC-VCS-088
 """
 
 from __future__ import annotations
@@ -21,13 +21,27 @@ from markdown_it import MarkdownIt
 INS_START, INS_END, DEL_START, DEL_END = "", "", "", ""
 
 # Words for the inline diff: links, images and code spans stay whole (a mark inside them would break them);
-# punctuation stands apart, so "robocza." → "ostateczna." changes one word.
-WORD = re.compile(r"\s*(?:!?\[[^\]]*\]\([^)]*\)|`[^`]*`|[^\s.,;:!?]+|[.,;:!?]+)")
+# punctuation and <br> stand apart, so "robocza." → "ostateczna." and "stara<br>D2" → "nowa<br>D2" change one word.
+WORD = re.compile(r"\s*(?:!?\[[^\]]*\]\([^)]*\)|`[^`]*`|<br\s*/?>|[^\s.,;:!?<]+|<|[.,;:!?]+)", re.IGNORECASE)
+BR_TAG = re.compile(r"<br\s*/?>", re.IGNORECASE)
 TASK = re.compile(r"^\[([ xX])\](?=\s)")
 PAIRING = 0.5            # blocks this similar are one changed block, not a removal and an addition
 PAIRING_LIMIT = 4000     # old × new blocks in one changed stretch; above it everything is removed and added
 
+def _line_break_tag(state, silent: bool) -> bool:
+    """<br> is the one HTML tag kept: Markdown has no other line break inside a table cell (DEC-VCS-088).
+    As a parser rule, it stays literal inside code; any other tag stays text (`html` is off)."""
+    match = BR_TAG.match(state.src, state.pos) if state.src[state.pos] == "<" else None
+    if not match:
+        return False
+    if not silent:
+        state.push("hardbreak", "br", 0)
+    state.pos = match.end()
+    return True
+
+
 MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable("table").enable("strikethrough")
+MARKDOWN.inline.ruler.before("html_inline", "line_break_tag", _line_break_tag)
 
 
 class State(Enum):
