@@ -33,14 +33,14 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then "app.py" jest w grupie Changes
     And grupa Staged nie zawiera "app.py"
 
-  @AT_VCS_004 @confirmed @UC_VCS_03 @REQ_VCS_003 @REQ_VCS_023 @DEC_VCS_035 @VER_VCS_011
-  Scenario: Zewnętrzne narzędzie dostaje strony zgodne z grupą pliku
+  @AT_VCS_004 @confirmed @UC_VCS_03 @REQ_VCS_003 @REQ_VCS_023 @DEC_VCS_102 @VER_VCS_011
+  Scenario: Strona diffu dostaje strony zgodne z grupą pliku
     Given "app.py" ma w indeksie linię "return x * 3" zamiast "return x * 2" z HEAD
     And kopia robocza "app.py" ma dodatkowo linię "# todo"
     When użytkownik otwiera porównanie "app.py" z grupy Staged
-    Then narzędzie diffu dostaje po lewej treść z HEAD, a po prawej treść z indeksu
+    Then strona diffu w przeglądarce dostaje po lewej treść z HEAD, a po prawej treść z indeksu
     When użytkownik otwiera porównanie "app.py" z grupy Changes
-    Then narzędzie diffu dostaje po lewej treść z indeksu, a po prawej plik z kopii roboczej
+    Then strona diffu dostaje po lewej treść z indeksu, a po prawej plik z kopii roboczej
 
   @AT_VCS_005 @confirmed @UC_VCS_02 @REQ_VCS_003 @DEC_VCS_006 @VER_VCS_001
   Scenario: Pliki w nowym katalogu są pokazane pojedynczo
@@ -56,12 +56,12 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then żadna grupa nie zawiera "debug.log"
 
   # Uśpione w v1: DEC-VCS-044.
-  @AT_VCS_007 @dormant @UC_VCS_03 @REQ_VCS_007 @VER_VCS_001
+  @AT_VCS_007 @confirmed @UC_VCS_03 @REQ_VCS_007 @DEC_VCS_105 @VER_VCS_011
   Scenario: Plik binarny nie ma diffu, ale można go stage'ować
-    Given nieśledzony plik "logo.png" ma zawartość binarną
-    When użytkownik wybiera "logo.png"
-    Then zamiast diffu widoczny jest komunikat o pliku binarnym
-    And akcja Stage dla "logo.png" jest dostępna
+    Given nieśledzony plik "dane.bin" ma zawartość binarną
+    When użytkownik klika dwukrotnie "dane.bin"
+    Then strona w przeglądarce pokazuje „Brak podglądu zmian” i rozmiar pliku
+    And akcja Stage dla "dane.bin" jest dostępna
 
   @AT_VCS_008 @confirmed @UC_VCS_04 @REQ_VCS_005 @VER_VCS_002
   Scenario: Stage zapisuje w indeksie cały plik
@@ -202,32 +202,35 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And użytkownik wybiera "alpha"
     Then pole wiadomości jest puste
 
-  @AT_VCS_025 @confirmed @UC_VCS_03 @REQ_VCS_023 @VER_VCS_011
-  Scenario: Brak narzędzia diffu kończy się komunikatem
-    Given polecenie narzędzia diffu w ustawieniach wskazuje nieistniejący plik
-    When użytkownik otwiera porównanie "app.py" z grupy Changes
+  @AT_VCS_025 @confirmed @UC_VCS_03 @REQ_VCS_023 @DEC_VCS_106 @VER_VCS_011
+  Scenario: Brak narzędzia zewnętrznego kończy się komunikatem
+    Given polecenie "external_diff_tool" w ustawieniach wskazuje nieistniejący plik
+    When użytkownik wybiera z menu kontekstowego „Porównaj w narzędziu zewnętrznym” dla "app.py"
     Then widoczny jest komunikat zawierający ścieżkę polecenia
     And narzędzie działa dalej
 
-  @AT_VCS_026 @confirmed @REQ_VCS_023 @DEC_VCS_024 @VER_VCS_011
-  Scenario: Narzędzie diffu da się podmienić w ustawieniach
-    Given polecenie narzędzia diffu w ustawieniach to ["/usr/local/bin/inny-diff", "{left}", "{right}"]
-    When użytkownik otwiera porównanie "app.py" z grupy Changes
+  @AT_VCS_026 @confirmed @REQ_VCS_023 @DEC_VCS_106 @VER_VCS_011
+  Scenario: Narzędzie zewnętrzne podłącza się wpisem w ustawieniach
+    Given ustawienia nie mają "external_diff_tool"
+    Then menu kontekstowe "app.py" nie ma pozycji „Porównaj w narzędziu zewnętrznym”
+    Given polecenie "external_diff_tool" w ustawieniach to ["/usr/local/bin/inny-diff", "{left}", "{right}"]
+    When użytkownik wybiera z menu kontekstowego „Porównaj w narzędziu zewnętrznym” dla "app.py"
     Then uruchomione zostaje "/usr/local/bin/inny-diff" ze ścieżkami obu stron
+    And dwuklik na "app.py" nadal otwiera diff w przeglądarce
 
   @AT_VCS_027 @confirmed @UC_VCS_03 @REQ_VCS_023 @REQ_VCS_017 @VER_VCS_011
-  Scenario: Pliki tymczasowe znikają po zamknięciu narzędzia diffu
+  Scenario: Pliki tymczasowe znikają po zapisaniu strony diffu
     Given użytkownik otworzył porównanie "app.py" z grupy Staged
-    When okno narzędzia diffu zostaje zamknięte
+    When proces strony diffu się kończy
     Then pliki tymczasowe obu stron nie istnieją
     And repozytorium zostało odświeżone
 
-  @AT_VCS_028 @confirmed @UC_VCS_03 @REQ_VCS_023 @DEC_VCS_039 @VER_VCS_011
-  Scenario: Zmiana kopii roboczej w narzędziu diffu jest widoczna po zamknięciu
-    Given "app.py" jest w grupie Changes
-    And użytkownik otworzył porównanie "app.py" z grupy Changes
-    When narzędzie diffu zapisuje w kopii roboczej "app.py" linię "# poprawka"
-    And okno narzędzia diffu zostaje zamknięte
+  @AT_VCS_028 @confirmed @UC_VCS_03 @REQ_VCS_023 @DEC_VCS_106 @VER_VCS_011
+  Scenario: Zmiana kopii roboczej w narzędziu zewnętrznym jest widoczna po zamknięciu
+    Given "app.py" jest w grupie Changes, a ustawienia mają "external_diff_tool"
+    And użytkownik otworzył „Porównaj w narzędziu zewnętrznym” dla "app.py"
+    When narzędzie zapisuje w kopii roboczej "app.py" linię "# poprawka"
+    And okno narzędzia zostaje zamknięte
     Then plik "app.py" na dysku zawiera linię "# poprawka"
     And repozytorium zostało odświeżone
 
@@ -323,16 +326,16 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And grupa Unversioned zawiera ".gitignore" i "u3.txt", a nie zawiera "u1.txt" ani "u2.txt"
     And zaznaczony jest "u3.txt"
 
-  @AT_VCS_039 @confirmed @UC_VCS_03 @REQ_VCS_031 @DEC_VCS_080 @VER_VCS_016
-  Scenario: Dwuklik na pliku .md otwiera wyrenderowany diff, a źródło jest w Beyond Compare
-    Given plik "README.md" ma w kopii roboczej nowy akapit
+  @AT_VCS_039 @confirmed @UC_VCS_03 @REQ_VCS_031 @REQ_VCS_023 @DEC_VCS_102 @VER_VCS_016
+  Scenario: Dwuklik na .md otwiera wyrenderowany diff, a na innym pliku tekstowym diff lewo–prawo
+    Given plik "README.md" ma w kopii roboczej nowy akapit, a "app.py" jest nowy
     When użytkownik klika dwukrotnie "README.md"
     Then otwiera się wyrenderowany diff "README.md" z tytułem "README.md (kopia robocza)"
-    When użytkownik wybiera z menu kontekstowego „Porównaj źródło”
-    Then ten sam plik otwiera się w Beyond Compare
-    And dwuklik na pliku innym niż .md nadal otwiera Beyond Compare
+    And menu kontekstowe "README.md" nie ma pozycji „Porównaj źródło”
+    When użytkownik klika dwukrotnie "app.py"
+    Then otwiera się diff lewo–prawo "app.py" w przeglądarce
 
-  @AT_VCS_040 @confirmed @UC_VCS_02 @REQ_VCS_032 @DEC_VCS_089 @VER_VCS_015
+  @AT_VCS_040 @confirmed @UC_VCS_02 @REQ_VCS_032 @DEC_VCS_089 @DEC_VCS_098 @VER_VCS_015
   Scenario: Widok Projekt pokazuje też pliki bez zmian i otwiera je
     Given repozytorium "alpha" śledzi "docs/plan.md" i "src/app.py" bez zmian oraz ma zmieniony "README.md"
     When użytkownik wybiera widok „Projekt”
@@ -341,4 +344,65 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik rozwija "docs" i klika dwukrotnie "plan.md"
     Then otwiera się wyrenderowany dokument "plan.md" w trybie czytania
     When użytkownik rozwija "src" i klika dwukrotnie "app.py"
-    Then "src/app.py" otwiera się w domyślnej aplikacji macOS
+    Then "src/app.py" otwiera się w przeglądarce jako strona tekstowa z numerami linii
+
+  @AT_VCS_041 @confirmed @UC_VCS_08 @REQ_VCS_033 @DEC_VCS_093 @VER_VCS_017
+  Scenario: Szukanie całego słowa z polskimi literami i maską plików
+    Given repozytorium "alpha" śledzi "notatki.md" z linią "Żółw idzie w las" i "src/app.py" z linią "w = 1"
+    When użytkownik szuka "w" z opcją „całe słowo” i maską "md"
+    Then jedynym trafieniem jest "notatki.md", linia 1, z podświetlonym samym "w" przed "las"
+    When użytkownik czyści maskę
+    Then trafieniami są "notatki.md" i "src/app.py"
+    When użytkownik szuka "ŻÓŁW" z opcją „wielkość liter”
+    Then nie ma trafień
+
+  @AT_VCS_042 @confirmed @UC_VCS_08 @REQ_VCS_033 @REQ_VCS_034 @DEC_VCS_095 @DEC_VCS_098 @VER_VCS_017
+  Scenario: Enter na trafieniu otwiera plik przy trafionej linii
+    Given okno „Szukaj w plikach” pokazuje trafienie w "docs/plan.md", linia 3, i w "src/app.py", linia 1
+    When użytkownik naciska Enter na trafieniu w "docs/plan.md"
+    Then otwiera się wyrenderowany dokument "docs/plan.md" w trybie czytania przy linii 3
+    And okno „Szukaj w plikach” się zamyka
+    When użytkownik otwiera okno ponownie i naciska Enter na trafieniu w "src/app.py"
+    Then "src/app.py" otwiera się w przeglądarce jako strona tekstowa przy linii 1
+
+  @AT_VCS_043 @confirmed @UC_VCS_08 @REQ_VCS_033 @DEC_VCS_097 @VER_VCS_017
+  Scenario: Szukanie rusza po przerwie w pisaniu, a starszy wynik jest odrzucany
+    Given okno „Szukaj w plikach” jest otwarte w repozytorium "alpha"
+    When użytkownik wpisuje "tyd", a po 100 ms "tydzień"
+    Then przez 250 ms od ostatniego znaku nic nie jest szukane
+    And potem szukane jest tylko "tydzień"
+    When wynik szukania "tyd" przychodzi po wyniku szukania "tydzień"
+    Then okno pokazuje wynik szukania "tydzień"
+    And przy ponad 500 trafieniach okno pokazuje pierwsze 500 i ostrzeżenie
+
+  @AT_VCS_044 @confirmed @UC_VCS_08 @REQ_VCS_033 @DEC_VCS_097 @VER_VCS_017
+  Scenario: Podwójny Shift otwiera okno, Shift z literą albo kliknięciem nie
+    Given w oknie głównym wybrane jest repozytorium "alpha"
+    When użytkownik naciska i puszcza Shift dwa razy w ciągu 350 ms
+    Then otwiera się okno „Szukaj w plikach — alpha” z frazą z poprzedniego otwarcia
+    When użytkownik pisze wielką literę, a potem naciska i puszcza Shift raz
+    Then okno się nie otwiera
+    When użytkownik klika z Shift, a potem naciska i puszcza Shift raz
+    Then okno się nie otwiera
+
+  @AT_VCS_045 @confirmed @UC_VCS_03 @REQ_VCS_034 @DEC_VCS_100 @VER_VCS_011
+  Scenario: Typ pliku decyduje, gdzie się otwiera
+    Given repozytorium "alpha" ma zmieniony "logo.png", w Staged nową wersję "ikona.png", nieśledzony "opis.pdf", niezmienione "notatki.txt" i "archiwum.zip"
+    When użytkownik klika dwukrotnie "logo.png" w grupie Changes
+    Then plik "logo.png" z kopii roboczej otwiera się w domyślnej przeglądarce
+    When użytkownik klika dwukrotnie "ikona.png" w grupie Staged
+    Then w domyślnej przeglądarce otwiera się kopia "ikona.png" z indeksu
+    When użytkownik klika dwukrotnie "opis.pdf" w grupie Unversioned
+    Then plik "opis.pdf" otwiera się w domyślnej przeglądarce
+    When użytkownik w drzewie PROJEKT klika dwukrotnie "notatki.txt", a potem "archiwum.zip"
+    Then "notatki.txt" otwiera się jako strona tekstowa, a "archiwum.zip" w domyślnej aplikacji
+    When użytkownik wybiera z menu kontekstowego „Otwórz w aplikacji” dla "logo.png"
+    Then "logo.png" otwiera się w domyślnej aplikacji macOS
+
+  @AT_VCS_046 @confirmed @UC_VCS_03 @REQ_VCS_023 @DEC_VCS_103 @VER_VCS_011
+  Scenario: Diff lewo–prawo pokazuje zmienione linie obok siebie
+    Given w "app.py" linia 2 zmienia "return x * 2" na "return x * 3", linia 30 jest usunięta, a reszta z 60 linii jest bez zmian
+    When użytkownik otwiera porównanie "app.py" z grupy Changes
+    Then strona ma po lewej i po prawej numery linii, a wiersz linii 2 ma podkreślone "2" po lewej i "3" po prawej
+    And wiersz linii 30 ma po prawej stronie zakreskowane pole
+    And niezmienione linie dalej niż 3 od zmiany są zwinięte z liczbą linii

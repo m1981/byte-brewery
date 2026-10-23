@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · Szukaj w plikach</title>
+<style>
+  /* Tokens of E-01.html and E-01-lista.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --chrome: #ececee; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73; --accent: #0a66d8;
+    --accent-soft: #e3eefc; --hover: #f5f7fb; --conf: #c2302a;
+    --file-mod: #002daa; --file-add: #0c7216;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --hit: #fde68a;            /* NEW: matched text background */
+    --toggle-on: #dbe8fb;      /* NEW: option toggle switched on */
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px 16px 48px; }
+  .page { max-width: 1080px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 92ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .rec { font: 600 11px var(--font); color: #fff; background: var(--accent); border-radius: 999px; padding: 1px 8px; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 92ch; }
+
+  .win { background: var(--bg); border-radius: 12px; overflow: hidden; max-width: 720px;
+         box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 38px; background: var(--chrome); display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .title { flex: 1; text-align: center; font-weight: 600; color: #4a4a50; margin-right: 52px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* NEW: search bar */
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fafafb; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .field { flex: 1 1 260px; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 8px; border: 1px solid #c9c9cf;
+           border-radius: 6px; background: #fff; box-shadow: 0 0 0 3px rgba(10,102,216,.25); border-color: var(--accent); min-width: 0; }
+  .field .glass { color: var(--dim); }
+  .field .text { flex: 1; white-space: nowrap; overflow: hidden; min-width: 0; }
+  .field .text.ph { color: #a0a0a6; }
+  .caret { display: inline-block; width: 1px; height: 15px; background: var(--ink); vertical-align: -3px; margin-left: 1px; }
+  .tg { font: 600 11.5px var(--font); color: #3a3a40; height: 20px; min-width: 24px; padding: 0 5px; border-radius: 5px;
+        display: inline-flex; align-items: center; justify-content: center; }
+  .tg.on { background: var(--toggle-on); color: var(--accent); box-shadow: inset 0 0 0 1px #b9d2f5; }
+  .tg.w { font-family: var(--mono); font-weight: 600; }
+  .mask { display: flex; align-items: center; gap: 6px; flex: 0 1 200px; min-width: 150px; }
+  .mask .lbl { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .mask .in { flex: 1; height: 24px; border: 1px solid #c9c9cf; border-radius: 6px; padding: 2px 8px; background: #fff; white-space: nowrap; overflow: hidden; min-width: 0; }
+  .mask .in.ph { color: #a0a0a6; }
+  .opts { display: flex; gap: 16px; width: 100%; align-items: center; flex-wrap: wrap; }
+  .cb { display: inline-flex; align-items: center; gap: 6px; }
+  .box { width: 14px; height: 14px; border-radius: 4px; border: 1px solid #b4b4ba; background: #fff; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
+  .box.on { background: var(--accent); border-color: var(--accent); }
+
+  /* NEW: result list */
+  .list { height: 288px; overflow: hidden; padding: 4px 0; }
+  .row { height: 24px; display: flex; align-items: center; gap: 12px; padding: 0 16px; white-space: nowrap; }
+  .row.sel { background: var(--accent-soft); }
+  .row.hov { background: var(--hover); }
+  .row .line { flex: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .row .where { color: var(--dim); font-size: 12px; flex: none; }
+  .row .where b { font-weight: 400; color: var(--ink); }
+  .row .where b.mod { color: var(--file-mod); }
+  .row .where .ln { font-variant-numeric: tabular-nums; margin-left: 4px; }
+  mark { background: var(--hit); color: inherit; border-radius: 2px; padding: 0 1px; }
+  .el { color: var(--dim); }
+  .ghead { height: 24px; display: flex; align-items: center; gap: 8px; padding: 6px 16px 3px; }
+  .ghead b { font-weight: 400; } .ghead .n { color: var(--dim); font-size: 12px; }
+  .grow { height: 24px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 28px; white-space: nowrap; }
+  .grow.sel { background: var(--accent-soft); }
+  .grow .ln { width: 34px; text-align: right; color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; flex: none; }
+  .grow .line { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .center { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; }
+  .center .sym { font-size: 26px; color: #b9bac0; } .center .h { font-size: 15px; font-weight: 600; } .center .d { color: var(--dim); max-width: 46ch; }
+  .err { margin: 8px 12px 4px; border-radius: 8px; background: #fbe3e1; border-left: 3px solid var(--conf); padding: 8px 10px 8px 12px;
+         display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; }
+  .err .s { color: var(--conf); font-weight: 700; } .err .t { color: var(--conf); font-weight: 600; }
+  .err .m { grid-column: 2; font: 12px/1.45 var(--mono); } .err .x { color: var(--dim); font-size: 15px; grid-row: 1; grid-column: 3; }
+
+  /* NEW: status line */
+  .status { display: flex; gap: 14px; align-items: center; padding: 6px 14px; background: var(--chrome); border-top: 1px solid var(--line);
+            color: var(--dim); font-size: 11.5px; flex-wrap: wrap; }
+  .status .sp { flex: 1; }
+  .status .warn { color: #b4690e; }
+  kbd { font: 11px var(--mono); color: var(--ink); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 18px; }
+  .state p { margin: 8px 0 0; color: #3a3a40; font-size: 12.5px; }
+  .state .win .list { height: 120px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>vcs-lite — okno „Szukaj w plikach” (propozycja, Q-VCS-054)</h1>
+    <p class="lead">Okno modalne nad oknem głównym, otwierane podwójnym ⇧. Szuka w plikach śledzonych wybranego repo (DEC-VCS-094); całe słowo działa poprawnie dla polskich liter (DEC-VCS-093); <kbd>↩</kbd> otwiera trafienie, a <code>.md</code> przewinięty do linii (DEC-VCS-095). Do wyboru: układ A albo B. Przykładowa fraza: „tydzień próbny”.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid">P15a</span> Układ A: opcje w polu, płaska lista jak w PyCharmie <span class="rec">rekomendacja</span></h2>
+    <p class="cap">Jak „Find in Files” w PyCharmie: przełączniki <b>Aa</b> (wielkość liter) i <b>W</b> (całe słowo) w polu frazy, obok maska plików. Wiersz to linia z trafieniem, z prawej plik i numer linii; plik zmieniony w kolorze statusu jak na liście plików.</p>
+    <div class="win">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">Szukaj w plikach — byte-brewery</span></div>
+      <div class="bar">
+        <div class="field"><span class="glass">⌕</span><span class="text">tydzień próbny<span class="caret"></span></span><span class="tg" title="Wielkość liter (⌥⌘C)">Aa</span><span class="tg w on" title="Całe słowo (⌥⌘W)">W</span></div>
+        <div class="mask"><span class="lbl">Pliki</span><span class="in">md</span></div>
+      </div>
+      <div class="list">
+        <div class="row sel"><span class="line"><span class="el">…</span>Wykonanie od razu, bez czekania na <mark>tydzień próbny</mark> (zmienia termin z DEC-VCS-080); zgoda na…</span><span class="where"><b class="mod">SPEC.md</b> packages/vcs_lite/docs<span class="ln">129</span></span></div>
+        <div class="row hov"><span class="line">| DEC-VCS-096 | <mark>Tydzień próbny</mark> (DoD) zakończony; punkt DoD „przez tydzień zastępuje PyCharm” uznany…</span><span class="where"><b class="mod">SPEC.md</b> packages/vcs_lite/docs<span class="ln">144</span></span></div>
+        <div class="row"><span class="line">4. <mark>Tydzień próbny</mark> (DoD) zakończony, DEC-VCS-096.</span><span class="where"><b class="mod">SPEC.md</b> packages/vcs_lite/docs<span class="ln">515</span></span></div>
+      </div>
+      <div class="status"><span>3 trafienia w 1 pliku</span><span class="sp"></span><span><kbd>↑</kbd><kbd>↓</kbd> wybór</span><span><kbd>↩</kbd> otwórz</span><span><kbd>esc</kbd> zamknij</span></div>
+    </div>
+    <p class="cap">Prawdziwe trafienia w byte-brewery. Pierwszy wiersz to długa linia tabeli: pokazana w okolicy trafienia, z „…”. Nieśledzone <code>PROMPT-STARTOWY.md</code> i <code>RETROSPEKTYWA.md</code> nie są przeszukiwane.</p>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P15b</span> Układ B: pola wyboru pod frazą, trafienia pogrupowane według plików</h2>
+    <p class="cap">Opcje jako natywne pola wyboru z podpisami, czytelne bez podpowiedzi. Nagłówek pliku z liczbą trafień, pod nim numery linii i treść; więcej miejsca na tekst linii, ale mniej trafień na ekranie.</p>
+    <div class="win">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">Szukaj w plikach — byte-brewery</span></div>
+      <div class="bar">
+        <div class="field"><span class="glass">⌕</span><span class="text">tydzień próbny<span class="caret"></span></span></div>
+        <div class="opts"><span class="cb"><span class="box on">✓</span>Całe słowo</span><span class="cb"><span class="box"></span>Wielkość liter</span>
+          <span class="mask"><span class="lbl">Pliki</span><span class="in">md</span></span></div>
+      </div>
+      <div class="list">
+        <div class="ghead"><b style="color:var(--file-mod)">SPEC.md</b><span class="n">packages/vcs_lite/docs · 3</span></div>
+        <div class="grow sel"><span class="ln">129</span><span class="line"><span class="el">…</span>Wykonanie od razu, bez czekania na <mark>tydzień próbny</mark> (zmienia termin z DEC-VCS-080)…</span></div>
+        <div class="grow"><span class="ln">144</span><span class="line">| DEC-VCS-096 | <mark>Tydzień próbny</mark> (DoD) zakończony; punkt DoD…</span></div>
+        <div class="grow"><span class="ln">515</span><span class="line">4. <mark>Tydzień próbny</mark> (DoD) zakończony, DEC-VCS-096.</span></div>
+      </div>
+      <div class="status"><span>3 trafienia w 1 pliku</span><span class="sp"></span><span><kbd>↑</kbd><kbd>↓</kbd> wybór</span><span><kbd>↩</kbd> otwórz</span><span><kbd>esc</kbd> zamknij</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P15c</span> Stany (pokazane w układzie A)</h2>
+    <div class="states">
+      <div class="state">
+        <div class="win"><div class="bar"><div class="field"><span class="glass">⌕</span><span class="text ph">Szukaj w byte-brewery<span class="caret"></span></span><span class="tg">Aa</span><span class="tg w">W</span></div><div class="mask"><span class="lbl">Pliki</span><span class="in ph">wszystkie</span></div></div>
+          <div class="list"><div class="center"><span class="d">Wpisz frazę. Szukam w plikach śledzonych przez git, w ich obecnej postaci na dysku.</span></div></div></div>
+        <p><b>Puste pole.</b> Pierwsze otwarcie. Maska pusta oznacza wszystkie pliki. Przy kolejnym otwarciu okno pamięta frazę, opcje i maskę do zamknięcia vcs-lite, a fraza jest zaznaczona, więc pisanie ją zastępuje.</p>
+      </div>
+      <div class="state">
+        <div class="win"><div class="bar"><div class="field"><span class="glass">⌕</span><span class="text">w<span class="caret"></span></span><span class="tg">Aa</span><span class="tg w on">W</span></div><div class="mask"><span class="lbl">Pliki</span><span class="in">md</span></div></div>
+          <div class="list">
+            <div class="row sel"><span class="line">Żółw idzie <mark>w</mark> las, a żółwie zostają.</span><span class="where"><b>notatki.md</b><span class="ln">3</span></span></div>
+            <div class="row"><span class="line">Zapis <mark>w</mark> SPEC.md przed kodem.</span><span class="where"><b>README.md</b><span class="ln">12</span></span></div>
+          </div><div class="status"><span>2 trafienia w 2 plikach</span></div></div>
+        <p><b>Całe słowo z polskimi literami.</b> „w” trafia tylko jako osobne słowo; „żółw” i „żółwie” nie są trafieniami (tu <code>git grep -w</code> by się mylił, DEC-VCS-093).</p>
+      </div>
+      <div class="state">
+        <div class="win"><div class="bar"><div class="field"><span class="glass">⌕</span><span class="text">e<span class="caret"></span></span><span class="tg">Aa</span><span class="tg w">W</span></div><div class="mask"><span class="lbl">Pliki</span><span class="in ph">wszystkie</span></div></div>
+          <div class="list">
+            <div class="row sel"><span class="line"># vcs-lit<mark>e</mark> — sp<mark>e</mark>cyfikacja funkcjonalna v1</span><span class="where"><b>SPEC.md</b> packages/vcs_lite/docs<span class="ln">1</span></span></div>
+            <div class="row"><span class="line"><span class="el">…</span>l<mark>e</mark>t a=1;function g(){r<mark>e</mark>turn n<mark>e</mark>w Promis<mark>e</mark>(<span class="el">…</span></span><span class="where"><b>app.min.js</b> static<span class="ln">1</span></span></div>
+          </div><div class="status"><span class="warn">Pokazano pierwsze 500 trafień · zawęź frazę albo maskę plików</span></div></div>
+        <p><b>Za dużo trafień.</b> Lista obcięta do 500 z ostrzeżeniem. Długa linia (np. zminifikowana) pokazana w okolicy pierwszego trafienia, z „…” po obu stronach.</p>
+      </div>
+      <div class="state">
+        <div class="win"><div class="bar"><div class="field"><span class="glass">⌕</span><span class="text">zażółć gęślą<span class="caret"></span></span><span class="tg on">Aa</span><span class="tg w">W</span></div><div class="mask"><span class="lbl">Pliki</span><span class="in">md, py</span></div></div>
+          <div class="list"><div class="center"><span class="sym">⌕</span><span class="h">Brak trafień</span><span class="d">„zażółć gęślą” w plikach *.md, *.py, z rozróżnianiem wielkości liter.</span></div></div></div>
+        <p><b>Brak trafień.</b> Opis powtarza, co było szukane, żeby od razu widać było, która opcja zawęziła wynik.</p>
+      </div>
+      <div class="state">
+        <div class="win"><div class="bar"><div class="field"><span class="glass">⌕</span><span class="text">tydzień próbn<span class="caret"></span></span><span class="tg">Aa</span><span class="tg w on">W</span></div><div class="mask"><span class="lbl">Pliki</span><span class="in">md</span></div></div>
+          <div class="list" style="opacity:.55">
+            <div class="row"><span class="line">4. <mark>Tydzień próbny</mark> (DoD) zakończony, DEC-VCS-096.</span><span class="where"><b class="mod">SPEC.md</b><span class="ln">515</span></span></div>
+          </div><div class="status"><span>Szukam…</span></div></div>
+        <p><b>W trakcie pisania.</b> Szukanie rusza 250 ms po ostatnim znaku; do tego czasu poprzednie wyniki są wyszarzone, a w linii stanu „Szukam…”. Wynik starszego zapytania jest wyrzucany.</p>
+      </div>
+      <div class="state">
+        <div class="win"><div class="bar"><div class="field"><span class="glass">⌕</span><span class="text">tydzień<span class="caret"></span></span><span class="tg">Aa</span><span class="tg w">W</span></div><div class="mask"><span class="lbl">Pliki</span><span class="in">md</span></div></div>
+          <div class="list"><div class="err"><span class="s">⚠</span><span class="t">Wyszukiwanie nie powiodło się</span><span class="x">×</span><span class="m">fatal: not a git repository (or any of the parent directories): .git</span></div></div></div>
+        <p><b>Błąd gita.</b> Ten sam pasek co P3 w oknie głównym, nad listą wyników.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Wartości i zachowanie (wspólne dla A i B)</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Wartość</th></tr>
+      <tr><td>Okno</td><td><code>tk.Toplevel</code>, <code>transient</code>, <code>grab_set</code> jak E-02; 720 × 420, wyśrodkowane nad oknem głównym w górnej jednej trzeciej; można je przesunąć i zmienić rozmiar. Tytuł „Szukaj w plikach — &lt;repo&gt;”.</td></tr>
+      <tr><td>Otwarcie</td><td>podwójny ⇧: dwa samodzielne naciśnięcia (lewy albo prawy) w ciągu 350 ms, bez innego klawisza ani kliknięcia pomiędzy; Shift-kliknięcie i wielkie litery go nie uruchamiają. Także menu Edycja → „Szukaj w plikach…” (<kbd>⌘⇧F</kbd>). Bez wybranego repo nic się nie dzieje.</td></tr>
+      <tr><td>Pasek frazy</td><td>tło <code>#fafafb</code>, padding 10 × 14; pole 28 pt, promień 6, obrys <code>#c9c9cf</code>, w fokusie <code>accent</code> z obwódką; maska plików 24 pt</td></tr>
+      <tr><td>Przełączniki (A)</td><td>„Aa” i „W” 20 × 24 pt, promień 5; włączony: tło <code>#dbe8fb</code>, tekst <code>accent</code>; podpowiedzi „Wielkość liter (⌥⌘C)”, „Całe słowo (⌥⌘W)”; <kbd>⌥⌘C</kbd> i <kbd>⌥⌘W</kbd> przełączają, nic nie wpisując (zamiast ⌥C i ⌥W: na polskiej klawiaturze ⌥C to „ć”, DEC-VCS-109)</td></tr>
+      <tr><td>Maska plików</td><td>„md, py”, „*.md; *.py” i „.md” znaczą to samo; wielkość liter bez znaczenia (<code>README.MD</code> się liczy); pusta: wszystkie pliki</td></tr>
+      <tr><td>Wiersz wyniku</td><td>24 pt jak lista plików; linia od 16 pt, 13 pt <code>ink</code>, białe znaki z początku pominięte; trafienie na tle <code>#fde68a</code> (nowy token <code>hit</code>), także na zaznaczonym wierszu (<code>accent-soft</code>); z prawej nazwa pliku (13, kolor statusu albo <code>ink</code>), folder i numer linii (12, <code>dim</code>, cyfry tabelaryczne). Ścieżka skracana w środku, linia na końcu (<code>fit_pieces</code>, <code>elide</code>).</td></tr>
+      <tr><td>Linia stanu</td><td>jak pasek stanu okna głównego: „N trafień w M plikach”, „Szukam…”, ostrzeżenie o 500 w <code>mod</code>; z prawej klawisze</td></tr>
+      <tr><td>Klawiatura</td><td>fokus zostaje w polu frazy; <kbd>↑</kbd> <kbd>↓</kbd> przesuwają zaznaczenie wyniku; <kbd>↩</kbd> albo dwuklik otwiera trafienie i zamyka okno; <kbd>esc</kbd> zamyka; <kbd>⇥</kbd> przechodzi do maski</td></tr>
+      <tr><td>Otwieranie</td><td><code>.md</code>: strona w trybie czytania przewinięta do linii, linia na chwilę podświetlona; inne: <code>open</code> (DEC-VCS-095). Błąd: pasek P3 w oknie głównym.</td></tr>
+      <tr><td>Co jest przeszukiwane</td><td>pliki śledzone, treść z dysku (zmienione w obecnej postaci); pomijane: binarne, usunięte z dysku, nieśledzone (Unversioned) i ignorowane</td></tr>
+      <tr><td>Odwzorowanie w Tk</td><td>pole frazy i maski: <code>tk.Entry</code> w ramce z obrysem; przełączniki (A): <code>tk.Canvas</code> z <code>rounded_rect</code>; pola wyboru (B): natywne <code>tk.Checkbutton</code>; lista wyników: <code>tk.Canvas</code> jak lista plików; obwódka fokusu: obrys 2 pt w <code>accent</code> (Tk nie rysuje półprzezroczystej obwódki)</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

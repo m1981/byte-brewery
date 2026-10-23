@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · diff lewo–prawo</title>
+<style>
+  /* Colours of the implemented Markdown diff page (core/mdpage.py, DEC-VCS-082); additions are marked NEW. */
+  :root {
+    --bg:#ffffff; --page:#f4f4f6; --line:#dedee3; --ink:#1d1d1f; --dim:#5f5f66; --accent:#0a66d8;
+    --add:#1a7f37; --add-soft:#ecf7ef; --del:#cf222e; --del-soft:#fdeeec; --mod:#b26a00;
+    --gutter:#f6f6f8; --filler:#f0f0f3;   /* NEW: line numbers, the empty side of an added or removed line */
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg:#1e1e21; --page:#121214; --line:#3a3a40; --ink:#e8e8ec; --dim:#a3a3ab; --accent:#3d8bfd;
+    --add:#3fb950; --add-soft:#1f4029; --del:#f85149; --del-soft:#5f2828; --mod:#e3a33b;
+    --gutter:#232327; --filler:#26262a; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--font); padding: 24px 16px 48px; }
+  .page { max-width: 1200px; margin: 0 auto; display: grid; gap: 28px; }
+  h1.t { font-size: 20px; margin: 0; } .lead { color: var(--dim); margin: 4px 0 0; max-width: 92ch; }
+  h2.sec { font-size: 16px; margin: 0 0 4px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: var(--dim); margin: 0 0 10px; max-width: 92ch; }
+  .themes { display: inline-flex; gap: 6px; } .themes button { font: inherit; padding: 3px 10px; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+
+  .card { background: var(--bg); border-radius: 10px; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .bar .f { font-weight: 650; } .bar .sides { color: var(--dim); } .spacer { flex: 1; }
+  .stats { font: 12px var(--mono); } .stats .a { color: var(--add); } .stats .d { color: var(--del); } .stats .m { color: var(--mod); }
+  .badge { font-size: 12px; color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
+
+  /* NEW: the side-by-side table */
+  table.diff { width: 100%; border-collapse: collapse; table-layout: fixed; font: 13px/1.55 var(--mono); }
+  .diff col.n { width: 52px; } .diff col.c { width: calc(50% - 52px); }
+  .diff th.side { font: 12px var(--font); color: var(--dim); text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .diff td { padding: 0 12px; vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .diff td.n { padding: 0 8px; text-align: right; color: var(--dim); background: var(--gutter); user-select: none; font-size: 12px; }
+  .diff td.c + td.n { border-left: 1px solid var(--line); }
+  .diff tr.del td.c.l, .diff tr.mod td.c.l { background: var(--del-soft); }
+  .diff tr.add td.c.r, .diff tr.mod td.c.r { background: var(--add-soft); }
+  .diff tr.del td.c.r, .diff tr.add td.c.l { background: repeating-linear-gradient(135deg, var(--filler) 0 6px, transparent 6px 12px); }
+  .diff tr.del td.n.l, .diff tr.mod td.n.l { color: var(--del); }
+  .diff tr.add td.n.r, .diff tr.mod td.n.r { color: var(--add); }
+  ins { text-decoration: underline solid var(--add) 2px; text-underline-offset: 3px; }
+  del { text-decoration: underline dotted var(--del) 2px; text-underline-offset: 3px; color: var(--dim); }
+  .diff tr.fold td { font: 12px var(--font); color: var(--dim); background: var(--gutter); border-top: 1px dashed var(--line);
+                     border-bottom: 1px dashed var(--line); padding: 3px 12px; text-align: center; }
+  .one col.c { width: calc(100% - 52px); }
+  .one tr.add td.c { background: var(--add-soft); } .one tr.add td.n { color: var(--add); }
+  .one tr.del td.c { background: var(--del-soft); } .one tr.del td.n { color: var(--del); }
+  .msg { padding: 40px 24px; text-align: center; display: grid; gap: 6px; justify-items: center; }
+  .msg .sym { font-size: 26px; color: #b9bac0; } .msg .h { font-size: 15px; font-weight: 600; } .msg .d { color: var(--dim); }
+  .msg table { border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .msg td { padding: 3px 12px; border-bottom: 1px solid var(--line); text-align: left; } .msg td + td { font-family: var(--mono); text-align: right; }
+
+  .notes { background: var(--bg); border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px var(--line); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  .notes table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  .notes th, .notes td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  .notes th { background: var(--gutter); }
+  code { font: 12px var(--mono); }
+  @media (max-width: 700px) { .diff col.n { width: 36px; } .diff td { padding: 0 6px; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1 class="t">vcs-lite — diff lewo–prawo w przeglądarce (propozycja, Q-VCS-057)</h1>
+    <p class="lead">Zastępuje Beyond Compare (DEC-VCS-102) dla plików tekstowych innych niż <code>.md</code>: ta sama strona co diff Markdown (pasek, kolory, motyw z menu Widok), w środku tabela obok siebie (DEC-VCS-103). Tylko do odczytu (DEC-VCS-104).</p>
+    <p class="lead">Podgląd motywu: <span class="themes"><button onclick="document.documentElement.dataset.theme='light'">Jasny</button><button onclick="document.documentElement.dataset.theme='dark'">Ciemny</button></span></p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid">P16a</span> Zmieniony plik (Changes: indeks → kopia robocza)</h2>
+    <p class="cap">Linia zmieniona: czerwone tło z lewej, zielone z prawej, zmienione słowa podkreślone jak w diffie Markdown (DEC-VCS-087). Linia usunięta albo dodana: druga strona zakreskowana. Po 3 linie kontekstu wokół zmian, reszta zwinięta. Długie linie są zawijane w swojej kolumnie, więc wiersze po obu stronach zostają równo.</p>
+    <div class="card">
+      <div class="bar"><span class="f">model.py</span><span class="sides">src/vcs_lite/app/model.py (indeks) → src/vcs_lite/app/model.py (kopia robocza)</span>
+        <span class="stats"><span class="a">+3</span> <span class="d">−1</span> <span class="m">~2</span></span><span class="spacer"></span></div>
+      <table class="diff">
+        <colgroup><col class="n"><col class="c"><col class="n"><col class="c"></colgroup>
+        <tr><th class="side" colspan="2">indeks</th><th class="side" colspan="2">kopia robocza</th></tr>
+        <tr class="fold"><td colspan="4">⋯ 41 niezmienionych linii</td></tr>
+        <tr><td class="n l">42</td><td class="c l">def is_markdown(path: str) -&gt; bool:</td><td class="n r">42</td><td class="c r">def is_markdown(path: str) -&gt; bool:</td></tr>
+        <tr class="mod"><td class="n l">43</td><td class="c l">    """Files opened as a rendered diff by a <del>double click</del> (REQ-VCS-031)."""</td><td class="n r">43</td><td class="c r">    """Files opened as a rendered diff by a <ins>double click or Enter</ins> (REQ-VCS-031)."""</td></tr>
+        <tr><td class="n l">44</td><td class="c l">    return Path(path).suffix.lower() == ".md"</td><td class="n r">44</td><td class="c r">    return Path(path).suffix.lower() == ".md"</td></tr>
+        <tr><td class="n l">45</td><td class="c l"></td><td class="n r">45</td><td class="c r"></td></tr>
+        <tr class="add"><td class="n l"></td><td class="c l"></td><td class="n r">46</td><td class="c r">IMAGES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}   # opened in the browser (DEC-VCS-100)</td></tr>
+        <tr class="add"><td class="n l"></td><td class="c l"></td><td class="n r">47</td><td class="c r"></td></tr>
+        <tr class="add"><td class="n l"></td><td class="c l"></td><td class="n r">48</td><td class="c r"></td></tr>
+        <tr><td class="n l">46</td><td class="c l">class RepoState(Enum):</td><td class="n r">49</td><td class="c r">class RepoState(Enum):</td></tr>
+        <tr class="fold"><td colspan="4">⋯ 118 niezmienionych linii</td></tr>
+        <tr><td class="n l">165</td><td class="c l">        self._worker = worker</td><td class="n r">168</td><td class="c r">        self._worker = worker</td></tr>
+        <tr class="del"><td class="n l">166</td><td class="c l">        self._diff_tool = diff_tool</td><td class="n r"></td><td class="c r"></td></tr>
+        <tr class="mod"><td class="n l">167</td><td class="c l">        self._confirm = <del>confirm</del></td><td class="n r">169</td><td class="c r">        self._confirm = <ins>confirm or (lambda title, message: False)</ins>   # a very long line wraps inside its own column instead of pushing the page sideways</td></tr>
+        <tr><td class="n l">168</td><td class="c l">        self._rootdir = settings.rootdir</td><td class="n r">170</td><td class="c r">        self._rootdir = settings.rootdir</td></tr>
+        <tr class="fold"><td colspan="4">⋯ 437 niezmienionych linii</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P16b</span> Nowy plik (Unversioned albo dodany w Staged)</h2>
+    <p class="cap">Nie ma lewej strony, więc jedna kolumna: wszystkie linie na zielono, z numerami. Tak samo plik usunięty: jedna kolumna na czerwono z ostatnią zapisaną wersją.</p>
+    <div class="card">
+      <div class="bar"><span class="f">search.py</span><span class="sides">src/vcs_lite/app/search.py (kopia robocza)</span><span class="badge">nowy plik</span>
+        <span class="stats"><span class="a">+5</span></span><span class="spacer"></span></div>
+      <table class="diff one">
+        <colgroup><col class="n"><col class="c"></colgroup>
+        <tr class="add"><td class="n">1</td><td class="c">"""State of the search window without Tk."""</td></tr>
+        <tr class="add"><td class="n">2</td><td class="c"></td></tr>
+        <tr class="add"><td class="n">3</td><td class="c">from __future__ import annotations</td></tr>
+        <tr class="add"><td class="n">4</td><td class="c"></td></tr>
+        <tr class="add"><td class="n">5</td><td class="c">DEBOUNCE_MS = 250   # searching starts after a pause this long in typing</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P16c</span> Plik binarny albo większy niż 2 MB (DEC-VCS-105)</h2>
+    <p class="cap">Ta sama strona, zamiast tabeli komunikat i rozmiary obu stron. Stage i unstage w oknie działają jak zawsze.</p>
+    <div class="card">
+      <div class="bar"><span class="f">dane.sqlite</span><span class="sides">dane.sqlite (indeks) → dane.sqlite (kopia robocza)</span><span class="spacer"></span></div>
+      <div class="msg"><span class="sym">⊘</span><span class="h">Brak podglądu zmian</span><span class="d">Plik binarny: vcs-lite nie pokazuje różnic w jego treści.</span>
+        <table><tr><td>indeks</td><td>1,2 MB</td></tr><tr><td>kopia robocza</td><td>1,3 MB</td></tr></table></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Wartości i zachowanie</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Wartość</th></tr>
+      <tr><td>Strona</td><td>jak diff Markdown: pasek u góry przyklejony, szerokość do 1200 pt, karta na tle <code>--page</code>, motyw z menu Widok → Motyw diffu Markdown (nazwa menu zmieni się na „Motyw stron w przeglądarce”)</td></tr>
+      <tr><td>Tabela</td><td>4 kolumny: numer (52 pt, tło <code>--gutter</code>, 12 pt <code>--dim</code>), treść; kod 13 pt o stałej szerokości, wysokość linii 1,55; nagłówki kolumn „indeks” / „kopia robocza” (strony z T-VCS-01)</td></tr>
+      <tr><td>Linie</td><td>zmieniona: lewa <code>--del-soft</code>, prawa <code>--add-soft</code>, numery w <code>--del</code> / <code>--add</code>; słowa: <code>ins</code> ciągłe 2 pt, <code>del</code> kropkowane 2 pt z tekstem <code>--dim</code>; dodana lub usunięta: druga strona w ukośne paski <code>--filler</code></td></tr>
+      <tr><td>Zwijanie</td><td>3 linie kontekstu wokół zmian; „⋯ N niezmienionych linii” na całą szerokość</td></tr>
+      <tr><td>Długie linie</td><td>zawijane w swojej kolumnie (rekomendacja); alternatywa: przewijanie każdej kolumny w poziomie</td></tr>
+      <tr><td>Nowy i usunięty plik</td><td>jedna kolumna, wszystkie linie na zielono (nowy) albo na czerwono (usunięty), znaczek „nowy plik” / „usunięty plik”</td></tr>
+      <tr><td>Bez zmian w treści</td><td>np. tylko inne końce linii: komunikat „Bez zmian w treści” jak w diffie Markdown</td></tr>
+      <tr><td>Kodowanie</td><td>UTF-8; inne bajty jako znaki zastępcze (REQ-VCS-008); nic z pliku nie wykonuje się w przeglądarce (tekst jest escapowany, CSP jak w E-03)</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

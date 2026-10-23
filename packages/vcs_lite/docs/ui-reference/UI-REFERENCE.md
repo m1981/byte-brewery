@@ -2,7 +2,7 @@
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
 
-1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); `E-01-widok.html`: przełącznik „Widok” P14 (DEC-VCS-092); `E-01-projekt.html`: drzewo PROJEKT (DEC-VCS-089); `E-03-md-diff.html`: wyrenderowany diff Markdown, wariant A bez przekreśleń (DEC-VCS-078); `E-03-podkreslenia.html`: zmienione słowa podkreśleniem, wariant U2 (DEC-VCS-087; zastępuje tło słów z E-03); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
+1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); `E-01-widok.html`: przełącznik „Widok” P14 (DEC-VCS-092); `E-01-projekt.html`: drzewo PROJEKT (DEC-VCS-089); `E-04-szukaj.html`: okno „Szukaj w plikach”, układ A (DEC-VCS-097), źródło sekcji 10; `E-05-diff.html`: diff lewo–prawo w przeglądarce (DEC-VCS-107), źródło sekcji 11; `E-03-md-diff.html`: wyrenderowany diff Markdown, wariant A bez przekreśleń (DEC-VCS-078); `E-03-podkreslenia.html`: zmienione słowa podkreśleniem, wariant U2 (DEC-VCS-087; zastępuje tło słów z E-03); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
 2. `E-01.png`: zrzut makiety wykonany przez użytkownika (1135 × 712 px); pokazuje, jak wartości wyglądają razem.
 3. Ten dokument: każda wartość wypisana jawnie, z odwzorowaniem w Tk 8.6 i listą przybliżeń.
 
@@ -134,13 +134,13 @@ Nagłówek „REPOZYTORIA”. Element repo: kropka stanu, nazwa (pogrubiona), dr
 Stopka: przycisk „⚙ Repozytoria…” otwiera Settings (E-02).
 
 ### Lista plików
-Zastąpione przez §9 (DEC-VCS-052–057). Kolejność grup: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED. Teksty podpowiedzi przy wierszu pliku: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051); CHANGES i UNVERSIONED „spacja stage · dwuklik porównaj” (P7). Słowa „spacja” i „dwuklik” w stylu `kbd`. Tło wiersza: zwykły `bg`, pod kursorem `#f5f7fb`, zaznaczony `accent-soft`; podpowiedź widoczna tylko na wierszu pod kursorem, najwyżej jedna (P12, DEC-VCS-071).
+Zastąpione przez §9 (DEC-VCS-052–057). Kolejność grup: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED. Teksty podpowiedzi przy wierszu pliku: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051); CHANGES i UNVERSIONED „spacja stage · dwuklik porównaj” (P7); dla obrazków i PDF „dwuklik pokaż” zamiast „dwuklik porównaj” (DEC-VCS-100). Słowa „spacja” i „dwuklik” w stylu `kbd`. Tło wiersza: zwykły `bg`, pod kursorem `#f5f7fb`, zaznaczony `accent-soft`; podpowiedź widoczna tylko na wierszu pod kursorem, najwyżej jedna (P12, DEC-VCS-071).
 
 ### Panel commita
 Pole wiadomości z tekstem zastępczym „Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push”. Obok, w kolumnie: przycisk główny „Commit do <repo>” i pod nim „Commit & Push”. Pod spodem linia przyczyny „ⓘ <commit_disabled_reason>”; ukryta, gdy commit jest możliwy.
 
 ### Pasek stanu
-„Odświeżono HH:MM” (czas ostatniego odświeżenia wybranego repo) · „Dwuklik: porównanie w Beyond Compare” · „⌘1–⌘9 wybór repo” (klawisze w stylu `kbd`).
+„Odświeżono HH:MM” (czas ostatniego odświeżenia wybranego repo) · „Dwuklik: porównanie w przeglądarce” · „⌘1–⌘9 wybór repo” (klawisze w stylu `kbd`).
 
 ## 5. Odwzorowanie w Tk 8.6
 
@@ -278,6 +278,38 @@ Chip „⎇ odłączony HEAD · <7 znaków commita>”. Pull nieaktywny, podpowi
 - Dwuklik na węźle albo kliknięcie strzałki: zwija i rozwija; klawisze ← i → na zaznaczonym węźle: zwija i rozwija.
 - Węzły domyślnie rozwinięte; stan zwinięcia pamiętany do zamknięcia okna.
 - Wybrany widok zapisany w ustawieniach, wspólny dla wszystkich repo (REQ-VCS-025, DEC-VCS-091).
+
+## 10. Okno „Szukaj w plikach” E-04 (DEC-VCS-097)
+
+Źródło: `E-04-szukaj.html`, układ A (P15a) i stany P15c. Układ B (P15b) odrzucony.
+
+### Nowe kolory
+
+| Nazwa | Wartość | Użycie |
+|---|---|---|
+| `hit` | `#fde68a` | tło trafienia w linii, także na zaznaczonym wierszu |
+| `toggle_on` | `#dbe8fb` | tło włączonego przełącznika „Aa” albo „W” |
+| `toggle_on_edge` | `#b9d2f5` | obrys włączonego przełącznika |
+| `placeholder` | `#a0a0a6` | tekst zastępczy pola frazy i maski |
+
+### Wymiary i teksty
+
+| Element | Wartość |
+|---|---|
+| okno | `tk.Toplevel` modalne, 720 × 420, nad oknem głównym (30 pt od góry, na środku), można przesuwać i zmieniać rozmiar; tytuł „Szukaj w plikach — <repo>” |
+| pasek frazy | tło `panel`, padding 14 × 10, odstęp 10, linia dolna 1 `line` |
+| pole frazy | wysokość 28, obrys 1 `control_border`, w fokusie 2 `accent`; „⌕” w `dim`; tekst zastępczy „Szukaj w <repo>” |
+| przełączniki | „Aa” (wielkość liter), „W” (całe słowo, mono); 24 × 20, promień 5, tekst 12 600 `chip_ink`; włączony: tło `toggle_on`, obrys `toggle_on_edge`, tekst `accent`; podpowiedzi „Wielkość liter (⌥⌘C)”, „Całe słowo (⌥⌘W)”; skróty ⌥⌘C i ⌥⌘W zamiast ⌥C i ⌥W z makiety, bo ⌥C wpisuje „ć” na polskiej klawiaturze (DEC-VCS-109) |
+| maska | etykieta „Pliki” 12 `dim`, pole 24 pt, szerokość ok. 150; tekst zastępczy „wszystkie” |
+| wiersz wyniku | 24 pt, od 16 pt; linia 13 `ink` (podczas szukania `dim`), trafienia na tle `hit`; „…” w `dim` na początku przyciętej linii; z prawej (16 pt od krawędzi): nazwa pliku 13 w kolorze statusu albo `ink`, po 8 pt folder 12 `dim` (skracany w środku), po 4 pt numer linii 12 `dim`; zaznaczony `accent_soft`, pod kursorem `row_hover` |
+| linia stanu | tło `chrome`, padding 14 × 6, tekst 12 `dim`: „N trafień w M plikach”, „Szukam…”; ostrzeżenie „Pokazano pierwsze 500 trafień · zawęź frazę albo maskę plików” w `mod`; z prawej klawisze ↑ ↓ wybór, ↩ otwórz, esc zamknij (`kbd`) |
+| puste pole | na środku listy, `dim`: „Wpisz frazę. Szukam w plikach śledzonych przez git, w ich obecnej postaci na dysku.” |
+| brak trafień | jak P5: „⌕”, „Brak trafień”, opis „„<fraza>” w plikach *.md, *.py, z rozróżnianiem wielkości liter, całe słowo.” (części tylko dla użytych opcji; bez maski „we wszystkich plikach”) |
+| błąd | pasek P3 nad listą: „Wyszukiwanie nie powiodło się” i komunikat gita |
+
+## 11. Diff lewo–prawo w przeglądarce E-05 (DEC-VCS-107)
+
+Źródło: `E-05-diff.html` (P16a, P16b, P16c) z tabelą wartości. Strona dzieli z diffem Markdown pasek, kartę, paletę jasną i ciemną (DEC-VCS-082) i motyw z menu Widok → „Motyw stron w przeglądarce”. Nowe tokeny strony: `--gutter` dla numerów linii i `--filler` dla zakreskowanej drugiej strony; wartości w makiecie i w `core/pagekit.py` (to kolory strony w przeglądarce, nie okna Tk). Kod 13 pt o stałej szerokości, wysokość linii 1,55, numery 12 pt w kolumnie 52 pt; 3 linie kontekstu; długie linie zawijane (DEC-VCS-108).
 
 ## 7. Do ustalenia (rejestr w SPEC.md)
 
