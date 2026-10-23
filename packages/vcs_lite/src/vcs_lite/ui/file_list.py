@@ -4,7 +4,7 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, T-VCS-01
+Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, DEC-VCS-076, T-VCS-01
 """
 
 from __future__ import annotations
@@ -14,10 +14,10 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from vcs_lite.app.model import AppModel, EmptyState, files_label
+from vcs_lite.app.model import AppModel, EmptyState, RepoState, files_label
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import rounded_rect
+from vcs_lite.ui.widgets import elide, elide_middle, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 
@@ -30,6 +30,7 @@ STATUS_COLORS = {"M": "file_mod", "T": "file_mod", "A": "file_add", "D": "file_d
                  "?": "file_unv"}
 
 KBD = "kbd"
+EMPTY_STAGED = [("pusto · ", None), ("spacja", KBD), (" na pliku dodaje go do commita", None)]  # P13b
 HINTS = {
     Group.CONFLICTS: [("rozwiąż w edytorze · ", None), ("spacja", KBD), (" oznacz jako rozwiązany", None)],
     Group.STAGED: [("spacja", KBD), (" unstage · ", None), ("dwuklik", KBD), (" porównaj", None)],  # DEC-VCS-051
@@ -59,6 +60,40 @@ class ListRow:
         return self.group, self.path
 
 
+@dataclass(frozen=True)
+class Advance:
+    """Where the selection goes once a space operation has finished (REQ-VCS-028)."""
+
+    repo: str
+    group: Group
+    leaving: frozenset[str]   # paths that space takes out of the group
+    after: tuple[Key, ...]    # files of the group below the row, nearest first
+    before: tuple[Key, ...]   # files of the group above the row, nearest first
+
+
+DOUBLE_CLICK_MS = 500  # a click inside a multiple selection narrows it only if no double click follows
+STAY = object()        # the planned move found nothing to do: the selection stays as it is
+
+
+def fit_pieces(pieces: list[tuple[str, str]], room: float) -> list[tuple[str, str]]:
+    """P12: the name stays whole while it fits on its own, else it ends in "…" and nothing follows;
+    the folder or old name after it is shortened in the middle, so its first and last parts stay."""
+    (name, role), *rest = pieces
+    name_width = theme.font(role).measure(name)
+    if name_width > room:
+        return [(elide(name, theme.font(role), int(room)), role)]
+    fitted, room = [(name, role)], room - name_width
+    for text, suffix_role in rest:
+        room -= S["suffix_gap"]
+        font = theme.font(suffix_role)
+        if room < font.measure("x…x"):
+            break
+        short = elide_middle(text, font, int(room))
+        fitted.append((short, suffix_role))
+        room -= font.measure(short)
+    return fitted
+
+
 def file_color(change: FileChange) -> str:
     if change.group is Group.CONFLICTS:
         return C["conf"]
@@ -79,20 +114,28 @@ def file_pieces(change: FileChange, *, folder_suffix: bool) -> list[tuple[str, s
 class FileList(tk.Frame):
     def __init__(self, master: tk.Misc, *, on_toggle: Callable[[FileChange], None],
                  on_activate: Callable[[FileChange], None], on_toggle_folder: Callable[[Group, str], None],
-                 on_empty_action: Callable[[str], None]):
+                 on_empty_action: Callable[[str], None],
+                 on_toggle_many: Callable[[Group, list[FileChange]], None] = lambda group, changes: None,
+                 on_ignore: Callable[[list[str], list[str]], None] = lambda files, folders: None):
         super().__init__(master, bg=C["bg"])
         self._on_toggle, self._on_activate = on_toggle, on_activate
         self._on_toggle_folder, self._on_empty_action = on_toggle_folder, on_empty_action
+        self._on_toggle_many, self._on_ignore = on_toggle_many, on_ignore
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self._rows: list[ListRow] = []
         self._headers: list[tuple[str, int, int]] = []   # title, count, top
+        self._placeholder_top: int | None = None          # the grey hint of an empty Staged group (P13b)
         self._empty: list[str] = []
         self._collapsed: set[Key] = set()
         self._content_height = 1
-        self.selected_key: Key | None = None
+        self.selected_key: Key | None = None     # the current row: arrows and Enter act on it
+        self.selected_keys: set[Key] = set()     # the selection (REQ-VCS-029)
+        self.anchor_key: Key | None = None       # where Shift ranges start
         self.hovered_key: Key | None = None
-        self._follow: Key | None = None  # row moved by space: follow it until it shows up in another group
+        self._narrow_after: str | None = None
+        self._shown_repo: str | None = None
+        self._advance: Advance | None = None  # planned by space, carried out once the operation is over
         self._model: AppModel | None = None
         self._empty_button: tk.Button | None = None
         self._bind()
@@ -100,13 +143,26 @@ class FileList(tk.Frame):
     def _bind(self) -> None:
         c = self.canvas
         c.bind("<Button-1>", lambda e: (c.focus_set(), self.click(e.y, e.x)))
+        for sequence, ctrl, shift in (("<Shift-Button-1>", False, True), ("<Control-Button-1>", True, False),
+                                      ("<Command-Button-1>", True, False), ("<Control-Shift-Button-1>", True, True),
+                                      ("<Command-Shift-Button-1>", True, True)):  # Ctrl and ⌘ alike (DEC-VCS-073)
+            c.bind(sequence, lambda e, a=ctrl, b=shift: (c.focus_set(), self.click(e.y, e.x, ctrl=a, shift=b)))
         c.bind("<Double-Button-1>", lambda e: self.double_click(e.y))
         c.bind("<Motion>", lambda e: self.hover(e.y))
         c.bind("<Leave>", lambda e: self.hover(-1))
         for key, action in (("<Up>", self.press_up), ("<Down>", self.press_down), ("<Left>", self.press_left),
-                            ("<Right>", self.press_right), ("<space>", self.press_space), ("<Return>", self.press_return)):
+                            ("<Right>", self.press_right), ("<space>", self.press_space), ("<Return>", self.press_return),
+                            ("<Shift-Up>", lambda: self.press_up(extend=True)),
+                            ("<Shift-Down>", lambda: self.press_down(extend=True)),
+                            ("<Control-Up>", lambda: self.move_current(-1)), ("<Command-Up>", lambda: self.move_current(-1)),
+                            ("<Control-Down>", lambda: self.move_current(+1)),
+                            ("<Command-Down>", lambda: self.move_current(+1)),
+                            ("<Control-space>", self.toggle_current), ("<Command-space>", self.toggle_current),
+                            ("<Control-a>", self.select_all), ("<Command-a>", self.select_all)):
             c.bind(key, lambda e, a=action: a())
         c.bind("<MouseWheel>", lambda e: self.scroll(e.delta))
+        for sequence in ("<Button-2>", "<Button-3>"):  # right button and two-finger click (DEC-VCS-073)
+            c.bind(sequence, lambda e: self.open_menu(e.y, e.x_root, e.y_root))
         c.bind("<Configure>", lambda e: self._model and self.render(self._model))
 
     def scroll(self, delta: int) -> None:
@@ -128,9 +184,11 @@ class FileList(tk.Frame):
     def empty_texts(self) -> list[str]:
         return list(self._empty)
 
+    def staged_placeholder(self) -> str | None:
+        return "".join(text for text, _ in EMPTY_STAGED) if self._placeholder_top is not None else None
+
     def hint_texts(self) -> list[str]:
-        shown = self._marked_keys()
-        return ["".join(t for t, _ in HINTS[r.group]) for r in self._rows if r.kind == "file" and r.key in shown]
+        return ["".join(t for t, _ in HINTS[r.group]) for r in self._rows if r.kind == "file" and r.key == self.hovered_key]
 
     def empty_action_enabled(self) -> bool:
         return self._empty_button is not None and str(self._empty_button.cget("state")) == tk.NORMAL
@@ -153,28 +211,91 @@ class FileList(tk.Frame):
         return next((r for r in self._rows if r.key == key), None)
 
     def select_key(self, key: Key | None) -> None:
-        self._follow = None
-        self.selected_key = key
+        """Only this row: selected, current and anchor."""
+        self._cancel_narrow()
+        self._advance = None  # choosing a row by hand wins over a pending move
+        self.selected_key = self.anchor_key = key
+        self.selected_keys = {key} if key is not None else set()
         self._redraw_rows()
         self._scroll_into_view()
 
-    def click(self, y: int, x: int = 0) -> None:
+    def click(self, y: int, x: int = 0, *, ctrl: bool = False, shift: bool = False) -> None:
+        """Explorer rules (REQ-VCS-029): click, Ctrl-click, Shift-click, Ctrl+Shift-click; empty space clears."""
         row = self._row_at(y)
         if not row:
+            if not ctrl and not shift:
+                self.select_key(None)
             return
-        if row.kind == "folder" and x >= self._action_left() and FOLDER_ACTIONS.get(row.group):
+        if ctrl or shift:
+            self._cancel_narrow()
+            self._advance = None
+            if shift:
+                anchor = self.anchor_key if self._row(self.anchor_key) else row.key
+                span = self._span(anchor, row.key)
+                self.selected_keys = self.selected_keys | span if ctrl else span
+                self.anchor_key = anchor
+            else:
+                self.selected_keys ^= {row.key}
+                self.anchor_key = row.key
+            self.selected_key = row.key
+            self._redraw_rows()
+        elif row.kind == "folder" and x >= self._action_left() and FOLDER_ACTIONS.get(row.group):
             self.select_key(row.key)
             self.click_action()
         elif row.kind == "folder" and row.x <= x < row.x + S["chevron_width"]:
             self._toggle_collapsed(row)
+        elif row.key in self.selected_keys and len(self.selected_keys) > 1:
+            self._narrow_later(row.key)
         else:
             self.select_key(row.key)
 
+    def _narrow_later(self, key: Key) -> None:
+        """A click inside a multiple selection: narrow to the row unless a double click follows (S-16)."""
+        self._cancel_narrow()
+        self.selected_key = self.anchor_key = key
+        self._narrow_after = self.after(DOUBLE_CLICK_MS, lambda: self.select_key(key))
+        self._redraw_rows()
+
+    def _narrow_now(self) -> None:
+        if self._narrow_after:
+            key = self.selected_key
+            self._cancel_narrow()
+            self.select_key(key)
+
+    def _cancel_narrow(self) -> None:
+        if self._narrow_after:
+            self.after_cancel(self._narrow_after)
+            self._narrow_after = None
+
+    def _span(self, first: Key, last: Key) -> set[Key]:
+        keys = [r.key for r in self._rows]
+        a, b = sorted((keys.index(first), keys.index(last)))
+        return set(keys[a:b + 1])
+
+    def move_current(self, step: int) -> None:
+        """Ctrl+↑/↓: move the current row without changing the selection."""
+        key = self._step_key(step)
+        if key is not None:
+            self.selected_key = key
+            self._redraw_rows()
+            self._scroll_into_view()
+
+    def toggle_current(self) -> None:
+        """Ctrl+space: add the current row to the selection or take it out."""
+        if self.selected_key is not None:
+            self.selected_keys ^= {self.selected_key}
+            self.anchor_key = self.selected_key
+            self._redraw_rows()
+
+    def select_all(self) -> None:
+        self.selected_keys = {r.key for r in self._rows}
+        self._redraw_rows()
+
     def click_action(self) -> None:
         row = self._action_row()
-        if row and FOLDER_ACTIONS.get(row.group):
+        if row and FOLDER_ACTIONS.get(row.group) and not self._busy():
+            self._plan_advance(row, self._folder_paths(row))
             self._on_toggle_folder(row.group, row.path)
-            self._follow = row.key
 
     def hover(self, y: int) -> None:
         row = self._row_at(y) if y >= 0 else None
@@ -184,10 +305,15 @@ class FileList(tk.Frame):
             self._redraw_rows()
 
     def double_click(self, y: int) -> None:
+        """Compare only the clicked file; a multiple selection stays (S-16)."""
         row = self._row_at(y)
         if not row:
             return
-        self.select_key(row.key)
+        self._cancel_narrow()
+        if row.key in self.selected_keys:
+            self.selected_key = row.key
+        else:
+            self.select_key(row.key)
         if row.kind == "folder":
             self._toggle_collapsed(row)
         else:
@@ -201,16 +327,119 @@ class FileList(tk.Frame):
             self._on_activate(row.change)
 
     def press_space(self) -> None:
-        row = self._row(self.selected_key)
-        if not row:
+        rows = [r for r in self._rows if r.key in self.selected_keys]
+        if not rows or self._busy():  # one operation per repository at a time (REQ-VCS-016)
             return
+        if len(rows) > 1:
+            self._toggle_selection(rows)
+            return
+        row = rows[0]
         if row.kind == "folder":
             if FOLDER_ACTIONS.get(row.group):
+                self._plan_advance(row, self._folder_paths(row))
                 self._on_toggle_folder(row.group, row.path)
-                self._follow = row.key
             return
+        self._plan_advance(row, {row.path})
         self._on_toggle(row.change)
-        self._follow = row.key
+
+    # ---------- review file by file (REQ-VCS-028) ----------
+
+    # ---------- context menu (DEC-VCS-040) ----------
+
+    def prepare_menu(self, y: int) -> list[tuple[str, bool, Callable[[], None]]]:
+        """Select as Explorer does (a row outside the selection becomes the only one) and list the entries:
+        label, enabled, command. The commands are space and Enter, so their rules apply (REQ-VCS-028)."""
+        row = self._row_at(y)
+        if not row:
+            return []
+        self._cancel_narrow()
+        if row.key in self.selected_keys:
+            self.selected_key = row.key
+            self._redraw_rows()
+        else:
+            self.select_key(row.key)
+        rows = [r for r in self._rows if r.key in self.selected_keys]
+        groups = {r.group for r in rows}
+        group = rows[0].group if len(groups) == 1 else None
+        free = not self._busy()
+        paths: set[str] = set()
+        for r in rows:
+            paths |= self._folder_paths(r) if r.kind == "folder" else {r.path}
+        count = f" ({len(paths)})" if len(paths) > 1 else ""
+        single_file = len(rows) == 1 and rows[0].kind == "file"
+        return [
+            (f"Stage{count}", free and group in (Group.CHANGES, Group.UNVERSIONED), self.press_space),
+            (f"Unstage{count}", free and group is Group.STAGED, self.press_space),
+            ("Oznacz jako rozwiązany", free and group is Group.CONFLICTS and single_file, self.press_space),
+            ("Porównaj", single_file and group is not Group.CONFLICTS, self.press_return),
+            (f"Dodaj do .gitignore{self._ignore_count(rows)}", free and group is Group.UNVERSIONED,
+             lambda: self._ignore_selection(rows)),
+        ]
+
+    @staticmethod
+    def _ignore_count(rows: list[ListRow]) -> str:
+        """Entries after merging: a selected folder covers the files below it (counted without git)."""
+        folders = [f"{r.path}/" for r in rows if r.kind == "folder"]
+        entries = len(folders) + sum(1 for r in rows if r.kind == "file" and not r.path.startswith(tuple(folders)))
+        return f" ({entries})" if entries > 1 else ""
+
+    def _ignore_selection(self, rows: list[ListRow]) -> None:
+        files = [r.path for r in rows if r.kind == "file"]
+        folders = [r.path for r in rows if r.kind == "folder"]
+        leaving = set(files)
+        for r in rows:
+            if r.kind == "folder":
+                leaving |= {c.path for c in self._model.files(r.group) if c.path.startswith(f"{r.path}/")}
+        self._plan_advance(rows[-1], leaving)
+        self._on_ignore(files, folders)
+
+    def open_menu(self, y: int, x_root: int, y_root: int) -> None:
+        entries = self.prepare_menu(y)
+        if not entries:
+            return
+        menu = tk.Menu(self, tearoff=0)
+        for label, enabled, command in entries:
+            if label.startswith("Dodaj do .gitignore"):
+                menu.add_separator()
+            menu.add_command(label=label, command=command, state=tk.NORMAL if enabled else tk.DISABLED)
+        menu.tk_popup(x_root, y_root)
+
+    def _toggle_selection(self, rows: list[ListRow]) -> None:
+        """Space on several rows of one group: one operation for all; other groups or conflicts: nothing."""
+        group = rows[0].group
+        if any(r.group is not group for r in rows) or group is Group.CONFLICTS:
+            return
+        paths: set[str] = set()
+        for r in rows:
+            paths |= self._folder_paths(r) if r.kind == "folder" else {r.path}
+        self._plan_advance(rows[-1], paths)
+        self._on_toggle_many(group, [c for c in self._model.files(group) if c.path in paths])
+
+    def _busy(self) -> bool:
+        model = self._model
+        return bool(model and model.selected and model.state(model.selected) is RepoState.BUSY)
+
+    def _folder_paths(self, row: ListRow) -> set[str]:
+        return {c.path for c in self._model.files(row.group) if c.path.rpartition("/")[0] == row.path}
+
+    def _plan_advance(self, row: ListRow, leaving: set[str]) -> None:
+        """Remember the visible files of the group around the row; set before the operation starts."""
+        index = self._rows.index(row)
+        files = [(i, r.key) for i, r in enumerate(self._rows)
+                 if r.group is row.group and r.kind == "file" and r.path not in leaving]
+        self._advance = Advance(self._model.selected, row.group, frozenset(leaving),
+                                tuple(key for i, key in files if i > index),
+                                tuple(key for i, key in reversed(files) if i < index))
+
+    def _advanced_key(self, keys: set[Key]):
+        plan = self._advance
+        if plan.leaving <= {c.path for c in self._model.files(plan.group)}:
+            return STAY  # nothing left the group: the operation failed or changed nothing
+        found = next((key for key in (*plan.after, *plan.before) if key in keys), None)
+        if found:
+            return found
+        below = GROUP_ORDER[GROUP_ORDER.index(plan.group) + 1:]
+        return next((r.key for group in below for r in self._rows if r.group is group and r.kind == "file"), None)
 
     def press_left(self) -> None:
         row = self._row(self.selected_key)
@@ -222,18 +451,33 @@ class FileList(tk.Frame):
         if row and row.kind == "folder" and row.collapsed:
             self._toggle_collapsed(row)
 
-    def press_down(self) -> None:
-        self._move(+1)
+    def press_down(self, extend: bool = False) -> None:
+        self._move(+1, extend)
 
-    def press_up(self) -> None:
-        self._move(-1)
+    def press_up(self, extend: bool = False) -> None:
+        self._move(-1, extend)
 
-    def _move(self, step: int) -> None:
+    def _step_key(self, step: int) -> Key | None:
         if not self._rows:
-            return
+            return None
         keys = [r.key for r in self._rows]
         index = keys.index(self.selected_key) + step if self.selected_key in keys else (0 if step > 0 else len(keys) - 1)
-        self.select_key(keys[max(0, min(index, len(keys) - 1))])
+        return keys[max(0, min(index, len(keys) - 1))]
+
+    def _move(self, step: int, extend: bool = False) -> None:
+        """↑/↓ select the next row only; Shift+↑/↓ select from the anchor to it (REQ-VCS-029)."""
+        key = self._step_key(step)
+        if key is None:
+            return
+        if not extend:
+            self.select_key(key)
+            return
+        anchor = self.anchor_key if self._row(self.anchor_key) else self.selected_key or key
+        self._cancel_narrow()
+        self._advance = None
+        self.selected_key, self.anchor_key, self.selected_keys = key, anchor, self._span(anchor, key)
+        self._redraw_rows()
+        self._scroll_into_view()
 
     def _toggle_collapsed(self, row: ListRow) -> None:
         self._collapsed.symmetric_difference_update({row.key})
@@ -263,18 +507,26 @@ class FileList(tk.Frame):
 
     def render(self, model: AppModel) -> None:
         self._model = model
-        self._rows, self._headers, self._empty = [], [], []
+        self._rows, self._headers, self._empty, self._placeholder_top = [], [], [], None
         y = S["files_pad_top"]
+        anything = any(model.files(group) for group in GROUP_ORDER)
         for group in GROUP_ORDER:
             changes = model.files(group)
+            if not changes and group is Group.STAGED and anything:  # P13b: what the commit takes stays in view
+                self._headers.append((group.value.upper(), 0, y))
+                self._placeholder_top = y + HEADER_HEIGHT
+                y += HEADER_HEIGHT + ROW_HEIGHT
+                continue
             if not changes:
                 continue
             self._headers.append((group.value.upper(), len(changes), y))
             y += HEADER_HEIGHT
             y = self._add_folder_rows(group, changes, y) if model.show_folders else self._add_flat_rows(changes, y)
         self._content_height = max(y, 1)
-        self._keep_selection()
+        moved = self._keep_selection()
         self._redraw_all(model)
+        if moved:
+            self._scroll_into_view()
 
     def _add_flat_rows(self, changes: list[FileChange], y: int) -> int:
         for change in changes:
@@ -305,17 +557,29 @@ class FileList(tk.Frame):
             y += ROW_HEIGHT
         return y
 
-    def _keep_selection(self) -> None:
+    def _keep_selection(self) -> bool:
+        """Drop keys that are gone; carry out a planned move once the repository is free. True if it moved."""
         keys = {r.key for r in self._rows}
-        if self._follow is not None:
-            old_group, path = self._follow
-            moved = next((r.key for r in self._rows if r.path == path and r.group is not old_group), None)
-            if moved or self._follow not in keys:  # arrived in its new group, or gone altogether
-                self.selected_key, self._follow = moved, None
+        moved = False
+        if self._model.selected != self._shown_repo:  # another repository: nothing of the old one stays chosen
+            self._shown_repo = self._model.selected
+            self._cancel_narrow()
+            self.selected_key = self.anchor_key = self._advance = None
+            self.selected_keys = set()
+        if self._advance is not None and not self._busy():
+            target, self._advance = self._advanced_key(keys), None
+            if target is not STAY:
+                self.selected_key = self.anchor_key = target
+                self.selected_keys = {target} if target is not None else set()
+                moved = True
+        self.selected_keys &= keys
         if self.selected_key not in keys:
             self.selected_key = None
+        if self.anchor_key not in keys:
+            self.anchor_key = self.selected_key
         if self.hovered_key not in keys:
             self.hovered_key = None
+        return moved
 
     # ---------- drawing ----------
 
@@ -325,9 +589,6 @@ class FileList(tk.Frame):
 
     def _action_left(self) -> int:
         return self._width() - S["row_side"] - S["folder_act"]
-
-    def _marked_keys(self) -> set[Key]:
-        return {k for k in (self.selected_key, self.hovered_key) if k is not None}
 
     def _redraw_all(self, model: AppModel) -> None:
         c = self.canvas
@@ -340,6 +601,8 @@ class FileList(tk.Frame):
             return
         for title, count, top in self._headers:
             self._draw_header(title, count, top)
+        if self._placeholder_top is not None:
+            self._draw_staged_placeholder(self._placeholder_top + ROW_HEIGHT / 2)
         self._redraw_rows()
         c.configure(scrollregion=(0, 0, self._width(), max(self._content_height, c.winfo_height())))
 
@@ -355,28 +618,50 @@ class FileList(tk.Frame):
     def _redraw_rows(self) -> None:
         c = self.canvas
         c.delete("row")
-        width, marked, action_row = self._width(), self._marked_keys(), self._action_row()
+        width, action_row = self._width(), self._action_row()
         for row in self._rows:
-            fill = C["accent_soft"] if row.key == self.selected_key else (
+            fill = C["accent_soft"] if row.key in self.selected_keys else (
                 C["row_hover"] if row.key == self.hovered_key else C["bg"])
             c.create_rectangle(0, row.top, width, row.top + row.height, fill=fill, outline="", tags=("row",))
+            if row.key == self.selected_key and row.key not in self.selected_keys:  # current, not selected
+                c.create_rectangle(0.5, row.top + 0.5, width - 0.5, row.top + row.height - 0.5, outline=C["accent"],
+                                   tags=("row", "current_ring"))
             middle = row.top + row.height / 2
             if row.kind == "folder":
                 self._draw_folder(row, middle)
                 if row is action_row and FOLDER_ACTIONS.get(row.group):
                     self._draw_action(FOLDER_ACTIONS[row.group], middle)
             else:
-                self._draw_pieces(row, row.x, middle)
-                if row.key in marked:
-                    self._draw_hint(row, width - S["row_side"], middle)
+                right = width - S["row_side"]
+                if row.key == self.hovered_key:  # P12: one hint, only on the row under the pointer
+                    right = self._draw_hint(row, right, middle) - S["hint_gap"]
+                self._draw_pieces(row, row.x, middle, right)
 
-    def _draw_pieces(self, row: ListRow, x: float, middle: float) -> None:
-        for index, (text, role) in enumerate(row.pieces):
+    def _draw_pieces(self, row: ListRow, x: float, middle: float, right: float | None = None) -> None:
+        pieces = row.pieces if right is None else fit_pieces(row.pieces, right - x)
+        for index, (text, role) in enumerate(pieces):
             if index:
                 x += S["suffix_gap"]
             color = row.color if role in ("file_name", "file_name_del") else theme.TYPE[role].color
             self.canvas.create_text(x, middle, anchor=tk.W, text=text, font=theme.font(role), fill=color, tags=("row",))
             x += theme.font(role).measure(text)
+
+    def _draw_staged_placeholder(self, middle: float) -> None:
+        """Not a row: selection, hover and keys never reach it."""
+        c, x = self.canvas, S["indent_flat"]
+        pad_x, _ = S["kbd_pad"]
+        kbd_font, hint_font = theme.font("kbd"), theme.font("hint")
+        tags = ("staged_placeholder",)
+        for text, kind in EMPTY_STAGED:
+            if kind == KBD:
+                w, h = kbd_font.measure(text) + 2 * pad_x, kbd_font.metrics("linespace") + 2
+                rounded_rect(c, x, middle - h / 2, x + w, middle + h / 2, S["kbd_radius"],
+                             fill=C["kbd_bg"], outline=C["kbd_border"], tags=tags)
+                c.create_text(x + w / 2, middle, text=text, font=kbd_font, fill=theme.TYPE["kbd"].color, tags=tags)
+            else:
+                w = hint_font.measure(text)
+                c.create_text(x, middle, anchor=tk.W, text=text, font=hint_font, fill=theme.TYPE["hint"].color, tags=tags)
+            x += w
 
     def _draw_folder(self, row: ListRow, middle: float) -> None:
         c = self.canvas
@@ -395,7 +680,8 @@ class FileList(tk.Frame):
         self.canvas.create_text(left + size / 2, middle, text=glyph, font=theme.font("folder_act"),
                                 fill=theme.TYPE["folder_act"].color, tags=("row",))
 
-    def _draw_hint(self, row: ListRow, right: float, middle: float) -> None:
+    def _draw_hint(self, row: ListRow, right: float, middle: float) -> float:
+        """Draw the hint ending at `right`; return where it starts."""
         c = self.canvas
         pad_x, _ = S["kbd_pad"]
         kbd_font, hint_font = theme.font("kbd"), theme.font("hint")
@@ -404,13 +690,15 @@ class FileList(tk.Frame):
                 w = kbd_font.measure(text) + 2 * pad_x
                 h = kbd_font.metrics("linespace") + 2
                 rounded_rect(c, right - w, middle - h / 2, right, middle + h / 2, S["kbd_radius"],
-                             fill=C["kbd_bg"], outline=C["kbd_border"], tags=("row",))
-                c.create_text(right - w / 2, middle, text=text, font=kbd_font, fill=theme.TYPE["kbd"].color, tags=("row",))
+                             fill=C["kbd_bg"], outline=C["kbd_border"], tags=("row", "hint"))
+                c.create_text(right - w / 2, middle, text=text, font=kbd_font, fill=theme.TYPE["kbd"].color,
+                              tags=("row", "hint"))
             else:
                 w = hint_font.measure(text)
                 c.create_text(right, middle, anchor=tk.E, text=text, font=hint_font,
-                              fill=theme.TYPE["hint"].color, tags=("row",))
+                              fill=theme.TYPE["hint"].color, tags=("row", "hint"))
             right -= w
+        return right
 
     def _draw_empty(self, empty: EmptyState) -> None:
         c = self.canvas

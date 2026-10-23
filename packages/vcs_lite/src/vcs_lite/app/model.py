@@ -1,6 +1,6 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
@@ -98,6 +98,7 @@ UNSTAGE = Operation("Wycofywanie ze Staged…", "Unstage nie powiódł się")
 MARK_RESOLVED = Operation("Oznaczanie jako rozwiązany…", "Oznaczenie jako rozwiązany nie powiodło się")
 COMMIT = Operation("Zapisywanie commita…", "Commit nie powiódł się")
 PUSH = Operation("Wypychanie do origin…", "Push nie powiódł się")
+IGNORE = Operation("Dodawanie do .gitignore…", "Dodanie do .gitignore nie powiodło się")
 PULL = Operation("Pobieranie zmian…", "Pull nie powiódł się")
 COMPARE_FAILED = "Porównanie nie powiodło się"
 REFRESH_FAILED = "Odświeżanie nie powiodło się"
@@ -413,13 +414,28 @@ class AppModel:
     def toggle_folder(self, group: Group, folder: str) -> None:
         """Folder button or space on a folder: stage from Changes and Unversioned, unstage from Staged
         (REQ-VCS-026); conflicts stay per file (REQ-VCS-024)."""
-        changes = [c for c in self.files(group) if c.path.rpartition("/")[0] == folder]
+        self.toggle_many(group, [c for c in self.files(group) if c.path.rpartition("/")[0] == folder])
+
+    def toggle_many(self, group: Group, changes: list[FileChange]) -> None:
+        """Several files of one group in one git call: stage from Changes and Unversioned, unstage from Staged
+        (REQ-VCS-026, REQ-VCS-029). Conflicts are marked one by one, each after its own marker check."""
         if not changes or group is Group.CONFLICTS:
             return
         view = self._current()
         repo = self._repo(view)
         operation, kind = (repo.unstage_all, UNSTAGE) if group is Group.STAGED else (repo.stage_all, STAGE)
         self._run(view, kind, lambda: operation(changes))
+
+    def add_to_gitignore(self, files: list[str], folders: list[str]) -> None:
+        """Context menu „Dodaj do .gitignore” on unversioned files and folders (REQ-VCS-030)."""
+        unversioned = [c.path for c in self.files(Group.UNVERSIONED)]
+        members = {folder: [p for p in unversioned if p.startswith(f"{folder}/")] for folder in folders}
+        files = [f for f in files if f in unversioned]
+        if not files and not members:
+            return
+        view = self._current()
+        repo = self._repo(view)
+        self._run(view, IGNORE, lambda: repo.ignore(files, members))
 
     def activate(self, change: FileChange) -> None:
         """Double click or Enter: compare the file in the external tool (DEC-VCS-040)."""

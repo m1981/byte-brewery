@@ -67,13 +67,16 @@ def test_des_vcs_045_rows_are_24_points_from_x_28(shown):
     assert (first.top, first.height, first.x) == (6 + 24, 24, 28)
 
 
-def test_des_vcs_024_hint_shows_only_on_the_selected_row(shown):
+def test_des_vcs_024_hint_shows_only_on_the_row_under_the_pointer(shown):
     window, _ = shown
-    assert window.file_list.hint_texts() == []
-    window.file_list.select_key((Group.CHANGES, "README.md"))
-    assert window.file_list.hint_texts() == ["spacja stage · dwuklik porównaj"]
-    window.file_list.select_key((Group.STAGED, "staged.py"))
-    assert window.file_list.hint_texts() == ["spacja unstage · dwuklik porównaj"]
+    fl = window.file_list
+    assert fl.hint_texts() == []
+    fl.select_key((Group.CHANGES, "README.md"))
+    assert fl.hint_texts() == []  # P12: selecting shows no hint
+    fl.hover(by_path(window, Group.STAGED, "staged.py").top + 5)
+    assert fl.hint_texts() == ["spacja unstage · dwuklik porównaj"]  # one hint, the hovered row's
+    fl.hover(-100)
+    assert fl.hint_texts() == []
 
 
 def test_des_vcs_024_hover_highlights_and_shows_the_hint(shown):
@@ -85,13 +88,13 @@ def test_des_vcs_024_hover_highlights_and_shows_the_hint(shown):
     assert window.file_list.hovered_key is None
 
 
-def test_at_vcs_029_space_stages_and_selection_follows_the_file(shown, world):
+def test_at_vcs_029_space_stages_and_selection_moves_on_in_the_group(shown, world):
     window, model = shown
     window.file_list.select_key((Group.CHANGES, "README.md"))
     window.file_list.press_space()
     world.worker.settle()
     assert "README.md" in [c.path for c in model.files(Group.STAGED)]
-    assert window.file_list.selected_key == (Group.STAGED, "README.md")
+    assert window.file_list.selected_key == (Group.CHANGES, "both.py")  # REQ-VCS-028
 
 
 def test_at_vcs_029_double_click_and_enter_open_the_compare(shown, world):
@@ -119,7 +122,7 @@ def test_des_vcs_045_conflicts_come_first_in_red(root, world):  # noqa: F811
     world.select("gamma")
     assert window.file_list.headers()[0] == ("CONFLICTS", 1)
     assert window.file_list.rows()[0].color == "#c2302a"
-    window.file_list.select_key((Group.CONFLICTS, "f.txt"))
+    window.file_list.hover(window.file_list.rows()[0].top + 5)
     assert window.file_list.hint_texts() == ["rozwiąż w edytorze · spacja oznacz jako rozwiązany"]
 
 
@@ -146,6 +149,112 @@ def test_des_vcs_043_empty_state_description_wraps_at_46_characters(root, world)
     x1, y1, x2, y2 = c.bbox(item)
     assert float(c.itemcget(item, "width")) == limit and x2 - x1 <= limit + 2
     assert y2 - y1 > 1.5 * theme.font("empty_sub").metrics("linespace")  # wrapped onto more lines
+
+
+# ---------- empty Staged (P13b, DEC-VCS-076) ----------
+
+EMPTY_STAGED = "pusto · spacja na pliku dodaje go do commita"
+
+
+@pytest.fixture
+def nothing_staged(root, world):  # noqa: F811
+    r = world.repo("alpha")
+    r.write("README.md", "changed\n"); r.write("new.txt", "n\n")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    return window, model
+
+
+def test_des_vcs_045_empty_staged_keeps_its_header_and_a_grey_hint(nothing_staged):
+    window, _ = nothing_staged
+    fl = window.file_list
+    assert fl.headers() == [("STAGED", 0), ("CHANGES", 1), ("UNVERSIONED", 1)]
+    assert fl.staged_placeholder() == EMPTY_STAGED
+    c = fl.canvas
+    texts = [i for i in c.find_withtag("staged_placeholder") if c.type(i) == "text"]
+    assert {c.itemcget(i, "fill") for i in texts if c.itemcget(i, "text") != "spacja"} == {"#6e6e73"}
+    assert min(c.coords(i)[0] for i in texts) == 28
+    first = fl.rows()[0]
+    assert first.key == (Group.CHANGES, "README.md") and first.top == 6 + 24 + 24 + 24  # header, hint, header
+
+
+def test_des_vcs_045_the_hint_row_cannot_be_selected_or_hovered(nothing_staged):
+    window, _ = nothing_staged
+    fl = window.file_list
+    fl.select_all()
+    assert all(group is not Group.STAGED for group, _ in fl.selected_keys)
+    fl.hover(6 + 24 + 5)  # over the hint
+    assert fl.hovered_key is None
+    fl.select_key((Group.CHANGES, "README.md")); fl.press_up()
+    assert fl.selected_key == (Group.CHANGES, "README.md")
+
+
+def test_des_vcs_045_folder_view_shows_the_same_hint(nothing_staged):
+    window, _ = nothing_staged
+    window.show_folders.set(True)
+    window.toggle_folders()
+    assert window.file_list.headers()[0] == ("STAGED", 0)
+    assert window.file_list.staged_placeholder() == EMPTY_STAGED
+
+
+def test_des_vcs_045_clean_repo_and_merge_without_files_keep_their_empty_states(root, world):  # noqa: F811
+    world.repo("alpha")
+    r = conflicted(world, "gamma")
+    r.write("f.txt", "main\n"); r.git("add", "f.txt")
+    model = world.start("alpha", "gamma")
+    window = MainWindow(root, model)
+    for name, head in (("alpha", "Brak zmian"), ("gamma", "Merge gotowy do commita")):
+        world.select(name)
+        assert window.file_list.headers() == [] and window.file_list.staged_placeholder() is None
+        assert head in window.file_list.empty_texts()
+
+
+# ---------- long names and paths (P12, DEC-VCS-071) ----------
+
+DEEP = "data/realizacje/2026-08-pomiar-kuchnia1/checklisty/podkatalog/jeszcze-glebiej/kolejny-poziom-katalogow/i-jeszcze"
+
+
+@pytest.fixture
+def deep(root, world):  # noqa: F811
+    a = world.repo("alpha")
+    a.write(f"{DEEP}/E4-umowa.md", "x\n")
+    a.write("sesja-01a093f4-labels-deps-export-" + "bardzo-dluga-nazwa-" * 6 + ".md", "x\n")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    return window
+
+
+def drawn(window, prefix):
+    c = window.file_list.canvas
+    return next(i for i in c.find_withtag("row") if c.type(i) == "text" and c.itemcget(i, "text").startswith(prefix))
+
+
+def test_des_vcs_024_long_folder_is_shortened_in_the_middle_16_pt_before_the_hint(deep):
+    fl = deep.file_list
+    row = by_path(deep, Group.UNVERSIONED, f"{DEEP}/E4-umowa.md")
+    fl.hover(row.top + 5)
+    c = fl.canvas
+    folder = drawn(deep, "data/")
+    text = c.itemcget(folder, "text")
+    assert "…" in text and text.startswith("data/") and text.endswith("i-jeszcze")
+    assert c.bbox(folder)[2] <= c.bbox("hint")[0] - 16 + 1
+
+
+def test_des_vcs_024_long_folder_without_a_hint_ends_16_pt_before_the_edge(deep):
+    fl = deep.file_list
+    c = fl.canvas
+    folder = drawn(deep, "data/")
+    assert "…" in c.itemcget(folder, "text") and not c.find_withtag("hint")
+    assert c.bbox(folder)[2] <= fl._width() - 16 + 1
+
+
+def test_des_vcs_024_too_long_file_name_gets_an_ellipsis_and_no_folder(deep):
+    fl = deep.file_list
+    c = fl.canvas
+    name = drawn(deep, "sesja-01a093f4")
+    assert c.itemcget(name, "text").endswith("…") and c.bbox(name)[2] <= fl._width() - 16 + 1
 
 
 # ---------- folder view ----------

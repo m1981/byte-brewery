@@ -1,6 +1,6 @@
 """Operations on one repository: status, diff sides, stage, unstage, commit, push, pull.
 
-Trace: DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
+Trace: DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-048, REQ-VCS-030, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
 """
 
 from __future__ import annotations
@@ -16,6 +16,14 @@ from vcs_lite.core.status import STATUS_ARGS, FileChange, RepoStatus, Side, pars
 # Lines that only a merge leaves behind. A bare "=======" is not one of them: Markdown uses it to
 # underline headings, and a resolved file never keeps "<<<<<<<" or ">>>>>>>" (DES-VCS-044).
 CONFLICT_MARKERS = (b"<<<<<<<", b">>>>>>>", b"|||||||")
+
+
+def ignore_pattern(path: str, *, folder: bool = False) -> str:
+    """Anchored at the repository root, so "#" and "!" never start the line; git's wildcards and
+    trailing spaces get a backslash (DES-VCS-048)."""
+    escaped = "".join("\\" + ch if ch in "\\*?[]" else ch for ch in path)
+    kept = escaped.rstrip(" ")
+    return "/" + kept + "\\ " * (len(escaped) - len(kept)) + ("/" if folder else "")
 
 
 class UnresolvedConflict(Exception):
@@ -74,6 +82,28 @@ class GitRepo:
             raise ValueError(f"{change.path}: brak stron diffu dla grupy {change.group.value}")
         left_path = change.orig_path if change.left is Side.HEAD and change.orig_path else change.path
         return self.content(change.left, left_path), self.content(change.right, change.path)
+
+    def ignore(self, files: list[str], folders: dict[str, list[str]]) -> GitResult:
+        """Append patterns to the root .gitignore (REQ-VCS-030). `folders` maps a folder to its unversioned
+        files: a folder without tracked files is ignored whole (with its subfolders), otherwise file by file."""
+        patterns, whole = [], []
+        for folder, members in folders.items():
+            if self._read("ls-files", "-z", "--", f"{folder}/").stdout:
+                patterns += [ignore_pattern(p) for p in members]
+            else:
+                patterns.append(ignore_pattern(folder, folder=True))
+                whole.append(f"{folder}/")
+        patterns += [ignore_pattern(f) for f in files if not f.startswith(tuple(whole))]
+        path = self.path / ".gitignore"
+        old = path.read_bytes() if path.exists() else b""
+        newline = b"\r\n" if b"\r\n" in old else b"\n"
+        present = {line.rstrip(b"\r") for line in old.split(b"\n")}
+        new = [p for p in dict.fromkeys(pattern.encode("utf-8") for pattern in patterns) if p not in present]
+        if new:
+            lead = newline if old and not old.endswith(b"\n") else b""
+            with path.open("ab") as out:  # fails before writing when the file is read-only
+                out.write(lead + newline.join(new) + newline)
+        return GitResult(("gitignore",), 0, b"", "")
 
     def stage(self, change: FileChange) -> GitResult:
         return self.stage_all([change])

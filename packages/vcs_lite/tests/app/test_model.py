@@ -699,3 +699,14 @@ def test_des_vcs_043_busy_label_names_the_running_operation(world, tracked):
     assert model.busy_label == "Wypychanie do origin…"
     world.worker.settle()
     assert model.busy_label is None
+
+
+def test_req_vcs_029_toggle_many_stages_or_unstages_files_of_one_group(world):
+    r = world.repo("alpha")
+    for name in ("u1.txt", "u2.txt"):
+        r.write(name, "u\n")
+    model = world.start("alpha"); world.select("alpha")
+    model.toggle_many(Group.UNVERSIONED, model.files(Group.UNVERSIONED)); world.worker.settle()
+    assert paths(model, Group.STAGED) == ["u1.txt", "u2.txt"]
+    model.toggle_many(Group.STAGED, model.files(Group.STAGED)); world.worker.settle()
+    assert paths(model, Group.UNVERSIONED) == ["u1.txt", "u2.txt"]

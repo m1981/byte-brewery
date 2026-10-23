@@ -95,7 +95,8 @@ class MainWindow(tk.Frame):
         files.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self._build_banner(files)
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
-                                  on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action)
+                                  on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action,
+                                  on_toggle_many=self.model.toggle_many, on_ignore=self.model.add_to_gitignore)
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
 

@@ -125,7 +125,7 @@ SPACE = {
     # file list (section 9)
     "group_header": (6, 15, 3),        # top, text line, bottom: 24
     "group_side": 16, "group_count_gap": 8,
-    "row_height": 24, "row_side": 16,
+    "row_height": 24, "row_side": 16, "hint_gap": 16,
     "indent_flat": 28, "indent_chevron": 28, "chevron_width": 12, "indent_icon": 46, "indent_child": 68,
     "folder_icon": (16, 13), "suffix_gap": 8,
     "folder_act": 20, "folder_act_radius": 5,
