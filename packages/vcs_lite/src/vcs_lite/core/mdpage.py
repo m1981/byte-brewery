@@ -4,7 +4,7 @@ Run as its own process, `python -m vcs_lite.core.mdpage <left> <right> <left tit
 [--no-open]`, so the window's memory stays as it is (DES-VCS-049). Raw HTML from the file is shown as text and
 the page allows no scripts but its own view toggle, so nothing from a repository runs in the browser.
 
-Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-079, DEC-VCS-081, DEC-VCS-082, DEC-VCS-084, DEC-VCS-086, DEC-VCS-087
+Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-079, DEC-VCS-081, DEC-VCS-082, DEC-VCS-084, DEC-VCS-086, DEC-VCS-087, REQ-VCS-032
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from vcs_lite.core.mddiff import (DEL_END, DEL_START, INS_END, INS_START, MARKDOWN, Block, Change, State,
-                                  diff_blocks)
+                                  diff_blocks, parse_blocks)
 
 PAGES = Path(tempfile.gettempdir()) / "vcs-lite-md"
 PAGE_LIFETIME = 24 * 3600   # older pages are removed when a new one is written
@@ -31,18 +31,20 @@ OLD_IMAGES = re.compile(r"<del>.*?</del>", re.S)
 
 
 def render_page(old_text: str, new_text: str, *, file_name: str, left_title: str, right_title: str,
-                base: Path | None = None, theme: str = "system") -> str:
-    """`theme` light or dark overrides macOS; system follows it."""
-    changes = diff_blocks(old_text, new_text)
+                base: Path | None = None, theme: str = "system", read: bool = False) -> str:
+    """`theme` light or dark overrides macOS; system follows it. `read` shows the new text as a plain
+    document: no marks, no folding, no counts (a file without changes, REQ-VCS-032)."""
+    changes = [Change(State.SAME, b) for b in parse_blocks(new_text)] if read else diff_blocks(old_text, new_text)
     counts = {state: sum(c.state is state for c in changes) for state in State}
-    body = _rendered_view(changes)
+    stats = "" if read else (f'<span class="stats"><span class="a">+{counts[State.ADD]}</span> '
+                             f'<span class="d">−{counts[State.DEL]}</span> <span class="m">~{counts[State.MOD]}</span></span>')
+    body = _rendered_view(changes, folding=not read)
     body = _labels_for_old_images(body) if base else IMAGE.sub(_image_label, body)
     base_tag = f'<base href="{html.escape(base.as_uri())}/">' if base else ""
     return TEMPLATE.format(
         theme="" if theme == "system" else f' data-theme="{theme}"',
         title=html.escape(file_name), base=base_tag, css=CSS, script=SCRIPT,
-        sides=html.escape(f"{left_title} → {right_title}"),
-        added=counts[State.ADD], removed=counts[State.DEL], changed=counts[State.MOD],
+        sides=html.escape(right_title if read else f"{left_title} → {right_title}"), stats=stats,
         body=body, source=_source_view(old_text, new_text))
 
 
@@ -78,9 +80,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--base", type=Path, help="folder pliku w kopii roboczej, z którego ładują się obrazki")
     parser.add_argument("--no-open", action="store_true", help="tylko zapisz stronę i wypisz jej ścieżkę")
     parser.add_argument("--theme", choices=("system", "light", "dark"), default="system", help="kolory strony")
+    parser.add_argument("--read", action="store_true", help="sam dokument z prawej strony, bez porównania")
     args = parser.parse_args(argv)
     page = render_page(_read(args.left), _read(args.right), file_name=args.right_title.split(" (")[0],
-                       left_title=args.left_title, right_title=args.right_title, base=args.base, theme=args.theme)
+                       left_title=args.left_title, right_title=args.right_title, base=args.base, theme=args.theme,
+                       read=args.read)
     path = write_page(page, args.right_title)
     print(path)
     if not args.no_open:
@@ -90,11 +94,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 # ---------- the rendered view ----------
 
-def _rendered_view(changes: list[Change]) -> str:
+def _rendered_view(changes: list[Change], *, folding: bool = True) -> str:
     """Consecutive rows make one table, consecutive items one list; long unchanged runs fold."""
-    if all(c.state is State.SAME for c in changes):
+    if folding and all(c.state is State.SAME for c in changes):
         return '<p class="nochange">Bez zmian w treści (np. tylko inne łamanie linii).</p>'
-    shown = _shown(changes)
+    shown = _shown(changes) if folding else set(range(len(changes)))
     out: list[str] = []
     group: tuple | None = None   # ("table", id) or ("list", ordered) while one is open
     folded = 0
@@ -301,7 +305,7 @@ TEMPLATE = """<!doctype html>
 </head>
 <body>
 <div class="bar"><span class="f">{title}</span><span class="sides">{sides}</span>
-<span class="stats"><span class="a">+{added}</span> <span class="d">−{removed}</span> <span class="m">~{changed}</span></span>
+{stats}
 <span class="spacer"></span>
 <span class="seg"><button class="on" data-view="doc">Wyrenderowany</button><button data-view="source">Źródło</button></span></div>
 <main><div class="doc">{body}</div><div class="source" hidden>{source}</div></main>

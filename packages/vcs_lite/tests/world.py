@@ -22,6 +22,8 @@ class World:
         self.worker = ManualWorker()
         self.tool = FakeDiffTool()
         self.md_tool = FakeDiffTool()  # the rendered Markdown diff (REQ-VCS-031)
+        self.md_reader = FakeDiffTool()  # a Markdown file read without changes (REQ-VCS-032)
+        self.opened: list[list[str]] = []  # commands of the macOS opener (REQ-VCS-032)
         self.questions: list[str] = []
         self.answer = True
         self.model: AppModel | None = None
@@ -41,7 +43,8 @@ class World:
         extra = {"clock": self.clock} if self.clock else {}
         if self.save_settings:
             extra["save_settings"] = self.save_settings
-        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, markdown_tool=self.md_tool, worker=self.worker,
+        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, markdown_tool=self.md_tool,
+                              markdown_reader=self.md_reader, opener=self.opened.append, worker=self.worker,
                               confirm=self._confirm, **extra)
         self.model.refresh_all()
         self.worker.settle()

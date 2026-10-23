@@ -78,7 +78,7 @@ def test_uc_vcs_01_missing_rootdir_is_reported_with_its_path(tmp_path):
 
 def test_des_vcs_019_defaults_when_no_settings_file_exists(tmp_path):
     settings = SettingsStore(tmp_path / "settings.json").load()
-    assert settings == Settings(rootdir=DEFAULT_ROOTDIR, repos=(), diff_tool=BEYOND_COMPARE, show_folders=False)
+    assert settings == Settings(rootdir=DEFAULT_ROOTDIR, repos=(), diff_tool=BEYOND_COMPARE, list_view="changes")
     assert DEFAULT_ROOTDIR == "~/PycharmProjects"
 
 
@@ -138,7 +138,7 @@ def test_req_vcs_017_saving_settings_writes_nothing_into_repositories(tmp_path, 
     assert sorted(p.name for p in repo.rglob("*")) == before
 
 
-@pytest.mark.parametrize("data", [{"repos": "alpha"}, {"rootdir": 5}, {"diff_tool": [1, 2]}, {"show_folders": "yes"}, ["not", "an", "object"]])
+@pytest.mark.parametrize("data", [{"repos": "alpha"}, {"rootdir": 5}, {"diff_tool": [1, 2]}, {"show_folders": "yes"}, {"list_view": "drzewo"}, ["not", "an", "object"]])
 def test_des_vcs_019_values_of_the_wrong_type_are_reported(tmp_path, data):
     path = tmp_path / "settings.json"
     path.write_text(json.dumps(data))
@@ -146,11 +146,19 @@ def test_des_vcs_019_values_of_the_wrong_type_are_reported(tmp_path, data):
         SettingsStore(path).load()
 
 
-def test_req_vcs_025_folder_view_choice_is_stored(tmp_path):
+def test_req_vcs_025_list_view_choice_is_stored(tmp_path):
     path = tmp_path / "settings.json"
-    SettingsStore(path).save(Settings(show_folders=True))
-    assert json.loads(path.read_text())["show_folders"] is True
-    assert SettingsStore(path).load().show_folders is True
+    SettingsStore(path).save(Settings(list_view="project"))
+    stored = json.loads(path.read_text())
+    assert stored["list_view"] == "project" and "show_folders" not in stored
+    assert SettingsStore(path).load().list_view == "project"
+
+
+def test_req_vcs_025_the_old_folder_checkbox_becomes_the_folders_view(tmp_path):
+    """DEC-VCS-091: a settings file written before the View switch keeps the user's choice."""
+    assert Settings.from_dict({"show_folders": True}).list_view == "folders"
+    assert Settings.from_dict({"show_folders": False}).list_view == "changes"
+    assert Settings.from_dict({"show_folders": True, "list_view": "project"}).list_view == "project"
 
 
 def test_req_vcs_031_markdown_theme_is_stored_and_checked():

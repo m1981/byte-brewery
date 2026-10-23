@@ -23,6 +23,7 @@ from vcs_lite.app.model import AppModel, RepoState
 from vcs_lite.app.worker import Worker
 from vcs_lite.core.gitcli import GitCli
 from vcs_lite.core.settings import Settings
+from vcs_lite.core.repo import GitRepo
 from vcs_lite.core.status import Group
 
 
@@ -645,9 +646,9 @@ def test_req_vcs_025_folder_view_choice_is_saved(world):
     settings = Settings(rootdir=str(world.root), repos=("alpha",))
     model = AppModel(settings, git=world.git, diff_tool=world.tool, worker=world.worker,
                      confirm=lambda title, message: True, save_settings=saved.append)
-    assert model.show_folders is False
-    model.show_folders = True
-    assert model.show_folders is True and saved[-1].show_folders is True and saved[-1].repos == ("alpha",)
+    assert model.list_view == "changes"
+    model.list_view = "folders"
+    assert model.list_view == "folders" and saved[-1].list_view == "folders" and saved[-1].repos == ("alpha",)
 
 
 # ---------- choosing repositories (E-02, P8, REQ-VCS-001) ----------
@@ -754,3 +755,54 @@ def test_req_vcs_031_markdown_theme_is_kept_in_the_settings(world):
     assert model.markdown_theme == "system"
     model.markdown_theme = "light"
     assert model.markdown_theme == "light" and saved[-1].markdown_theme == "light"
+
+
+# ---------- project view (REQ-VCS-032, DES-VCS-050) ----------
+
+@pytest.fixture
+def project(world):
+    r = world.repo("alpha")  # README.md committed by the world
+    r.write("docs/plan.md", "# Plan\n"); r.write("src/app.py", "x\n"); r.write("both.py", "1\n"); r.commit("files")
+    r.write("README.md", "zmiana\n")
+    r.write("both.py", "2\n"); r.git("add", "both.py"); r.write("both.py", "3\n")
+    r.write("u.txt", "u\n")
+    model = world.start("alpha"); world.select("alpha")
+    return model
+
+
+def test_req_vcs_032_project_files_join_tracked_and_unversioned_with_their_change(project, world):
+    model = project
+    model.list_view = "project"; world.worker.settle()
+    files = [(f.path, f.change.group.value if f.change else None) for f in model.project_files()]
+    assert files == [("README.md", "Changes"), ("both.py", "Changes"), ("docs/plan.md", None), ("src/app.py", None),
+                     ("u.txt", "Unversioned")]  # a file in Staged and Changes shows its working-copy change
+
+
+def test_req_vcs_032_tracked_files_are_read_only_in_the_project_view(project, world, monkeypatch):
+    model = project
+    calls = []
+    real = GitRepo.tracked_files
+    monkeypatch.setattr(GitRepo, "tracked_files", lambda self: calls.append(self.path.name) or real(self))
+    model.refresh_all(); world.worker.settle()
+    assert calls == [] and model.project_files() == []
+    model.list_view = "project"; world.worker.settle()  # switching to the view reads them at once
+    assert calls == ["alpha"] and model.project_files()
+
+
+def test_req_vcs_032_reading_opening_and_revealing_project_files(project, world):
+    model = project
+    root = world.root / "alpha"
+    model.read("docs/plan.md"); world.worker.settle()
+    assert world.md_reader.calls[0]["right"] == root / "docs" / "plan.md"
+    assert world.md_reader.calls[0]["right_title"] == "docs/plan.md (kopia robocza)"
+    model.open_file("src/app.py"); model.reveal("src/app.py"); world.worker.settle()
+    assert world.opened == [["open", str(root / "src" / "app.py")], ["open", "-R", str(root / "src" / "app.py")]]
+
+
+def test_req_vcs_032_a_failing_open_shows_the_error(project, world):
+    model = project
+    def refuse(command):
+        raise OSError("brak aplikacji do otwarcia")
+    model._opener = refuse
+    model.open_file("src/app.py"); world.worker.settle()
+    assert model.error_title == "Otwieranie nie powiodło się" and "brak aplikacji" in model.error

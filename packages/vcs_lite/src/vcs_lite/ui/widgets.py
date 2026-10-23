@@ -1,12 +1,12 @@
 """Small drawn widgets of the reference: rounded pills (chip, badge, kbd) and hover tooltips.
 
-Trace: DES-VCS-042, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071
+Trace: DES-VCS-042, DES-VCS-051, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
 """
 
 from __future__ import annotations
 
 import tkinter as tk
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from tkinter import font as tkfont
 
@@ -98,6 +98,77 @@ def kbd(parent: tk.Misc, text: str, parent_bg: str) -> Pill:
                 pad=theme.SPACE["kbd_pad"], radius=theme.SPACE["kbd_radius"], bottom_edge=1, parent_bg=parent_bg)
     pill.set(text)
     return pill
+
+
+class SegmentedControl(tk.Canvas):
+    """A macOS-style pill switch (P14, DEC-VCS-092): the chosen option is a white pill on a grey track.
+    Tk has no native segmented control, so it is drawn like the chips; the pill's shadow is a grey copy
+    one point lower, because Tk draws no blur."""
+
+    def __init__(self, parent: tk.Misc, options: Sequence[tuple[str, str]], value: str,
+                 on_change: Callable[[str], None], *, parent_bg: str):
+        height = theme.SPACE["seg_height"]
+        super().__init__(parent, bg=parent_bg, highlightthickness=0, bd=0, height=height)
+        self._choices, self._on_change = list(options), on_change  # not _options: tkinter uses that name
+        self.value, self.hovered = value, None
+        font, pad = theme.font("segment"), theme.SPACE["seg_item_pad"]
+        self._widths = [font.measure(label) + 2 * pad for _, label in self._choices]
+        self.configure(width=sum(self._widths) + 2 * theme.SPACE["seg_pad"])
+        self.bind("<Button-1>", lambda e: self.click(e.x))
+        self.bind("<Motion>", lambda e: self.hover(e.x))
+        self.bind("<Leave>", lambda e: self.hover(-1))
+        self._draw()
+
+    def set(self, value: str) -> None:
+        self.value = value
+        self._draw()
+
+    def click(self, x: int) -> None:
+        value = self._value_at(x)
+        if value is not None and value != self.value:
+            self.set(value)
+            self._on_change(value)
+
+    def hover(self, x: int) -> None:
+        value = self._value_at(x)
+        if value != self.hovered:
+            self.hovered = value
+            self._draw()
+
+    def _value_at(self, x: int) -> str | None:
+        left = theme.SPACE["seg_pad"]
+        for (value, _), width in zip(self._choices, self._widths):
+            if left <= x < left + width:
+                return value
+            left += width
+        return None
+
+    def _draw(self) -> None:
+        C, S = theme.COLORS, theme.SPACE
+        self.delete("all")
+        height, pad = S["seg_height"], S["seg_pad"]
+        width = sum(self._widths) + 2 * pad
+        rounded_rect(self, 0, 0, width - 1, height - 1, height / 2, fill=C["seg_track"], outline=C["seg_track_line"],
+                     tags=("track",))
+        lefts = [pad + sum(self._widths[:i]) for i in range(len(self._widths))]
+        chosen = [value for value, _ in self._choices].index(self.value)
+        for i, (value, _) in enumerate(self._choices):
+            if value == self.hovered and i != chosen:
+                rounded_rect(self, lefts[i], pad, lefts[i] + self._widths[i], height - pad, (height - 2 * pad) / 2,
+                             fill=C["seg_hover"], tags=("hover",))
+        left, right, top, bottom = lefts[chosen], lefts[chosen] + self._widths[chosen], pad, height - pad
+        radius = (bottom - top) / 2
+        rounded_rect(self, left, top + 1, right, bottom + 1, radius, fill=C["seg_shadow"], tags=("thumb",))
+        rounded_rect(self, left, top, right, bottom, radius, fill=C["seg_thumb"], outline=C["seg_thumb_edge"], tags=("thumb",))
+        quiet = {chosen} | {i for i, (value, _) in enumerate(self._choices) if value == self.hovered}
+        for i in range(1, len(self._choices)):
+            if i not in quiet and i - 1 not in quiet:  # a line only between two plain options
+                x, half = lefts[i], S["seg_separator"] / 2
+                self.create_line(x, height / 2 - half, x, height / 2 + half, fill=C["seg_separator"], tags=("separator",))
+        for i, (value, label) in enumerate(self._choices):
+            ink = C["ink"] if i == chosen else theme.TYPE["segment"].color
+            self.create_text(lefts[i] + self._widths[i] / 2, height / 2, text=label, font=theme.font("segment"),
+                             fill=ink, tags=("label",))
 
 
 class Tooltip:

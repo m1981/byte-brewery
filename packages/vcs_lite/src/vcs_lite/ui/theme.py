@@ -4,7 +4,7 @@ Source: docs/ui-reference/UI-REFERENCE.md (sections 1, 2, 3, 8) and E-01.html.
 Approximations allowed by section 6: sizes rounded to whole points, weights >= 550 drawn bold,
 no letter spacing, transparency replaced by computed colours.
 
-Trace: DES-VCS-042, DES-VCS-045, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068
+Trace: DES-VCS-042, DES-VCS-045, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068, DEC-VCS-089, DEC-VCS-092
 """
 
 from __future__ import annotations
@@ -41,6 +41,9 @@ COLORS = {
     "state_off": "#c7c7cc",
     "name_off": "#8e8e93",
     "conf_soft": "#fbe3e1",
+    # the View switch, P14 (DEC-VCS-092)
+    "seg_track": "#e4e4e9", "seg_track_line": "#d4d4da", "seg_thumb": "#ffffff", "seg_thumb_edge": "#cfcfd5",
+    "seg_shadow": "#d6d6db", "seg_separator": "#c3c3ca", "seg_hover": "#d9d9df", "seg_ink": "#3a3a40",
     "row_hover": "#f5f7fb",
     "kbd_bg": "#f0f0f3",
     "kbd_border": "#d5d5da",
@@ -90,6 +93,8 @@ TYPE = {
     "file_folder": Type(12, color=COLORS["dim"]),
     "folder_name": Type(13),
     "folder_count": Type(12, color=COLORS["dim"]),
+    "folder_changes": Type(12, color=COLORS["mod"]),
+    "segment": Type(12, color=COLORS["seg_ink"]),   # the View switch (DEC-VCS-092)  # changes inside a folder of the project tree (DEC-VCS-089)
     "folder_act": Type(16),
     "hint": Type(12, color=COLORS["dim"]),
     "kbd": Type(11, mono=True),
@@ -137,6 +142,7 @@ SPACE = {
     "kbd_pad": (4, 0), "kbd_radius": 4,
     "line": 1,
     # section 8
+    "seg_height": 24, "seg_pad": 2, "seg_item_pad": 12, "seg_separator": 10, "seg_label_gap": 8,
     "banner_margin": (12, 8, 4), "banner_pad": (12, 8), "banner_pad_right": 10, "banner_radius": 8, "banner_edge": 3, "banner_lines": 4,
     "busy_bar_height": 2, "busy_bar_share": 0.3, "busy_bar_period_ms": 1200,
     "empty_pad": (24, 40), "empty_gap": 6, "empty_text_width": 46,

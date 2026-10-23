@@ -130,8 +130,7 @@ def folders(root, world):  # noqa: F811
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")
-    window.show_folders.set(True)
-    window.toggle_folders()
+    window.set_list_view("folders")
     return window
 
 

@@ -1,6 +1,6 @@
 """Operations on one repository: status, diff sides, stage, unstage, commit, push, pull.
 
-Trace: DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-048, REQ-VCS-030, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
+Trace: DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-048, REQ-VCS-030, DES-VCS-050, REQ-VCS-032, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
 """
 
 from __future__ import annotations
@@ -68,6 +68,11 @@ class GitRepo:
         if dot_git.is_file():
             return self.path / dot_git.read_text(encoding="utf-8").partition("gitdir:")[2].strip()
         return dot_git
+
+    def tracked_files(self) -> list[str]:
+        """Every file in the index, as git sorts them (the project tree, DES-VCS-050)."""
+        out = self._read("ls-files", "-z").stdout
+        return [path.decode("utf-8", errors="surrogateescape") for path in out.split(b"\0") if path]
 
     def content(self, side: Side, path: str) -> Content:
         if side is Side.EMPTY:

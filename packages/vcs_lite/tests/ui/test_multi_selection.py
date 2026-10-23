@@ -109,8 +109,7 @@ def test_req_vcs_029_s09_range_takes_a_collapsed_folder_node_but_not_its_files(r
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")
-    window.show_folders.set(True)
-    window.toggle_folders()
+    window.set_list_view("folders")
     fl = window.file_list
     fl.select_key((U, "d")); fl.press_left()  # collapse the folder
     fl.click(y(window, (C, "README.md"))); fl.click(y(window, (U, "u1.txt")), shift=True)

@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-018, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, DEC-VCS-064, DEC-VCS-083, DEC-VCS-068, E-01, E-02
+Trace: DES-VCS-018, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
@@ -13,11 +13,14 @@ from vcs_lite.ui import theme
 from vcs_lite.ui.file_list import FileList
 from vcs_lite.ui.settings_dialog import RepoDialog
 from vcs_lite.ui.sidebar import RepoSidebar
-from vcs_lite.ui.widgets import Pill, Tooltip, kbd, rounded_rect
+from vcs_lite.ui.widgets import Pill, SegmentedControl, Tooltip, kbd, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 PLACEHOLDER = "Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push"
 MARKDOWN_THEMES = (("system", "Systemowy"), ("light", "Jasny"), ("dark", "Ciemny"))  # DEC-VCS-083
+LIST_VIEWS = (("changes", "Zmiany"), ("folders", "Foldery"), ("project", "Projekt"))  # DEC-VCS-091
+VIEW_TIPS = {"changes": "Tylko zmienione pliki", "folders": "Zmienione pliki pogrupowane w folderach",
+             "project": "Zmiany i wszystkie pliki projektu"}
 FOCUS_REFRESH_MS = 300  # several focus events on the way back give one refresh (DES-VCS-018)
 
 
@@ -78,11 +81,11 @@ class MainWindow(tk.Frame):
         self.refresh_button.pack(side=tk.RIGHT)
         self.pull_button = button(bar, "⇣ Pull", C["panel"], command=self.model.pull)
         self.pull_button.pack(side=tk.RIGHT, padx=(0, S["toolbar_gap"]))
-        self.show_folders = tk.BooleanVar(value=self.model.show_folders)
-        self.folders_check = tk.Checkbutton(bar, text="Pokaż foldery", variable=self.show_folders,
-                                            command=self.toggle_folders, bg=C["panel"], highlightbackground=C["panel"],
-                                            font=theme.font("body"), fg=C["ink"])  # native checkbox (DEC-VCS-055)
-        self.folders_check.pack(side=tk.RIGHT, padx=(0, S["toolbar_gap"]))
+        self.view_switch = SegmentedControl(bar, LIST_VIEWS, self.model.list_view, self.set_list_view, parent_bg=C["panel"])
+        self.view_switch.pack(side=tk.RIGHT, padx=(0, S["toolbar_gap"]))
+        self.view_label = theme.label(bar, "busy_text", "Widok", bg=C["panel"])
+        self.view_label.pack(side=tk.RIGHT, padx=(0, S["seg_label_gap"]))
+        Tooltip(self.view_switch, self.view_tip)
         Tooltip(self.pull_button, lambda: self.model.pull_disabled_reason)
         return bar
 
@@ -99,7 +102,8 @@ class MainWindow(tk.Frame):
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
                                   on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action,
                                   on_toggle_many=self.model.toggle_many, on_ignore=self.model.add_to_gitignore,
-                                  on_compare_source=lambda change: self.model.activate(change, source=True))
+                                  on_compare_source=lambda change: self.model.activate(change, source=True),
+                                  on_read=self.model.read, on_open=self.model.open_file, on_reveal=self.model.reveal)
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
 
@@ -236,10 +240,16 @@ class MainWindow(tk.Frame):
     # ---------- menu bar (DEC-VCS-083) ----------
 
     def _build_menu(self) -> None:
-        """Widok → Motyw diffu Markdown; on macOS the bar sits at the top of the screen."""
+        """Widok → Lista plików and Motyw diffu Markdown; on macOS the bar sits at the top of the screen."""
         top = self.winfo_toplevel()
         self.menubar = tk.Menu(top)
         self.view_menu = tk.Menu(self.menubar, tearoff=0)
+        self.list_view_menu = tk.Menu(self.view_menu, tearoff=0)
+        self.list_view = tk.StringVar(self, value=self.model.list_view)
+        for value, label in LIST_VIEWS:
+            self.list_view_menu.add_radiobutton(label=label, value=value, variable=self.list_view,
+                                                command=lambda: self.set_list_view(self.list_view.get()))
+        self.view_menu.add_cascade(label="Lista plików", menu=self.list_view_menu)
         self.theme_menu = tk.Menu(self.view_menu, tearoff=0)
         self.markdown_theme = tk.StringVar(self, value=self.model.markdown_theme)
         for value, label in MARKDOWN_THEMES:
@@ -284,8 +294,14 @@ class MainWindow(tk.Frame):
     def focus_refresh_pending(self) -> bool:
         return self._focus_after is not None
 
-    def toggle_folders(self) -> None:
-        self.model.show_folders = self.show_folders.get()
+    def set_list_view(self, value: str) -> None:
+        """The View switch and the View menu: changes, folders or project (REQ-VCS-025, DEC-VCS-091)."""
+        self.model.list_view = value
+        self.view_switch.set(value)
+        self.list_view.set(value)
+
+    def view_tip(self) -> str | None:
+        return VIEW_TIPS.get(self.view_switch.hovered)
 
     def _bind_shortcuts(self) -> None:
         """⌘↩ commit, ⌘⇧↩ commit and push, ⌘1–⌘9 repository (REQ-VCS-022). The message field gets its own

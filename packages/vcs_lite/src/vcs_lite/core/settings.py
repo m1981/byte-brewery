@@ -1,6 +1,6 @@
 """Which repositories are watched: scanning rootdir and persisting the choice.
 
-Trace: DES-VCS-019, DES-VCS-049, REQ-VCS-031, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
+Trace: DES-VCS-019, DES-VCS-049, REQ-VCS-031, DEC-VCS-091, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from vcs_lite.core.difftool import BEYOND_COMPARE
 
 DEFAULT_ROOTDIR = "~/PycharmProjects"
 MARKDOWN_THEMES = ("system", "light", "dark")  # the rendered Markdown diff page (REQ-VCS-031)
+LIST_VIEWS = ("changes", "folders", "project")  # the View switch (REQ-VCS-025, DEC-VCS-091)
 
 
 def default_settings_path() -> Path:
@@ -37,7 +38,7 @@ class Settings:
     rootdir: str = DEFAULT_ROOTDIR
     repos: tuple[str, ...] = ()
     diff_tool: tuple[str, ...] = BEYOND_COMPARE
-    show_folders: bool = False
+    list_view: str = "changes"
     markdown_theme: str = "system"
 
     @property
@@ -49,7 +50,7 @@ class Settings:
 
     def to_dict(self) -> dict[str, Any]:
         return {"rootdir": self.rootdir, "repos": list(self.repos), "diff_tool": list(self.diff_tool),
-                "show_folders": self.show_folders, "markdown_theme": self.markdown_theme}
+                "list_view": self.list_view, "markdown_theme": self.markdown_theme}
 
     @classmethod
     def from_dict(cls, data: Any) -> Settings:
@@ -60,9 +61,12 @@ class Settings:
         rootdir = data.get("rootdir", defaults.rootdir)
         if not isinstance(rootdir, str):
             raise ValueError("„rootdir” musi być tekstem")
-        show_folders = data.get("show_folders", defaults.show_folders)
+        show_folders = data.get("show_folders", False)  # before the View switch (DEC-VCS-091)
         if not isinstance(show_folders, bool):
             raise ValueError("„show_folders” musi być wartością true albo false")
+        list_view = data.get("list_view", "folders" if show_folders else defaults.list_view)
+        if list_view not in LIST_VIEWS:
+            raise ValueError(f"„list_view” musi być jedną z wartości: {', '.join(LIST_VIEWS)}")
         markdown_theme = data.get("markdown_theme", defaults.markdown_theme)
         if markdown_theme not in MARKDOWN_THEMES:
             raise ValueError(f"„markdown_theme” musi być jedną z wartości: {', '.join(MARKDOWN_THEMES)}")
@@ -70,7 +74,7 @@ class Settings:
             rootdir=rootdir,
             repos=_strings(data, "repos", defaults.repos),
             diff_tool=_strings(data, "diff_tool", defaults.diff_tool),
-            show_folders=show_folders,
+            list_view=list_view,
             markdown_theme=markdown_theme,
         )
 

@@ -43,3 +43,9 @@ def test_req_vcs_031_the_chosen_theme_is_passed_when_the_page_opens():
     assert "--theme" not in tool.command(*sides)
     chosen[0] = "dark"  # read at every opening, so a change in the settings applies at once
     assert tool.command(*sides)[-2:] == ["--theme", "dark"]
+
+
+def test_req_vcs_032_the_reader_asks_for_the_reading_mode():
+    argv = MarkdownDiffTool(open_browser=False, read=True).command(
+        Path("/r/a.md"), Path("/r/a.md"), "a.md (kopia robocza)", "a.md (kopia robocza)")
+    assert "--read" in argv

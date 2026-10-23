@@ -288,3 +288,14 @@ def test_req_vcs_027_commit_concludes_a_merge_resolved_to_head(repo, gr):
     assert gr.commit("Merge branch 'other'").ok
     assert len(repo.git("log", "-1", "--format=%P").split()) == 2
     assert not gr.status().merging
+
+
+# ---------- project files (DES-VCS-050, REQ-VCS-032) ----------
+
+def test_des_vcs_050_tracked_files_come_from_the_index(repo, gr):
+    for path in ("README.md", "docs/plan.md", "src/zażółć gęślą.py"):
+        repo.write(path, "x\n")
+    repo.commit("files")
+    repo.write("new.txt", "n\n"); repo.git("add", "new.txt")
+    repo.write("untracked.txt", "u\n")
+    assert gr.tracked_files() == ["README.md", "docs/plan.md", "new.txt", "src/zażółć gęślą.py"]

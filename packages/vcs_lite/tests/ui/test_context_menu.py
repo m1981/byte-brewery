@@ -141,8 +141,7 @@ def test_req_vcs_030_g13_count_merges_a_folder_with_its_files(root, world):  # n
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")
-    window.show_folders.set(True)
-    window.toggle_folders()
+    window.set_list_view("folders")
     fl = window.file_list
     fl.click(y(window, (U, "d"))); fl.click(y(window, (U, "u1.txt")), shift=True)  # d, d/x1, d/x2, u1
     menu = fl.prepare_menu(y(window, (U, "u1.txt")))

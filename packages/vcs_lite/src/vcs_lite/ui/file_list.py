@@ -4,7 +4,7 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, DEC-VCS-076, T-VCS-01
+Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, T-VCS-01
 """
 
 from __future__ import annotations
@@ -38,14 +38,19 @@ HINTS = {
     Group.UNVERSIONED: [("spacja", KBD), (" stage · ", None), ("dwuklik", KBD), (" porównaj", None)],  # P7
 }
 FOLDER_ACTIONS = {Group.STAGED: "−", Group.CHANGES: "+", Group.UNVERSIONED: "+"}  # none for conflicts (DEC-VCS-057)
+PROJECT = "projekt"         # the group of the project tree rows (REQ-VCS-032)
+DIRS = ("folder", "pdir")
+PROJECT_INDENT = 18         # one level deeper in the project tree   # folder nodes of the change groups and of the project tree
+READ_HINT = [("dwuklik", KBD), (" czytaj", None)]   # a Markdown file without changes
+OPEN_HINT = [("dwuklik", KBD), (" otwórz", None)]   # any other file without changes
 
-Key = tuple[Group, str]
+Key = tuple["Group | str", str]
 
 
 @dataclass(frozen=True)
 class ListRow:
-    kind: str                       # "file" or "folder"
-    group: Group
+    kind: str                       # "file", "folder", or in the project tree "pfile" and "pdir"
+    group: Group | str              # a status group, or PROJECT
     path: str                       # file path, or the directory of a folder node
     color: str
     pieces: list[tuple[str, str]] = field(compare=False)
@@ -94,6 +99,15 @@ def fit_pieces(pieces: list[tuple[str, str]], room: float) -> list[tuple[str, st
     return fitted
 
 
+def changes_label(n: int) -> str:
+    """Polish plural: 1 zmiana, 2–4 zmiany (but 12–14 zmian), otherwise zmian."""
+    if n == 1:
+        return "1 zmiana"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} zmiany"
+    return f"{n} zmian"
+
+
 def file_color(change: FileChange) -> str:
     if change.group is Group.CONFLICTS:
         return C["conf"]
@@ -117,19 +131,23 @@ class FileList(tk.Frame):
                  on_empty_action: Callable[[str], None],
                  on_toggle_many: Callable[[Group, list[FileChange]], None] = lambda group, changes: None,
                  on_ignore: Callable[[list[str], list[str]], None] = lambda files, folders: None,
-                 on_compare_source: Callable[[FileChange], None] = lambda change: None):
+                 on_compare_source: Callable[[FileChange], None] = lambda change: None,
+                 on_read: Callable[[str], None] = lambda path: None, on_open: Callable[[str], None] = lambda path: None,
+                 on_reveal: Callable[[str], None] = lambda path: None):
         super().__init__(master, bg=C["bg"])
         self._on_toggle, self._on_activate = on_toggle, on_activate
         self._on_toggle_folder, self._on_empty_action = on_toggle_folder, on_empty_action
         self._on_toggle_many, self._on_ignore = on_toggle_many, on_ignore
         self._on_compare_source = on_compare_source
+        self._on_read, self._on_open, self._on_reveal = on_read, on_open, on_reveal
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self._rows: list[ListRow] = []
         self._headers: list[tuple[str, int, int]] = []   # title, count, top
         self._placeholder_top: int | None = None          # the grey hint of an empty Staged group (P13b)
         self._empty: list[str] = []
-        self._collapsed: set[Key] = set()
+        self._collapsed: set[Key] = set()    # folders of the change groups, open by default
+        self._expanded: set[str] = set()     # folders of the project tree, closed by default
         self._content_height = 1
         self.selected_key: Key | None = None     # the current row: arrows and Enter act on it
         self.selected_keys: set[Key] = set()     # the selection (REQ-VCS-029)
@@ -190,7 +208,14 @@ class FileList(tk.Frame):
         return "".join(text for text, _ in EMPTY_STAGED) if self._placeholder_top is not None else None
 
     def hint_texts(self) -> list[str]:
-        return ["".join(t for t, _ in HINTS[r.group]) for r in self._rows if r.kind == "file" and r.key == self.hovered_key]
+        return ["".join(t for t, _ in self._hints(r)) for r in self._rows
+                if r.kind in ("file", "pfile") and r.key == self.hovered_key]
+
+    @staticmethod
+    def _hints(row: ListRow) -> list[tuple[str, str | None]]:
+        if row.change is not None:
+            return HINTS[row.change.group]
+        return READ_HINT if is_markdown(row.path) else OPEN_HINT
 
     def empty_action_enabled(self) -> bool:
         return self._empty_button is not None and str(self._empty_button.cget("state")) == tk.NORMAL
@@ -244,7 +269,7 @@ class FileList(tk.Frame):
         elif row.kind == "folder" and x >= self._action_left() and FOLDER_ACTIONS.get(row.group):
             self.select_key(row.key)
             self.click_action()
-        elif row.kind == "folder" and row.x <= x < row.x + S["chevron_width"]:
+        elif row.kind in DIRS and row.x <= x < row.x + S["chevron_width"]:
             self._toggle_collapsed(row)
         elif row.key in self.selected_keys and len(self.selected_keys) > 1:
             self._narrow_later(row.key)
@@ -316,17 +341,23 @@ class FileList(tk.Frame):
             self.selected_key = row.key
         else:
             self.select_key(row.key)
-        if row.kind == "folder":
-            self._toggle_collapsed(row)
-        else:
-            self._on_activate(row.change)
+        self._open_row(row)
 
     def press_return(self) -> None:
         row = self._row(self.selected_key)
-        if row and row.kind == "folder":
+        if row:
+            self._open_row(row)
+
+    def _open_row(self, row: ListRow) -> None:
+        """Double click and Enter: fold a folder; compare a changed file; read or open one without changes."""
+        if row.kind in DIRS:
             self._toggle_collapsed(row)
-        elif row:
+        elif row.change is not None:
             self._on_activate(row.change)
+        elif is_markdown(row.path):
+            self._on_read(row.path)
+        else:
+            self._on_open(row.path)
 
     def press_space(self) -> None:
         rows = [r for r in self._rows if r.key in self.selected_keys]
@@ -336,6 +367,10 @@ class FileList(tk.Frame):
             self._toggle_selection(rows)
             return
         row = rows[0]
+        if row.group == PROJECT:  # the tree keeps its rows: only a changed file has something to do
+            if row.kind == "pfile" and row.change is not None:
+                self._on_toggle(row.change)
+            return
         if row.kind == "folder":
             if FOLDER_ACTIONS.get(row.group):
                 self._plan_advance(row, self._folder_paths(row))
@@ -361,6 +396,8 @@ class FileList(tk.Frame):
         else:
             self.select_key(row.key)
         rows = [r for r in self._rows if r.key in self.selected_keys]
+        if row.group == PROJECT:
+            return self._project_menu(row, single=len(rows) == 1)
         groups = {r.group for r in rows}
         group = rows[0].group if len(groups) == 1 else None
         free = not self._busy()
@@ -380,6 +417,17 @@ class FileList(tk.Frame):
             entries.append(("Porównaj źródło", compare_ok, lambda: self._on_compare_source(rows[0].change)))
         entries.append((f"Dodaj do .gitignore{self._ignore_count(rows)}", free and group is Group.UNVERSIONED,
                         lambda: self._ignore_selection(rows)))
+        return entries
+
+    def _project_menu(self, row: ListRow, *, single: bool) -> list[tuple[str, bool, Callable[[], None]]]:
+        """A row of the project tree: open it, show it in Finder, and compare it when it changed (REQ-VCS-032)."""
+        entries = [("Otwórz", single, lambda: self._on_open(row.path)),
+                   ("Pokaż w Finderze", single, lambda: self._on_reveal(row.path))]
+        change = row.change
+        if single and change is not None and change.group is not Group.CONFLICTS:
+            entries.append(("Porównaj", True, lambda: self._on_activate(change)))
+            if is_markdown(row.path):
+                entries.append(("Porównaj źródło", True, lambda: self._on_compare_source(change)))
         return entries
 
     @staticmethod
@@ -413,7 +461,7 @@ class FileList(tk.Frame):
     def _toggle_selection(self, rows: list[ListRow]) -> None:
         """Space on several rows of one group: one operation for all; other groups or conflicts: nothing."""
         group = rows[0].group
-        if any(r.group is not group for r in rows) or group is Group.CONFLICTS:
+        if any(r.group is not group for r in rows) or group in (Group.CONFLICTS, PROJECT):
             return
         paths: set[str] = set()
         for r in rows:
@@ -449,12 +497,12 @@ class FileList(tk.Frame):
 
     def press_left(self) -> None:
         row = self._row(self.selected_key)
-        if row and row.kind == "folder" and not row.collapsed:
+        if row and row.kind in DIRS and not row.collapsed:
             self._toggle_collapsed(row)
 
     def press_right(self) -> None:
         row = self._row(self.selected_key)
-        if row and row.kind == "folder" and row.collapsed:
+        if row and row.kind in DIRS and row.collapsed:
             self._toggle_collapsed(row)
 
     def press_down(self, extend: bool = False) -> None:
@@ -486,7 +534,10 @@ class FileList(tk.Frame):
         self._scroll_into_view()
 
     def _toggle_collapsed(self, row: ListRow) -> None:
-        self._collapsed.symmetric_difference_update({row.key})
+        if row.kind == "pdir":
+            self._expanded.symmetric_difference_update({row.path})
+        else:
+            self._collapsed.symmetric_difference_update({row.key})
         if self._model:
             self.render(self._model)
 
@@ -527,12 +578,50 @@ class FileList(tk.Frame):
                 continue
             self._headers.append((group.value.upper(), len(changes), y))
             y += HEADER_HEIGHT
-            y = self._add_folder_rows(group, changes, y) if model.show_folders else self._add_flat_rows(changes, y)
+            y = self._add_folder_rows(group, changes, y) if model.list_view == "folders" else self._add_flat_rows(changes, y)
+        if model.list_view == "project":
+            files = model.project_files()
+            self._headers.append(("PROJEKT", len(files), y))
+            y = self._add_project_rows(files, y + HEADER_HEIGHT)
         self._content_height = max(y, 1)
         moved = self._keep_selection()
         self._redraw_all(model)
         if moved:
             self._scroll_into_view()
+
+    def _add_project_rows(self, files: list, y: int) -> int:
+        """Nested folders (closed until opened), then files, by name; a closed folder counts its changes."""
+        tree: dict = {}
+        for file in files:
+            *folders, name = file.path.split("/")
+            node = tree
+            for folder in folders:
+                node = node.setdefault(folder + "/", {})
+            node[name] = file
+
+        def changed(node: dict) -> int:
+            return sum(changed(v) if isinstance(v, dict) else v.change is not None for v in node.values())
+
+        def add(node: dict, prefix: str, depth: int) -> None:
+            nonlocal y
+            for key in sorted(k for k in node if k.endswith("/")):
+                path, open_ = prefix + key[:-1], prefix + key[:-1] in self._expanded
+                count = 0 if open_ else changed(node[key])
+                pieces = [(key[:-1], "folder_name")] + ([(changes_label(count), "folder_changes")] if count else [])
+                self._rows.append(ListRow("pdir", PROJECT, path, C["ink"], pieces, y, S["indent_flat"] + depth * PROJECT_INDENT,
+                                          collapsed=not open_))
+                y += ROW_HEIGHT
+                if open_:
+                    add(node[key], path + "/", depth + 1)
+            for key in sorted(k for k in node if not k.endswith("/")):
+                file = node[key]
+                pieces = file_pieces(file.change, folder_suffix=False) if file.change else [(key, "file_name")]
+                self._rows.append(ListRow("pfile", PROJECT, file.path, file_color(file.change) if file.change else C["ink"],
+                                          pieces, y, S["indent_icon"] + depth * PROJECT_INDENT, change=file.change))
+                y += ROW_HEIGHT
+
+        add(tree, "", 0)
+        return y
 
     def _add_flat_rows(self, changes: list[FileChange], y: int) -> int:
         for change in changes:
@@ -618,7 +707,8 @@ class FileList(tk.Frame):
         side = S["group_side"]
         self.canvas.create_text(side, y, anchor=tk.W, text=title, font=theme.font("group_header"), fill=color)
         x = side + theme.font("group_header").measure(title) + S["group_count_gap"]
-        self.canvas.create_text(x, y, anchor=tk.W, text=str(count), font=theme.font("group_count"),
+        label = files_label(count) if title == "PROJEKT" else str(count)
+        self.canvas.create_text(x, y, anchor=tk.W, text=label, font=theme.font("group_count"),
                                 fill=theme.TYPE["group_count"].color)
 
     def _redraw_rows(self) -> None:
@@ -633,7 +723,7 @@ class FileList(tk.Frame):
                 c.create_rectangle(0.5, row.top + 0.5, width - 0.5, row.top + row.height - 0.5, outline=C["accent"],
                                    tags=("row", "current_ring"))
             middle = row.top + row.height / 2
-            if row.kind == "folder":
+            if row.kind in DIRS:
                 self._draw_folder(row, middle)
                 if row is action_row and FOLDER_ACTIONS.get(row.group):
                     self._draw_action(FOLDER_ACTIONS[row.group], middle)
@@ -674,10 +764,10 @@ class FileList(tk.Frame):
         c.create_text(row.x + S["chevron_width"] / 2, middle, text="▸" if row.collapsed else "▾",
                       font=theme.font("folder_count"), fill=C["dim"], tags=("row",))
         w, h = S["folder_icon"]
-        left, top = S["indent_icon"], middle - h / 2
+        left, top = row.x + S["indent_icon"] - S["indent_chevron"], middle - h / 2   # 18 after the chevron
         rounded_rect(c, left, top, left + w * 0.45, top + 3, 1.5, fill=C["folder_icon"], tags=("row",))   # tab
         rounded_rect(c, left, top + 2, left + w, top + h, 2, fill=C["folder_icon"], tags=("row",))        # body
-        self._draw_pieces(row, S["indent_child"], middle)
+        self._draw_pieces(row, row.x + S["indent_child"] - S["indent_chevron"], middle)
 
     def _draw_action(self, glyph: str, middle: float) -> None:
         size, left = S["folder_act"], self._action_left()
@@ -691,7 +781,7 @@ class FileList(tk.Frame):
         c = self.canvas
         pad_x, _ = S["kbd_pad"]
         kbd_font, hint_font = theme.font("kbd"), theme.font("hint")
-        for text, kind in reversed(HINTS[row.group]):
+        for text, kind in reversed(self._hints(row)):
             if kind == KBD:
                 w = kbd_font.measure(text) + 2 * pad_x
                 h = kbd_font.metrics("linespace") + 2

@@ -236,3 +236,14 @@ def test_req_vcs_031_br_lines_are_compared_like_words():
     body = rendered(page("| A |\n|---|\n| D1. stara<br>D2. bez zmian |\n", "| A |\n|---|\n| D1. nowa<br>D2. bez zmian |\n"))
     assert "<del>stara</del>" in body and "<ins>nowa</ins>" in body and "<br />" in body
     assert not any(ch in body for ch in "\ue000\ue001\ue002\ue003")
+
+
+# ---------- reading mode (REQ-VCS-032) ----------
+
+def test_req_vcs_032_reading_mode_shows_the_whole_document_without_marks():
+    text = "".join(f"## Sekcja {i}\n\nTreść {i}.\n\n" for i in range(1, 13))
+    html = page(text, text, read=True, right_title="plan.md (kopia robocza)")
+    body = rendered(html)
+    assert "Sekcja 1<" in body and "Sekcja 12<" in body and 'class="fold"' not in body
+    assert "Bez zmian" not in body and '<span class="stats">' not in html
+    assert '<span class="sides">plan.md (kopia robocza)</span>' in html

@@ -192,8 +192,7 @@ def test_des_vcs_045_the_hint_row_cannot_be_selected_or_hovered(nothing_staged):
 
 def test_des_vcs_045_folder_view_shows_the_same_hint(nothing_staged):
     window, _ = nothing_staged
-    window.show_folders.set(True)
-    window.toggle_folders()
+    window.set_list_view("folders")
     assert window.file_list.headers()[0] == ("STAGED", 0)
     assert window.file_list.staged_placeholder() == EMPTY_STAGED
 
@@ -262,8 +261,7 @@ def test_des_vcs_024_too_long_file_name_gets_an_ellipsis_and_no_folder(deep):
 @pytest.fixture
 def folders(shown):
     window, model = shown
-    window.show_folders.set(True)
-    window.toggle_folders()
+    window.set_list_view("folders")
     return window, model
 
 
@@ -274,14 +272,13 @@ def test_at_vcs_032_folder_view_groups_files_and_is_remembered(root, world, tmp_
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")
-    window.show_folders.set(True)
-    window.toggle_folders()
+    window.set_list_view("folders")
     unversioned = [r for r in window.file_list.rows() if r.group is Group.UNVERSIONED]
     assert [(r.kind, r.path, r.x) for r in unversioned] == [("folder", "new", 28), ("file", "new/a.txt", 68), ("file", "new/b.txt", 68)]
     assert unversioned[0].pieces == [("new", "folder_name"), ("2 pliki", "folder_count")]
     readme = by_path(window, Group.CHANGES, "README.md")
     assert (readme.x, readme.pieces) == (46, [("README.md", "file_name")])
-    assert store.load().show_folders is True
+    assert store.load().list_view == "folders"
 
 
 def test_des_vcs_045_folders_come_before_root_files(folders):

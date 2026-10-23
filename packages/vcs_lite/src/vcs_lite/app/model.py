@@ -1,6 +1,6 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 from vcs_lite.app.worker import Executor, Outcome
 from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool, compare
 from vcs_lite.core.gitcli import GitCli, GitResult
-from vcs_lite.core.mdview import MarkdownDiffTool
+from vcs_lite.core.mdview import MarkdownDiffTool, open_with_macos
 from vcs_lite.core.repo import GitError, GitRepo
 from vcs_lite.core.settings import Settings, SettingsError, scan_rootdir
 from vcs_lite.core.status import FileChange, Group, RepoStatus, Side
@@ -47,6 +47,18 @@ class RepoState(Enum):
     BUSY = "w toku"
 
 
+@dataclass(frozen=True)
+class ProjectFile:
+    """A row of the project tree: any tracked or unversioned file, with its change if it has one."""
+
+    path: str
+    change: FileChange | None = None
+
+
+# Which change a file in several groups shows in the project tree: the one of the working copy first.
+PROJECT_CHANGE_ORDER = (Group.CONFLICTS, Group.CHANGES, Group.UNVERSIONED, Group.STAGED)
+
+
 @dataclass
 class RepoView:
     name: str
@@ -58,6 +70,7 @@ class RepoView:
     busy_label: str | None = None    # P4: the operation running now
     draft: str = ""  # DES-VCS-021: kept in memory only
     refreshed_at: datetime | None = None
+    tracked: tuple[str, ...] = ()    # files of the index, read only in the project view (DES-VCS-050)
 
     @property
     def branch_label(self) -> str:
@@ -108,19 +121,23 @@ IGNORE = Operation("Dodawanie do .gitignore…", "Dodanie do .gitignore nie powi
 PULL = Operation("Pobieranie zmian…", "Pull nie powiódł się")
 COMPARE_FAILED = "Porównanie nie powiodło się"
 REFRESH_FAILED = "Odświeżanie nie powiodło się"
+OPEN_FAILED = "Otwieranie nie powiodło się"
 
 
 class AppModel:
     def __init__(self, settings: Settings, *, git: GitCli, diff_tool: ExternalDiffTool, worker: Executor,
                  confirm: Callable[[str, str], bool], clock: Callable[[], datetime] = datetime.now,
                  save_settings: Callable[[Settings], None] = lambda settings: None,
-                 markdown_tool: ExternalDiffTool | None = None):
+                 markdown_tool: ExternalDiffTool | None = None, markdown_reader: ExternalDiffTool | None = None,
+                 opener: Callable[[list[str]], None] = open_with_macos):
         self._settings = settings
         self._save_settings = save_settings
         self._clock = clock
         self._git = git
         self._diff_tool = diff_tool
         self._markdown_tool = markdown_tool or MarkdownDiffTool(theme=lambda: self._settings.markdown_theme)
+        self._markdown_reader = markdown_reader or MarkdownDiffTool(read=True, theme=lambda: self._settings.markdown_theme)
+        self._opener = opener
         self._worker = worker
         self._confirm = confirm
         self._rootdir = settings.rootdir
@@ -167,13 +184,16 @@ class AppModel:
     # ---------- folder view (REQ-VCS-025) ----------
 
     @property
-    def show_folders(self) -> bool:
-        return self._settings.show_folders
+    def list_view(self) -> str:
+        """The View switch: changes, folders or project (REQ-VCS-025, DEC-VCS-091)."""
+        return self._settings.list_view
 
-    @show_folders.setter
-    def show_folders(self, value: bool) -> None:
-        self._settings = replace(self._settings, show_folders=value)
+    @list_view.setter
+    def list_view(self, value: str) -> None:
+        self._settings = replace(self._settings, list_view=value)
         self._save_settings(self._settings)
+        if value == "project" and self.selected:
+            self.refresh(self.selected)  # the tracked files are read only for this view
         self._changed()
 
     @property
@@ -261,6 +281,16 @@ class AppModel:
             return EmptyState("✓", "Brak zmian", f"Kopia robocza {view.name} jest zgodna z ostatnim commitem.",
                               glyph_color="add")
         return None
+
+    def project_files(self) -> list[ProjectFile]:
+        """Tracked and unversioned files of the selected repository, by path (REQ-VCS-032)."""
+        view = self._current()
+        if self.list_view != "project" or view is None or view.status is None:
+            return []
+        changes: dict[str, FileChange] = {}
+        for group in reversed(PROJECT_CHANGE_ORDER):  # the earlier group wins
+            changes.update({c.path: c for c in view.status.group(group)})
+        return [ProjectFile(path, changes.get(path)) for path in sorted(set(view.tracked) | set(changes))]
 
     def files(self, group: Group) -> list[FileChange]:
         view = self._current()
@@ -403,10 +433,12 @@ class AppModel:
         view = self._repos[name]
         self._worker.submit(name, lambda: self._read_status(view), lambda outcome: self._status_read(view, outcome))
 
-    def _read_status(self, view: RepoView) -> RepoStatus | None:
+    def _read_status(self, view: RepoView) -> tuple[RepoStatus, tuple[str, ...]] | None:
         if not (view.path / ".git").exists():
             return None
-        return self._repo(view).status()
+        repo = self._repo(view)
+        tracked = tuple(repo.tracked_files()) if self.list_view == "project" else ()
+        return repo.status(), tracked
 
     def _status_read(self, view: RepoView, outcome: Outcome) -> None:
         if isinstance(outcome.error, GitError):
@@ -415,7 +447,7 @@ class AppModel:
             raise outcome.error
         else:
             view.available = outcome.value is not None
-            view.status = outcome.value
+            view.status, view.tracked = outcome.value or (None, ())
             view.refreshed_at = self._clock()
         self._changed()
 
@@ -467,6 +499,34 @@ class AppModel:
         self._worker.submit(f"{view.name}:diff:{change.group.value}:{change.path}",
                             lambda: self._compare(view, change, tool),
                             lambda outcome: self._compared(view, outcome))
+
+    def read(self, path: str) -> None:
+        """A Markdown file without changes, shown as a rendered document (REQ-VCS-032)."""
+        view = self._current()
+        full, title = view.path / path, f"{path} ({SIDE_LABELS[Side.WORKTREE]})"
+        self._worker.submit(f"{view.name}:read:{path}",
+                            lambda: compare(self._markdown_reader, full, full, name=full.name, left_title=title,
+                                            right_title=title),
+                            lambda outcome: self._compared(view, outcome))
+
+    def open_file(self, path: str) -> None:
+        """The file or folder in its default macOS application (DEC-VCS-090)."""
+        self._open(["open"], path)
+
+    def reveal(self, path: str) -> None:
+        """The file or folder selected in Finder."""
+        self._open(["open", "-R"], path)
+
+    def _open(self, command: list[str], path: str) -> None:
+        view = self._current()
+        argv = [*command, str(view.path / path)]
+        key = f"{view.name}:{' '.join(command)}:{path}"  # opening and revealing one file do not block each other
+        self._worker.submit(key, lambda: self._opener(argv), lambda outcome: self._opened(view, outcome))
+
+    def _opened(self, view: RepoView, outcome: Outcome) -> None:
+        if outcome.error is not None:
+            view.error, view.error_title = str(outcome.error), OPEN_FAILED
+            self._changed()
 
     def _compare(self, view: RepoView, change: FileChange, tool: ExternalDiffTool):
         left, right = self._repo(view).sides(change)
