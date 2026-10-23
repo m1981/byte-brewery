@@ -477,6 +477,7 @@ class AppModel:
 
     def _pushed_after_commit(self, view: RepoView) -> None:
         self._clear_draft(view)
+        self._changed()  # the window shows the emptied message before a question can block it
         if view.status.upstream is not None:
             self._run(view, PUSH, lambda: self._repo(view).push())
         elif self._confirm(f"Gałąź {view.status.branch} nie ma upstreamu",  # P9

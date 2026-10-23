@@ -314,6 +314,20 @@ def test_req_vcs_013_branch_without_upstream_asks_before_pushing(world, tracked,
     assert (model.view("alpha").status.upstream == "origin/feature") is answer
 
 
+def test_req_vcs_009_the_window_shows_the_emptied_message_before_the_upstream_question(world, tracked):
+    """Zrzut 2026-10-22: during question P9 the message field still showed the saved commit's text."""
+    r, _ = tracked
+    r.git("checkout", "-q", "-b", "feature"); r.write("f.txt", "f\n"); r.git("add", "f.txt")
+    world.answer = False
+    model = world.start("alpha"); world.select("alpha")
+    events = world.questions  # the question lands in the same list, after whatever the window was told
+    model.subscribe(lambda: events.append(("render", model.message)))
+    model.message = "feat"
+    model.commit_and_push(); world.worker.settle()
+    asked = next(i for i, e in enumerate(events) if e[0] == "Gałąź feature nie ma upstreamu")
+    assert ("render", "") in events[:asked]
+
+
 def test_req_vcs_020_pull_fast_forwards_the_selected_repository(world, tracked, tmp_path):
     r, bare = tracked
     other = Repo(tmp_path / "other")

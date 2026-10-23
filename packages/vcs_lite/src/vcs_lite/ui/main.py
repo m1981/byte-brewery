@@ -37,7 +37,7 @@ def build(settings_path: Path) -> tuple[tk.Tk, AppModel, TkPump]:
     root.geometry("960x620")
     pump = TkPump(root, Worker())
     model = AppModel.from_settings(store.load(), git=GitCli(), worker=pump,
-                                   confirm=lambda title, message: messagebox.askyesno(title, message, parent=root),
+                                   confirm=lambda title, message: ask(root, title, message),
                                    save_settings=store.save)
     MainWindow(root, model, reduce_motion=reduce_motion()).pack(fill=tk.BOTH, expand=True)
     return root, model, pump
@@ -49,6 +49,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     model.refresh_all()
     _bring_to_front(root)
     root.mainloop()
+
+
+def ask(root: tk.Tk, title: str, message: str) -> bool:
+    """P9: paint pending changes (an emptied message field) before the modal question takes over."""
+    root.update_idletasks()
+    return messagebox.askyesno(title, message, parent=root)
 
 
 def reduce_motion() -> bool:
