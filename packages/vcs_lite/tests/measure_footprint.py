@@ -167,6 +167,8 @@ def measure(*, bcomp: bool = False, idle: int = 5) -> dict:
         "refresh_s_median": round(statistics.median(ready["refresh_s"]), 3),
         "git_calls_before_ready": sum(1 for r in calls if r["t"] <= ready_t),
         "git_calls_while_idle": sum(1 for r in calls if ready_t < r["t"] <= idle_end),
+        "git_calls_while_idle_detail": [f'{r["cmd"]} +{r["t"] - ready_t:.2f} s' for r in calls
+                                        if ready_t < r["t"] <= idle_end],  # e.g. a refresh after a focus change
     }
 
 
