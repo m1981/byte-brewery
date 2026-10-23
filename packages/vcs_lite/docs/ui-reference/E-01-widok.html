@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · przełącznik Widok</title>
+<style>
+  /* Tokens of E-01.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --chrome: #ececee; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73; --accent: #0a66d8;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --track: #e4e4e9; --track-line: #d4d4da; --thumb: #ffffff; --thumb-edge: #cfcfd5; --seg-ink: #3a3a40; --seg-hover: #d9d9df;  /* NEW */
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1080px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 92ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 92ch; }
+  .win { background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 38px; background: var(--chrome); display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .title { flex: 1; text-align: center; font-weight: 600; color: #4a4a50; margin-right: 52px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fafafb; flex-wrap: wrap; }
+  .repo-title { font-size: 15px; font-weight: 650; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; background: #eef0f3; color: #3a3a40; font-size: 12px; white-space: nowrap; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; border: 1px solid #c9c9cf; background: #fff; border-radius: 6px; padding: 3px 12px; color: var(--ink); white-space: nowrap; }
+  .label { color: var(--dim); font-size: 12px; }
+
+  /* NEW: segmented control, pill style */
+  .seg { display: inline-flex; align-items: center; height: 24px; padding: 2px; border-radius: 12px; background: var(--track);
+         box-shadow: inset 0 0 0 1px var(--track-line); }
+  .seg span { position: relative; height: 20px; padding: 0 12px; border-radius: 10px; display: inline-flex; align-items: center;
+              font-size: 12px; color: var(--seg-ink); cursor: default; }
+  .seg span + span::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 1px; background: #c3c3ca; }
+  .seg span.on { background: var(--thumb); color: var(--ink); box-shadow: 0 0 0 0.5px var(--thumb-edge), 0 1px 2px rgba(0,0,0,.16); }
+  .seg span.on::before, .seg span.on + span::before { display: none; }
+  .seg span.hover:not(.on) { background: var(--seg-hover); }
+  .seg span.hover::before, .seg span.hover + span::before { display: none; }
+  /* rounded-rectangle alternative (classic NSSegmentedControl) */
+  .seg.rect { border-radius: 6px; } .seg.rect span { border-radius: 5px; }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .state { background: #fafafb; border-radius: 10px; padding: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .state p { margin: 8px 0 0; color: var(--dim); font-size: 12px; }
+  .zoom { transform: scale(2); transform-origin: left top; height: 56px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>vcs-lite — przełącznik „Widok” w stylu macOS (propozycja, Q-VCS-053)</h1>
+    <p class="lead">Trzy pozycje w jednej kapsułce (DEC-VCS-091). Wybrana pozycja to biała „pigułka” z delikatnym cieniem na szarym torze, jak przełączniki w pasku narzędzi Findera, Muzyki i Ustawień macOS. Zastępuje pole „Pokaż foldery” w tym samym miejscu paska.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid">P14</span> W pasku narzędzi (wybrane: Projekt)</h2>
+    <p class="cap">Ten sam pasek co we wzorcu E-01: nazwa repo, chip gałęzi, z prawej przełącznik, Pull i Odśwież. Słowo „Widok” przed kapsułką pomaga zrozumieć, co się przełącza.</p>
+    <div class="win">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">vcs-lite — byte-brewery</span></div>
+      <div class="toolbar">
+        <span class="repo-title">byte-brewery</span><span class="chip">⎇ main → origin/main</span>
+        <span class="spacer"></span>
+        <span class="label">Widok</span>
+        <span class="seg"><span>Zmiany</span><span>Foldery</span><span class="on">Projekt</span></span>
+        <span class="btn">⇣ Pull</span><span class="btn">⟳ Odśwież</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P14</span> Stany (powiększone 2×)</h2>
+    <div class="states">
+      <div class="state"><div class="zoom"><span class="seg"><span class="on">Zmiany</span><span>Foldery</span><span>Projekt</span></span></div><p>Zmiany wybrane (domyślnie). Kreska oddziela tylko dwie niewybrane pozycje obok siebie.</p></div>
+      <div class="state"><div class="zoom"><span class="seg"><span>Zmiany</span><span class="on">Foldery</span><span>Projekt</span></span></div><p>Foldery wybrane: obie kreski znikają przy pigułce.</p></div>
+      <div class="state"><div class="zoom"><span class="seg"><span class="hover">Zmiany</span><span>Foldery</span><span class="on">Projekt</span></span></div><p>Kursor nad niewybraną pozycją: lekko ciemniejsze tło.</p></div>
+      <div class="state"><div class="zoom"><span class="seg rect"><span>Zmiany</span><span class="on">Foldery</span><span>Projekt</span></span></div><p>Dla porównania: klasyczny prostokątny przełącznik macOS (promień 6). Rekomendacja: kapsułka powyżej, o którą prosiłeś.</p></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Wartości i zachowanie</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Wartość</th></tr>
+      <tr><td>Tor</td><td>wysokość 24, promień 12 (kapsułka), tło <code>#e4e4e9</code>, obrys 1 pt <code>#d4d4da</code>, odstęp wewnętrzny 2</td></tr>
+      <tr><td>Pigułka wybranej pozycji</td><td>wysokość 20, promień 10, tło białe, obrys 0,5 pt <code>#cfcfd5</code>, cień 1 pt w dół</td></tr>
+      <tr><td>Pozycja</td><td>tekst 12 pt, poziomo 12 pt odstępu; wybrana <code>ink</code>, pozostałe <code>#3a3a40</code></td></tr>
+      <tr><td>Kreska między pozycjami</td><td>1 pt <code>#c3c3ca</code>, wysokość 10, tylko między dwiema niewybranymi</td></tr>
+      <tr><td>Najechanie</td><td>niewybrana pozycja dostaje tło <code>#d9d9df</code></td></tr>
+      <tr><td>Etykieta</td><td>„Widok” 12 pt <code>dim</code>, odstęp 8 przed torem</td></tr>
+      <tr><td>Podpowiedzi</td><td>Zmiany: „Tylko zmienione pliki”; Foldery: „Zmienione pliki pogrupowane w folderach”; Projekt: „Zmiany i wszystkie pliki projektu”</td></tr>
+      <tr><td>Klawiatura</td><td>pozycje także w menu Widok (radio), więc dostępne bez myszy</td></tr>
+      <tr><td>Odwzorowanie w Tk</td><td><code>tk.Canvas</code> jak chipy i pasek boczny (DEC-VCS-047): tor i pigułka przez <code>rounded_rect</code>; cień przybliżony szarą kapsułką przesuniętą o 1 pt w dół (Tk nie rysuje rozmytego cienia)</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

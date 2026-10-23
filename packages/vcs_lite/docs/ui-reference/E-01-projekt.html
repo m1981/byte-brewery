@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · Pokaż projekt</title>
+<style>
+  /* Tokens and rules of E-01-lista.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73; --accent: #0a66d8; --accent-soft: #e3eefc;
+    --row-hover: #f5f7fb; --mod: #b4690e; --conf: #c2302a; --folder: #9aa0ab;
+    --file-mod: #002daa; --file-add: #0c7216; --file-unv: #a92c3e;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1180px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 92ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 92ch; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 18px; }
+  .pane { background: var(--bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 10px 26px rgba(0,0,0,.14); }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: #fafafb; white-space: nowrap; }
+  .bar .t { font-weight: 650; font-size: 15px; } .spacer { flex: 1; }
+  .check { display: inline-flex; align-items: center; gap: 6px; }
+  .box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #b8b8be; background: #fff; display: grid; place-items: center; font-size: 10px; color: #fff; }
+  .box.on { background: var(--accent); border-color: var(--accent); }
+  .btn { font: inherit; border: 1px solid #c9c9cf; background: #fff; border-radius: 6px; padding: 2px 10px; }
+  .list { padding: 6px 0 10px; }
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .row { height: 24px; display: flex; align-items: center; padding-right: 16px; white-space: nowrap; }
+  .row.sel { background: var(--accent-soft); } .row.hover { background: var(--row-hover); }
+  .M { color: var(--file-mod); } .A { color: var(--file-add); } .U { color: var(--file-unv); }
+  .fd { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .chev { width: 12px; color: var(--dim); font-size: 10px; flex: none; }
+  .ficon { width: 16px; height: 13px; margin: 0 6px; flex: none; }
+  .changes { margin-left: 8px; font-size: 12px; color: var(--mod); }                  /* NEW: changes inside a folder */
+  .hint { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs><symbol id="folder" viewBox="0 0 16 13"><rect x="0" y="0" width="7" height="3" rx="1.5" fill="#9aa0ab"/><rect x="0" y="2" width="16" height="11" rx="2" fill="#9aa0ab"/></symbol></defs></svg>
+<div class="page">
+  <div>
+    <h1>vcs-lite — „Pokaż projekt”: także pliki śledzone bez zmian (propozycja)</h1>
+    <p class="lead">Pomysł użytkownika 2026-10-23. Nowe pole „Pokaż projekt” w pasku narzędzi, obok „Pokaż foldery”. Przykład: repo <code>packages/vcs_lite</code>; zmienione są <code>SPEC.md</code> (Changes) i <code>mddiff.py</code> (Staged), nowy jest <code>assets/</code>.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid">A</span> Grupy zmian jak dziś, pod nimi drzewo PROJEKT (rekomendacja)</h2>
+    <p class="cap">Commit dalej zaczyna się od góry listy. Drzewo projektu jest zagnieżdżone (folder w folderze), domyślnie zwinięte do pierwszego poziomu. Pliki zmienione mają w drzewie swoje kolory statusu, niezmienione zwykły kolor tekstu. Zwinięty folder mówi, ile ma zmian w środku.</p>
+    <div class="pair">
+      <div class="pane">
+        <div class="bar"><span class="t">vcs_lite</span><span class="spacer"></span>
+          <span class="check"><span class="box"></span>Pokaż foldery</span><span class="check"><span class="box on">✓</span>Pokaż projekt</span><span class="btn">⇣ Pull</span></div>
+        <div class="list">
+          <div class="group">Staged <span class="n">1</span></div>
+          <div class="row" style="padding-left:28px"><span class="M">mddiff.py</span><span class="fd">src/vcs_lite/core</span></div>
+          <div class="group">Changes <span class="n">1</span></div>
+          <div class="row" style="padding-left:28px"><span class="M">SPEC.md</span><span class="fd">docs</span></div>
+          <div class="group">Unversioned <span class="n">1</span></div>
+          <div class="row" style="padding-left:28px"><span class="U">logo.png</span><span class="fd">assets</span></div>
+          <div class="group">Projekt <span class="n">134 pliki</span></div>
+          <div class="row" style="padding-left:28px"><span class="chev">▸</span><svg class="ficon"><use href="#folder"/></svg>assets<span class="changes">1 nowy</span></div>
+          <div class="row" style="padding-left:28px"><span class="chev">▾</span><svg class="ficon"><use href="#folder"/></svg>docs<span class="changes">1 zmiana</span></div>
+          <div class="row" style="padding-left:46px"><span class="chev">▸</span><svg class="ficon"><use href="#folder"/></svg>ui-reference</div>
+          <div class="row" style="padding-left:68px">ACCEPTANCE.feature</div>
+          <div class="row" style="padding-left:68px">DESIGN.md</div>
+          <div class="row" style="padding-left:68px">MANUAL-UI.md</div>
+          <div class="row hover" style="padding-left:68px">PROPOZYCJA-gitignore.md<span class="hint"><kbd>dwuklik</kbd> czytaj</span></div>
+          <div class="row" style="padding-left:68px"><span class="M">SPEC.md</span></div>
+          <div class="row" style="padding-left:68px">WSPOLPRACA.md</div>
+          <div class="row" style="padding-left:28px"><span class="chev">▸</span><svg class="ficon"><use href="#folder"/></svg>src<span class="changes">1 zmiana</span></div>
+          <div class="row" style="padding-left:28px"><span class="chev">▸</span><svg class="ficon"><use href="#folder"/></svg>tests</div>
+          <div class="row" style="padding-left:28px"><span class="chev">▸</span><svg class="ficon"><use href="#folder"/></svg>tools</div>
+          <div class="row" style="padding-left:46px">pyproject.toml</div>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="bar"><span class="t">B: zamiast grup</span><span class="spacer"></span>
+          <span class="check"><span class="box on">✓</span>Pokaż projekt</span></div>
+        <div class="list">
+          <div class="group">Projekt <span class="n">134 pliki · 3 zmiany</span></div>
+          <div class="row" style="padding-left:28px"><span class="chev">▸</span><svg class="ficon"><use href="#folder"/></svg>assets<span class="changes">1 nowy</span></div>
+          <div class="row" style="padding-left:28px"><span class="chev">▾</span><svg class="ficon"><use href="#folder"/></svg>docs<span class="changes">1 zmiana</span></div>
+          <div class="row" style="padding-left:68px">DESIGN.md</div>
+          <div class="row sel" style="padding-left:68px"><span class="M">SPEC.md</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+          <div class="row" style="padding-left:28px"><span class="chev">▾</span><svg class="ficon"><use href="#folder"/></svg>src/vcs_lite/core<span class="changes">1 zmiana</span></div>
+          <div class="row" style="padding-left:68px"><span class="M">mddiff.py</span><span class="fd">staged</span></div>
+          <div class="row" style="padding-left:68px">mdpage.py</div>
+        </div>
+        <p class="cap" style="padding:0 16px 12px">Wariant B: jedno drzewo zamiast grup Staged, Changes i Unversioned. Mniej powtórzeń, ale trudniej zobaczyć, co wejdzie do commita, a Staged i Changes tego samego pliku trzeba by pokazywać w jednym wierszu.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Reguły wariantu A</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Zachowanie</th></tr>
+      <tr><td>Pole „Pokaż projekt”</td><td>natywne pole wyboru w pasku narzędzi obok „Pokaż foldery”; stan zapisany w ustawieniach jak „Pokaż foldery”, wspólny dla repo</td></tr>
+      <tr><td>Źródło plików</td><td><code>git ls-files</code> (śledzone) i pliki Unversioned; pliki ignorowane nie są pokazywane (REQ-VCS-004); wywołanie gita tylko przy odświeżeniu i tylko z włączonym polem, więc bezczynność bez zmian (REQ-VCS-101)</td></tr>
+      <tr><td>Drzewo</td><td>zagnieżdżone foldery, najpierw foldery, potem pliki, alfabetycznie; domyślnie zwinięte do pierwszego poziomu; zwinięcie pamiętane do zamknięcia okna; zwinięty folder ze zmianami w środku pokazuje „N zmian” w kolorze zmian</td></tr>
+      <tr><td>Kolory plików</td><td>zmienione w kolorach statusu z §9 (jak w grupach), niezmienione kolorem tekstu <code>ink</code></td></tr>
+      <tr><td>Dwuklik na niezmienionym <code>.md</code></td><td>wyrenderowany dokument w przeglądarce (ta sama strona co diff, w trybie czytania: bez zaznaczeń)</td></tr>
+      <tr><td>Dwuklik na innym niezmienionym pliku</td><td>do decyzji: otwarcie w domyślnej aplikacji macOS (<code>open</code>), np. edytor, podgląd</td></tr>
+      <tr><td>Plik zmieniony w drzewie</td><td>te same akcje co w swojej grupie (spacja, dwuklik, menu)</td></tr>
+      <tr><td>Spacja, menu na niezmienionym pliku</td><td>spacja nic nie robi; menu: „Otwórz”, „Pokaż w Finderze”</td></tr>
+      <tr><td>Wydajność</td><td>największe repo użytkownika (<code>docs</code>) ma ok. 1000 śledzonych plików w 52 folderach; <code>git ls-files</code> poniżej 0,01 s; drzewo zwinięte rysuje kilkadziesiąt wierszy</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

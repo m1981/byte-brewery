@@ -261,11 +261,11 @@ Feature: Lekki panel VCS dla kilku repozytoriów
   @AT_VCS_032 @confirmed @REQ_VCS_025 @DEC_VCS_055 @VER_VCS_015
   Scenario: Widok folderów grupuje pliki i jest zapamiętany
     Given repozytorium "alpha" ma nowe pliki "spec-evidence/a.json" i "spec-evidence/b.json" oraz zmieniony "README.md"
-    When użytkownik zaznacza „Pokaż foldery”
+    When użytkownik wybiera widok „Foldery”
     Then w grupie Unversioned jest węzeł "spec-evidence" z liczbą „2 pliki” i dwoma plikami pod nim
     And "README.md" w grupie Changes nie ma węzła folderu
     When narzędzie zostaje zamknięte i uruchomione ponownie
-    Then „Pokaż foldery” jest zaznaczone
+    Then wybrany jest widok „Foldery”
 
   @AT_VCS_033 @confirmed @REQ_VCS_026 @DEC_VCS_056 @VER_VCS_015
   Scenario: Przycisk przy folderze robi stage wszystkich jego plików
@@ -331,3 +331,14 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik wybiera z menu kontekstowego „Porównaj źródło”
     Then ten sam plik otwiera się w Beyond Compare
     And dwuklik na pliku innym niż .md nadal otwiera Beyond Compare
+
+  @AT_VCS_040 @confirmed @UC_VCS_02 @REQ_VCS_032 @DEC_VCS_089 @VER_VCS_015
+  Scenario: Widok Projekt pokazuje też pliki bez zmian i otwiera je
+    Given repozytorium "alpha" śledzi "docs/plan.md" i "src/app.py" bez zmian oraz ma zmieniony "README.md"
+    When użytkownik wybiera widok „Projekt”
+    Then grupa Changes zawiera "README.md"
+    And pod nią drzewo PROJEKT ma zwinięte foldery "docs" i "src" oraz plik "README.md" w kolorze zmienionego
+    When użytkownik rozwija "docs" i klika dwukrotnie "plan.md"
+    Then otwiera się wyrenderowany dokument "plan.md" w trybie czytania
+    When użytkownik rozwija "src" i klika dwukrotnie "app.py"
+    Then "src/app.py" otwiera się w domyślnej aplikacji macOS

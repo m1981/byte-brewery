@@ -2,7 +2,7 @@
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
 
-1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); `E-03-md-diff.html`: wyrenderowany diff Markdown, wariant A bez przekreśleń (DEC-VCS-078); `E-03-podkreslenia.html`: zmienione słowa podkreśleniem, wariant U2 (DEC-VCS-087; zastępuje tło słów z E-03); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
+1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); `E-01-widok.html`: przełącznik „Widok” P14 (DEC-VCS-092); `E-01-projekt.html`: drzewo PROJEKT (DEC-VCS-089); `E-03-md-diff.html`: wyrenderowany diff Markdown, wariant A bez przekreśleń (DEC-VCS-078); `E-03-podkreslenia.html`: zmienione słowa podkreśleniem, wariant U2 (DEC-VCS-087; zastępuje tło słów z E-03); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
 2. `E-01.png`: zrzut makiety wykonany przez użytkownika (1135 × 712 px); pokazuje, jak wartości wyglądają razem.
 3. Ten dokument: każda wartość wypisana jawnie, z odwzorowaniem w Tk 8.6 i listą przybliżeń.
 
@@ -269,14 +269,15 @@ Chip „⎇ odłączony HEAD · <7 znaków commita>”. Pull nieaktywny, podpowi
 | zmiana nazwy | „nowa” w kolorze `file-ren`, za nią „← stara” (12, `dim`) po odstępie 8 |
 | węzeł folderu | pełna ścieżka katalogu; liczba plików po odstępie 8; najpierw węzły alfabetycznie, potem pliki z katalogu głównego |
 | przycisk folderu | „+” w CHANGES i UNVERSIONED, „−” w STAGED, brak w CONFLICTS; pole 20 × 20, promień 5, 16 od prawej; widoczny na węźle pod kursorem i zaznaczonym; tło `folder-act-hover` |
-| pole „Pokaż foldery” | natywne pole wyboru w pasku narzędzi, przed Pull |
+| przełącznik „Widok” | kapsułka Zmiany, Foldery, Projekt w pasku narzędzi, przed Pull (P14, `E-01-widok.html`, DEC-VCS-092); zastępuje pole „Pokaż foldery” |
+| drzewo PROJEKT | w widoku Projekt pod grupami zmian: nagłówek „PROJEKT N plików”, zagnieżdżone foldery co 18 pt (strzałka, ikona, nazwa), domyślnie zwinięte; zwinięty folder ze zmianami: „N zmian” 12 pt w `mod`; pliki niezmienione w `ink`, zmienione w kolorach statusu; podpowiedź na niezmienionym: „dwuklik czytaj” (`.md`) albo „dwuklik otwórz” (`E-01-projekt.html`, DEC-VCS-089) |
 
 ### Zachowanie
 
 - Spacja na węźle folderu: jak przycisk („+” stage wszystkich plików folderu w grupie, „−” unstage); w CONFLICTS nic.
 - Dwuklik na węźle albo kliknięcie strzałki: zwija i rozwija; klawisze ← i → na zaznaczonym węźle: zwija i rozwija.
 - Węzły domyślnie rozwinięte; stan zwinięcia pamiętany do zamknięcia okna.
-- Stan „Pokaż foldery” zapisany w ustawieniach, wspólny dla wszystkich repo (REQ-VCS-025).
+- Wybrany widok zapisany w ustawieniach, wspólny dla wszystkich repo (REQ-VCS-025, DEC-VCS-091).
 
 ## 7. Do ustalenia (rejestr w SPEC.md)
 
