@@ -204,3 +204,15 @@ def test_req_vcs_031_wide_page_and_document_text_two_points_larger():
                  "border-collapse:collapse; font-size:16px;", ".doc pre { font:15px/1.5", ".source pre { margin:0; padding:14px 18px; font:15px/1.5"):
         assert rule in css, rule
     assert "border-bottom:1px solid var(--line); font-size:13px; }" in css  # the bar stays as it was
+
+
+def test_req_vcs_031_changed_words_are_underlined_not_filled():
+    """DEC-VCS-087 (wariant U2): colour, line style and tone tell added from removed, also for red-green blindness."""
+    css = mdpage.CSS
+    assert ("ins { background:none; text-decoration:underline solid var(--add) 2px; text-underline-offset:3px; }"
+            in css)
+    assert ("del { background:none; text-decoration:underline dotted var(--del) 2px; text-underline-offset:3px; "
+            "color:var(--dim); }" in css)
+    assert "ins code { box-shadow:0 0 0 1.5px var(--add); } del code { box-shadow:0 0 0 1.5px var(--del); }" in css
+    assert "ins a, del a { text-decoration:none; }" in css  # the change line stands in for the link underline
+    assert "--add-word" not in css and "--del-word" not in css  # no word fill any more

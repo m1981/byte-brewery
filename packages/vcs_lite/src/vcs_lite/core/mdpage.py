@@ -4,7 +4,7 @@ Run as its own process, `python -m vcs_lite.core.mdpage <left> <right> <left tit
 [--no-open]`, so the window's memory stays as it is (DES-VCS-049). Raw HTML from the file is shown as text and
 the page allows no scripts but its own view toggle, so nothing from a repository runs in the browser.
 
-Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-079, DEC-VCS-081, DEC-VCS-082, DEC-VCS-084, DEC-VCS-086
+Trace: DES-VCS-049, REQ-VCS-031, DEC-VCS-078, DEC-VCS-079, DEC-VCS-081, DEC-VCS-082, DEC-VCS-084, DEC-VCS-086, DEC-VCS-087
 """
 
 from __future__ import annotations
@@ -218,15 +218,15 @@ def _read(path: Path) -> str:
 
 # ---------- page template ----------
 
-# Colours checked for contrast on 2026-10-23: text at least 4.5:1 on every background it sits on (the
-# weakest is dark text on an inserted word, 5.2:1), change bars at least 3:1 against the page. Dark lines of
-# added and removed blocks stand 1.44:1 off the card and about 1.3:1 off code (they had 1.03–1.15).
+# Colours checked for contrast on 2026-10-23: text at least 4.5:1 on every background it sits on, change
+# bars and word underlines at least 3:1 against the page. Dark lines of added and removed blocks stand
+# 1.44:1 off the card and about 1.3:1 off code (they had 1.03–1.15).
 LIGHT = ("--bg:#ffffff; --page:#f4f4f6; --line:#dedee3; --ink:#1d1d1f; --dim:#5f5f66; --link:#0a5dc2; "
-         "--accent:#0a66d8; --code-bg:#f2f3f5; --add:#1a7f37; --add-soft:#ecf7ef; --add-word:#c3ead0; "
-         "--del:#cf222e; --del-soft:#fdeeec; --del-word:#f8d0cb; --mod:#b26a00; color-scheme:light;")
+         "--accent:#0a66d8; --code-bg:#f2f3f5; --add:#1a7f37; --add-soft:#ecf7ef; "
+         "--del:#cf222e; --del-soft:#fdeeec; --mod:#b26a00; color-scheme:light;")
 DARK = ("--bg:#1e1e21; --page:#121214; --line:#3a3a40; --ink:#e8e8ec; --dim:#a3a3ab; --link:#6cb6ff; "
-        "--accent:#3d8bfd; --code-bg:#26272b; --add:#3fb950; --add-soft:#1f4029; --add-word:#2f6b41; "
-        "--del:#f85149; --del-soft:#5f2828; --del-word:#7a2d2d; --mod:#e3a33b; color-scheme:dark;")
+        "--accent:#3d8bfd; --code-bg:#26272b; --add:#3fb950; --add-soft:#1f4029; "
+        "--del:#f85149; --del-soft:#5f2828; --mod:#e3a33b; color-scheme:dark;")
 
 CSS = f"""
 :root {{ {LIGHT} --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
@@ -266,8 +266,10 @@ li.add {{ background:var(--add-soft); box-shadow:-15px 0 0 -12px var(--add); }}
 li.del {{ background:var(--del-soft); box-shadow:-15px 0 0 -12px var(--del); }}
 li.mod {{ box-shadow:-15px 0 0 -12px var(--mod); }}
 tr.add td, tr.add th {{ background:var(--add-soft); }} tr.del td, tr.del th {{ background:var(--del-soft); }}
-ins {{ background:var(--add-word); color:var(--ink); text-decoration:none; border-radius:3px; padding:0 1px; }}
-del {{ background:var(--del-word); color:var(--ink); text-decoration:none; border-radius:3px; padding:0 1px; }}
+ins {{ background:none; text-decoration:underline solid var(--add) 2px; text-underline-offset:3px; }}
+del {{ background:none; text-decoration:underline dotted var(--del) 2px; text-underline-offset:3px; color:var(--dim); }}
+ins code {{ box-shadow:0 0 0 1.5px var(--add); }} del code {{ box-shadow:0 0 0 1.5px var(--del); }}
+ins a, del a {{ text-decoration:none; }}
 .img-old {{ color:var(--dim); font-size:15px; }}
 .doc img {{ max-width:100%; }}
 .ln {{ display:block; }} .ln.add {{ background:var(--add-soft); }} .ln.del {{ background:var(--del-soft); }}

@@ -1,0 +1,96 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<title>vcs-lite · zaznaczanie zmian w tekście</title><style>
+:root { --bg:#ffffff; --page:#f4f4f6; --line:#dedee3; --ink:#1d1d1f; --dim:#5f5f66; --link:#0a5dc2; --accent:#0a66d8; --code-bg:#f2f3f5; --add:#1a7f37; --add-soft:#ecf7ef; --add-word:#c3ead0; --del:#cf222e; --del-soft:#fdeeec; --del-word:#f8d0cb; --mod:#b26a00; color-scheme:light; --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1e1e21; --page:#121214; --line:#3a3a40; --ink:#e8e8ec; --dim:#a3a3ab; --link:#6cb6ff; --accent:#3d8bfd; --code-bg:#26272b; --add:#3fb950; --add-soft:#1f4029; --add-word:#2f6b41; --del:#f85149; --del-soft:#5f2828; --del-word:#7a2d2d; --mod:#e3a33b; color-scheme:dark; } }
+:root[data-theme="dark"] { --bg:#1e1e21; --page:#121214; --line:#3a3a40; --ink:#e8e8ec; --dim:#a3a3ab; --link:#6cb6ff; --accent:#3d8bfd; --code-bg:#26272b; --add:#3fb950; --add-soft:#1f4029; --add-word:#2f6b41; --del:#f85149; --del-soft:#5f2828; --del-word:#7a2d2d; --mod:#e3a33b; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--page); color:var(--ink); font:17px/1.6 var(--font); }
+a { color:var(--link); }
+.bar { position:sticky; top:0; display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:10px 20px;
+  background:var(--bg); border-bottom:1px solid var(--line); font-size:13px; }
+.bar .f { font-weight:650; } .bar .sides { color:var(--dim); } .spacer { flex:1; }
+.stats { font:12px var(--mono); } .stats .a { color:var(--add); } .stats .d { color:var(--del); } .stats .m { color:var(--mod); }
+.seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+.seg button { font:inherit; border:0; background:none; color:inherit; padding:3px 10px; cursor:pointer; }
+.seg button.on { background:var(--accent); color:#fff; }
+main { max-width:1200px; margin:0 auto; padding:16px; }
+.doc, .source { background:var(--bg); border-radius:10px; box-shadow:0 0 0 1px var(--line); }
+.doc { padding:18px 32px 24px; }
+.doc { font-family:"Open Sans",var(--font); font-synthesis:none; }
+.doc strong, .doc b, .doc th, .doc h1, .doc h2, .doc h3, .doc h4 { font-weight:600; }
+.doc h1 { font-size:26px; } .doc h2 { font-size:21px; } .doc h3 { font-size:18px; }
+.doc h1, .doc h2, .doc h3, .doc h4 { margin:14px 0 6px; } .doc p, .doc ul, .doc ol, .doc pre { margin:0 0 8px; }
+.doc ul, .doc ol { padding-left:22px; } .doc table { border-collapse:collapse; font-size:16px; margin:0 0 8px; }
+.doc td, .doc th { border:1px solid var(--line); padding:4px 10px; text-align:left; }
+.doc pre { font:15px/1.5 var(--mono); background:var(--code-bg); border-radius:6px; padding:8px 10px; overflow-x:auto; }
+.doc :not(pre) > code { font:0.9em var(--mono); background:var(--code-bg); border-radius:4px; padding:0 4px; }
+.doc pre.meta { color:var(--dim); background:none; border:1px dashed var(--line); }
+.doc pre .lang { float:right; color:var(--dim); font-size:13px; }
+.blk { padding:2px 0 2px 12px; margin-left:-15px; border-left:3px solid transparent; }
+.blk > :last-child { margin-bottom:2px; }
+.blk.add { border-left-color:var(--add); background:var(--add-soft); }
+.blk.del { border-left-color:var(--del); background:var(--del-soft); }
+.blk.mod { border-left-color:var(--mod); }
+.blk.quote { color:var(--dim); }
+li.add { background:var(--add-soft); box-shadow:-15px 0 0 -12px var(--add); }
+li.del { background:var(--del-soft); box-shadow:-15px 0 0 -12px var(--del); }
+li.mod { box-shadow:-15px 0 0 -12px var(--mod); }
+tr.add td, tr.add th { background:var(--add-soft); } tr.del td, tr.del th { background:var(--del-soft); }
+ins { background:var(--add-word); color:var(--ink); text-decoration:none; border-radius:3px; padding:0 1px; }
+del { background:var(--del-word); color:var(--ink); text-decoration:none; border-radius:3px; padding:0 1px; }
+.img-old { color:var(--dim); font-size:15px; }
+.doc img { max-width:100%; }
+.ln { display:block; } .ln.add { background:var(--add-soft); } .ln.del { background:var(--del-soft); }
+.fold { color:var(--dim); font-size:14px; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
+  padding:3px 0; margin:8px 0; }
+.nochange { color:var(--dim); }
+.source pre { margin:0; padding:14px 18px; font:15px/1.5 var(--mono); overflow-x:auto; }
+[hidden] { display:none !important; }
+
+.light { --bg:#ffffff; --page:#f4f4f6; --line:#dedee3; --ink:#1d1d1f; --dim:#5f5f66; --link:#0a5dc2; --accent:#0a66d8; --code-bg:#f2f3f5; --add:#1a7f37; --add-soft:#ecf7ef; --add-word:#c3ead0; --del:#cf222e; --del-soft:#fdeeec; --del-word:#f8d0cb; --mod:#b26a00; color-scheme:light; } .dark { --bg:#1e1e21; --page:#121214; --line:#3a3a40; --ink:#e8e8ec; --dim:#a3a3ab; --link:#6cb6ff; --accent:#3d8bfd; --code-bg:#26272b; --add:#3fb950; --add-soft:#1f4029; --add-word:#2f6b41; --del:#f85149; --del-soft:#5f2828; --del-word:#7a2d2d; --mod:#e3a33b; color-scheme:dark; }
+.col { background:var(--page); color:var(--ink); padding:12px; border-radius:10px; }
+.cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; } @media (max-width:900px) { .cols { grid-template-columns:1fr; } }
+section { max-width:1400px; margin:0 auto 28px; padding:0 16px; } section h2 { font-size:17px; margin:0 0 2px; } .why { color:#5f5f66; margin:0 0 10px; max-width:110ch; }
+h1.t { max-width:1400px; margin:24px auto 18px; padding:0 16px; font-size:21px; }</style></head>
+<body style="background:#e9e9ee"><h1 class="t">vcs-lite — jak zaznaczać zmienione słowa w zwykłym tekście (propozycja)</h1>
+<section class="dzis"><h2>Dziś: wypełnienie</h2><p class="why">Tło całego słowa; mocno przyciąga wzrok, zwłaszcza w długich akapitach.</p><style></style><div class="cols"><div class="col light"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div><div class="col dark"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div></div></section><section class="u1"><h2>U1: podkreślenie w kolorze</h2><p class="why">Dodane: zielona linia 2 pt pod słowem. Usunięte: czerwona linia 2 pt. Różnica tylko kolorem.</p><style>.u1 ins, .u1 del { background:none; padding:0; border-radius:0; text-decoration:none;
+  background-image:linear-gradient(var(--u),var(--u)); background-repeat:no-repeat; background-size:100% 2px; background-position:0 100%; padding-bottom:1px; }
+.u1 ins { --u:var(--add); }
+.u1 del { --u:var(--del); }
+.u1 ins code, .u1 del code { box-shadow:0 0 0 1.5px var(--u2) !important; }
+.u1 ins a, .u1 del a { text-decoration:none; }
+.u1 ins { --u2:var(--add); }
+.u1 del { --u2:var(--del); }
+</style><div class="cols"><div class="col light"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div><div class="col dark"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div></div></section><section class="u2"><h2>U2: podkreślenie i styl linii (rekomendacja)</h2><p class="why">Dodane: ciągła zielona linia 2 pt. Usunięte: kropkowana czerwona linia i przygaszony tekst, bez przekreślenia (DEC-VCS-078). Różnica kolorem, stylem linii i tonem tekstu, więc czytelna także przy daltonizmie czerwono-zielonym.</p><style>.u2 ins, .u2 del { background:none; padding:0; border-radius:0; text-decoration-line:underline; text-decoration-thickness:2px; text-underline-offset:3px; }
+.u2 ins { text-decoration-color:var(--add); text-decoration-style:solid; }
+.u2 del { text-decoration-color:var(--del); text-decoration-style:dotted; color:var(--dim); }
+.u2 ins code, .u2 del code { box-shadow:0 0 0 1.5px var(--u2) !important; }
+.u2 ins a, .u2 del a { text-decoration:none; }
+.u2 ins { --u2:var(--add); }
+.u2 del { --u2:var(--del); }
+</style><div class="cols"><div class="col light"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div><div class="col dark"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div></div></section><section class="u3"><h2>U3: obwódka jak przy kodzie</h2><p class="why">Cienka kolorowa ramka wokół zmienionych słów, bez wypełnienia; spójne z wyglądem fragmentów kodu.</p><style>.u3 ins, .u3 del { background:none; border-radius:4px; padding:0 2px; }
+.u3 ins { box-shadow:inset 0 0 0 1.5px var(--add); }
+.u3 del { box-shadow:inset 0 0 0 1.5px var(--del); color:var(--dim); }
+.u3 ins code, .u3 del code { box-shadow:0 0 0 1.5px var(--u2) !important; }
+.u3 ins a, .u3 del a { text-decoration:none; }
+.u3 ins { --u2:var(--add); }
+.u3 del { --u2:var(--del); }
+</style><div class="cols"><div class="col light"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div><div class="col dark"><div class="doc"><div class="blk mod"><p>Zmienione: <code>design/components.md</code>, <del><code>project/decisions.md</code></del> <ins><code>records/trace.md</code></ins>, <del><code>records/trace.md</code></del> <ins><code>reports/progress.md</code></ins>, <code>src/cli.py</code>.</p></div>
+<div class="blk mod"><p><strong>Sprawdź rozumienie:</strong> <del>który plik określa oczekiwanie</del> <ins>co było zaplanowane przed działaniem</ins>, <del>który pokazuje wykonanie, a który decyzję</del> <ins>co dopiero wykonano i która decyzja dotyczyła zakresu próby lub odbioru</ins>? <del>Czy zielony test zastępuje pozostałe dwa?</del></p></div>
+<div class="blk mod"><p><del><a href="a.md">Poprzednie zdjęcie</a></del> <ins><a href="a2.md">Poprzednie zdjęcie</a></ins> · <del><a href="b.md">Następne zdjęcie</a></del> <ins><a href="b2.md">Następne zdjęcie</a></ins></p></div></div></div></div></section></body></html>
