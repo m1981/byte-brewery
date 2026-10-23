@@ -106,8 +106,16 @@ class FileList(tk.Frame):
         for key, action in (("<Up>", self.press_up), ("<Down>", self.press_down), ("<Left>", self.press_left),
                             ("<Right>", self.press_right), ("<space>", self.press_space), ("<Return>", self.press_return)):
             c.bind(key, lambda e, a=action: a())
-        c.bind("<MouseWheel>", lambda e: c.yview_scroll(-e.delta, "units"))
+        c.bind("<MouseWheel>", lambda e: self.scroll(e.delta))
         c.bind("<Configure>", lambda e: self._model and self.render(self._model))
+
+    def scroll(self, delta: int) -> None:
+        """Mouse wheel; a list that fits its window stays put (Tk would move a short region into empty space)."""
+        c = self.canvas
+        if self._content_height <= c.winfo_height():
+            c.yview_moveto(0)
+            return
+        c.yview_scroll(-delta, "units")
 
     # ---------- reading what was drawn ----------
 
@@ -333,7 +341,7 @@ class FileList(tk.Frame):
         for title, count, top in self._headers:
             self._draw_header(title, count, top)
         self._redraw_rows()
-        c.configure(scrollregion=(0, 0, self._width(), self._content_height))
+        c.configure(scrollregion=(0, 0, self._width(), max(self._content_height, c.winfo_height())))
 
     def _draw_header(self, title: str, count: int, top: int) -> None:
         color = C["conf"] if title == Group.CONFLICTS.value.upper() else theme.TYPE["group_header"].color

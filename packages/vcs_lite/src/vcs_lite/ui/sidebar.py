@@ -11,11 +11,10 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
-from tkinter import font as tkfont
 
 from vcs_lite.app.model import AppModel, RepoState
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import rounded_rect
+from vcs_lite.ui.widgets import elide, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 
@@ -48,23 +47,19 @@ class Row:
     top: int
 
 
-def elide(text: str, font: tkfont.Font, width: int) -> str:
-    """Shorten text with an ellipsis so it fits the width in pixels."""
-    if font.measure(text) <= width:
-        return text
-    while text and font.measure(text + "…") > width:
-        text = text[:-1]
-    return text + "…"
-
-
 class RepoSidebar(tk.Frame):
     def __init__(self, master: tk.Misc, on_select: Callable[[str], None]):
         super().__init__(master, bg=C["sidebar"])
         self._on_select = on_select
-        self.canvas = tk.Canvas(self, bg=C["sidebar"], highlightthickness=0, bd=0, width=S["sidebar_width"])
+        self.canvas = tk.Canvas(self, bg=C["sidebar"], highlightthickness=0, bd=0, width=S["sidebar_width"],
+                                yscrollincrement=2)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind("<Button-1>", lambda event: self.click(event.y))
+        self.canvas.bind("<MouseWheel>", lambda event: self.scroll(event.delta))
         self._rows: list[Row] = []
+        self._shown_selected: str | None = None  # scroll to the selected row only when the selection changes
+        self._content_height = 1
+        self.canvas.bind("<Configure>", lambda event: self._fit_region())
         self.empty_text = ""
 
     # ---------- reading what was drawn ----------
@@ -78,8 +73,21 @@ class RepoSidebar(tk.Frame):
                 return row.name
         return None
 
+    def scroll(self, delta: int) -> None:
+        """Mouse wheel; a list that fits its window stays put (Tk would move a short region into empty space)."""
+        c = self.canvas
+        if self._content_height <= c.winfo_height():
+            c.yview_moveto(0)
+            return
+        c.yview_scroll(-delta, "units")
+
+    def _fit_region(self) -> None:
+        """The scroll region is never shorter than the window."""
+        self.canvas.configure(scrollregion=(0, 0, S["sidebar_width"], max(self._content_height, self.canvas.winfo_height())))
+
     def click(self, y: int) -> None:
-        name = self.name_at(y)
+        """`y` is in window coordinates; the list may be scrolled."""
+        name = self.name_at(int(self.canvas.canvasy(y)))
         if name:
             self._on_select(name)
 
@@ -98,6 +106,23 @@ class RepoSidebar(tk.Frame):
                           font=theme.font("body"), fill=C["dim"])
         for index, name in enumerate(model.repo_names):
             self._rows.append(self._draw_row(model, name, FIRST_ITEM_TOP + index * ITEM_STRIDE, width))
+        height = self._content_height = FIRST_ITEM_TOP + len(self._rows) * ITEM_STRIDE + PAD_Y
+        self._fit_region()
+        if model.selected != self._shown_selected:
+            self._shown_selected = model.selected
+            self._scroll_into_view(model.selected, height)
+
+    def _scroll_into_view(self, name: str | None, height: int) -> None:
+        """Keep a repository chosen with ⌘1–⌘9 or from the list visible."""
+        c = self.canvas
+        row = next((r for r in self._rows if r.name == name), None)
+        if not row or c.winfo_height() <= 1:
+            return
+        view_top, view_height = c.canvasy(0), c.winfo_height()
+        if row.top < view_top:
+            c.yview_moveto((row.top - PAD_Y) / height)
+        elif row.top + ITEM_HEIGHT > view_top + view_height:
+            c.yview_moveto((row.top + ITEM_HEIGHT + PAD_Y - view_height) / height)
 
     def _draw_row(self, model: AppModel, name: str, top: int, width: int) -> Row:
         c = self.canvas

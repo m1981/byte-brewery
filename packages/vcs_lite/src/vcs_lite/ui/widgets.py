@@ -1,6 +1,6 @@
 """Small drawn widgets of the reference: rounded pills (chip, badge, kbd) and hover tooltips.
 
-Trace: DES-VCS-042, DEC-VCS-047, DEC-VCS-049
+Trace: DES-VCS-042, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071
 """
 
 from __future__ import annotations
@@ -11,6 +11,15 @@ from collections.abc import Callable
 from tkinter import font as tkfont
 
 from vcs_lite.ui import theme
+
+
+def elide(text: str, font: tkfont.Font, width: int) -> str:
+    """Shorten text with an ellipsis so it fits the width in pixels."""
+    if font.measure(text) <= width:
+        return text
+    while text and font.measure(text + "…") > width:
+        text = text[:-1]
+    return text + "…"
 
 
 def elide_middle(text: str, font: tkfont.Font, width: int) -> str:

@@ -207,6 +207,24 @@ def test_des_vcs_023_sidebar_draws_state_line_badge_and_selection(root, world):
     assert top == rows[0].top  # one selection shape, on the selected row
 
 
+def test_des_vcs_023_sidebar_scrolls_when_repositories_do_not_fit(root, world):
+    names = [f"repo{i:02}" for i in range(15)]
+    for name in names:
+        world.repo(name)
+    model = world.start(*names)
+    window = MainWindow(root, model)
+    c = window.sidebar.canvas
+    rows = window.sidebar.rows()
+    assert float(c.cget("scrollregion").split()[3]) >= rows[-1].top + 48  # the last row is inside the region
+    assert c.bind("<MouseWheel>")  # Tk delivers no events to the hidden test window: bound, then run
+    window.sidebar.scroll(-5)
+    shift = c.canvasy(0)
+    assert shift > 0
+    last = rows[-1]
+    window.sidebar.click(int(last.top - shift + 5))  # a click is read in canvas coordinates
+    assert model.selected == last.name
+
+
 def test_des_vcs_023_clicking_a_row_selects_that_repository(root, world):
     world.repo("alpha"); world.repo("beta")
     model = world.start("alpha", "beta")
@@ -228,3 +246,16 @@ def test_des_vcs_023_long_names_are_shortened_to_fit(root, world):
     window = MainWindow(root, world.start("a-very-long-repository-name-that-does-not-fit"))
     shown = window.sidebar.rows()[0].shown_name
     assert shown.endswith("…") and len(shown) < 40
+
+
+def test_des_vcs_023_short_lists_do_not_scroll(root, world, monkeypatch):
+    """Zrzut 2026-10-22: the wheel moved a list shorter than its window down into empty space."""
+    world.repo("alpha").write("a.py", "a\n")
+    model = world.start("alpha")
+    window = MainWindow(root, model)
+    world.select("alpha")
+    for canvas, scroll in ((window.file_list.canvas, window.file_list.scroll), (window.sidebar.canvas, window.sidebar.scroll)):
+        monkeypatch.setattr(canvas, "winfo_height", lambda: 600)  # a tall window; the hidden test one has no height
+        for delta in (-5, +5):
+            scroll(delta)
+            assert canvas.canvasy(0) == 0
