@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · E-01 podpowiedzi</title>
+<style>
+  /* Tokens and rules of E-01-lista.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73;
+    --accent: #0a66d8; --accent-soft: #e3eefc; --row-hover: #f5f7fb; --conf: #c2302a;
+    --file-mod: #002daa; --file-unv: #a92c3e;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1120px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 84ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .pid.bad { background: var(--conf); }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 88ch; }
+  .scroll { overflow-x: auto; }
+  .pane { width: 540px; background: var(--bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 10px 26px rgba(0,0,0,.14); padding: 6px 0 10px; position: relative; }
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .row { height: 24px; display: flex; align-items: center; padding: 0 16px 0 28px; white-space: nowrap; position: relative; overflow: hidden; }
+  .row.sel { background: var(--accent-soft); } .row.hover { background: var(--row-hover); }
+  .U { color: var(--file-unv); } .M { color: var(--file-mod); }
+  .fd { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .hint { margin-left: auto; padding-left: 16px; color: var(--dim); font-size: 11.5px; flex: none; }   /* NEW: 16 gap kept */
+  .overlap .hint { position: absolute; right: 16px; padding-left: 0; }                                  /* today: drawn over the path */
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+  .cursor { position: absolute; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid #1d1d1f; transform: rotate(-30deg); }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>vcs-lite — P12: podpowiedzi przy wierszach plików</h1>
+    <p class="lead">Propozycja do akceptacji. Dwa problemy ze zrzutu użytkownika 2026-10-22 (repo <code>kitchen-agent</code>): podpowiedź nachodzi na długą ścieżkę folderu, a podpowiedź na zaznaczonym wierszu wisi stale, więc przy najechaniu na inny wiersz widać dwie naraz.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid bad">Dziś</span> Dwie podpowiedzi i nachodzący tekst</h2>
+    <p class="cap">Zaznaczony <code>E4-umowa.md</code> (kliknięty raz) i kursor nad <code>E8-odbior.md</code>. Reguła dziś: podpowiedź pod kursorem i na zaznaczonym (UI-REFERENCE §4).</p>
+    <div class="scroll"><div class="pane">
+      <div class="group">Unversioned <span class="n">203</span></div>
+      <div class="row overlap"><span class="U">E3-wycena.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+      <div class="row sel overlap"><span class="U">E4-umowa.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+      <div class="row overlap"><span class="U">E5-zamowienia.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+      <div class="row hover overlap"><span class="U">E8-odbior.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+      <div class="row overlap"><span class="U">E9-post.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P12a</span> Jedna podpowiedź, tylko pod kursorem</h2>
+    <p class="cap">Ten sam stan po zmianie. Zaznaczony wiersz ma tylko niebieskie tło. Podpowiedź ma jedną regułę: pojawia się na wierszu pod kursorem i znika, gdy kursor go opuszcza. Ścieżka folderu w wierszu z podpowiedzią jest skracana w środku tak, żeby zostało 16 pt odstępu przed podpowiedzią; pierwszy i ostatni człon zostają, bo to po nich rozpoznaje się miejsce.</p>
+    <div class="scroll"><div class="pane">
+      <div class="group">Unversioned <span class="n">203</span></div>
+      <div class="row"><span class="U">E3-wycena.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+      <div class="row sel"><span class="U">E4-umowa.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+      <div class="row"><span class="U">E5-zamowienia.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+      <div class="row hover"><span class="U">E8-odbior.md</span><span class="fd">data/realizacje/…/checklisty</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+      <div class="row"><span class="U">E9-post.md</span><span class="fd">data/realizacje/2026-08-pomiar-kuchnia1/checklisty</span></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">P12b</span> Ścieżka dłuższa niż wiersz, bez podpowiedzi</h2>
+    <p class="cap">Gdy ścieżka nie mieści się nawet bez podpowiedzi (wąskie okno), skraca się w środku do krawędzi wiersza (16 pt od prawej). Nazwa pliku nigdy nie jest skracana, dopóki mieści się sama; dopiero wtedy dostaje „…” na końcu, a folder znika.</p>
+    <div class="scroll"><div class="pane" style="width:380px">
+      <div class="group">Unversioned <span class="n">203</span></div>
+      <div class="row"><span class="U">E3-wycena.md</span><span class="fd">data/realizacje/2026-08-pom…/checklisty</span></div>
+      <div class="row sel"><span class="U">E4-umowa.md</span><span class="fd">data/realizacje/2026-08-pomi…/checklisty</span></div>
+      <div class="row hover"><span class="U">E8-odbior.md</span><span class="fd">data/…/checklisty</span><span class="hint"><kbd>spacja</kbd> stage · <kbd>dwuklik</kbd> porównaj</span></div>
+      <div class="row"><span class="U">sesja-01a093f4-labels-deps-export-…</span></div>
+    </div></div>
+  </section>
+
+  <section class="notes">
+    <h2>Reguły P12</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Dziś</th><th>Propozycja</th></tr>
+      <tr><td>Kiedy widać podpowiedź</td><td>pod kursorem i na zaznaczonym wierszu</td><td>tylko pod kursorem; najwyżej jedna naraz</td></tr>
+      <tr><td>Zaznaczony wiersz</td><td>tło <code>accent-soft</code> i podpowiedź</td><td>tylko tło <code>accent-soft</code></td></tr>
+      <tr><td>Długa ścieżka przy podpowiedzi</td><td>podpowiedź rysowana na ścieżce</td><td>ścieżka skracana w środku („…”), 16 pt przed podpowiedzią</td></tr>
+      <tr><td>Długa ścieżka bez podpowiedzi</td><td>wychodzi poza wiersz</td><td>skracana w środku do 16 pt od prawej krawędzi</td></tr>
+      <tr><td>Za długa nazwa pliku</td><td>—</td><td>„…” na końcu nazwy, bez folderu</td></tr>
+      <tr><td>Klawiatura (spacja, Enter)</td><td>bez zmian</td><td>bez zmian; skróty dalej w pasku stanu i tekście zastępczym</td></tr>
+    </table></div>
+    <p class="cap" style="margin-top:12px">Alternatywa rozważona i nierekomendowana: podpowiedź idzie za kursorem, a gdy kursor opuszcza listę, wraca na zaznaczony wiersz. Zostawia „wiszącą” podpowiedź, na którą była skarga.</p>
+  </section>
+</div>
+</body>
+</html>

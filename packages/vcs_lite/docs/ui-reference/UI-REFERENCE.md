@@ -2,7 +2,7 @@
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
 
-1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
+1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
 2. `E-01.png`: zrzut makiety wykonany przez użytkownika (1135 × 712 px); pokazuje, jak wartości wyglądają razem.
 3. Ten dokument: każda wartość wypisana jawnie, z odwzorowaniem w Tk 8.6 i listą przybliżeń.
 
@@ -134,7 +134,7 @@ Nagłówek „REPOZYTORIA”. Element repo: kropka stanu, nazwa (pogrubiona), dr
 Stopka: przycisk „⚙ Repozytoria…” otwiera Settings (E-02).
 
 ### Lista plików
-Zastąpione przez §9 (DEC-VCS-052–057). Kolejność grup: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED. Teksty podpowiedzi przy wierszu pliku: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051); CHANGES i UNVERSIONED „spacja stage · dwuklik porównaj” (P7). Słowa „spacja” i „dwuklik” w stylu `kbd`. Tło wiersza: zwykły `bg`, pod kursorem `#f5f7fb`, zaznaczony `accent-soft`; podpowiedź widoczna pod kursorem i na zaznaczonym.
+Zastąpione przez §9 (DEC-VCS-052–057). Kolejność grup: CONFLICTS (gdy są), STAGED, CHANGES, UNVERSIONED. Teksty podpowiedzi przy wierszu pliku: CONFLICTS „rozwiąż w edytorze · spacja oznacz jako rozwiązany” (P1); STAGED „spacja unstage · dwuklik porównaj” (DEC-VCS-051); CHANGES i UNVERSIONED „spacja stage · dwuklik porównaj” (P7). Słowa „spacja” i „dwuklik” w stylu `kbd`. Tło wiersza: zwykły `bg`, pod kursorem `#f5f7fb`, zaznaczony `accent-soft`; podpowiedź widoczna tylko na wierszu pod kursorem, najwyżej jedna (P12, DEC-VCS-071).
 
 ### Panel commita
 Pole wiadomości z tekstem zastępczym „Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push”. Obok, w kolumnie: przycisk główny „Commit do <repo>” i pod nim „Commit & Push”. Pod spodem linia przyczyny „ⓘ <commit_disabled_reason>”; ukryta, gdy commit jest możliwy.
@@ -263,6 +263,8 @@ Chip „⎇ odłączony HEAD · <7 znaków commita>”. Pull nieaktywny, podpowi
 | nagłówek grupy | wysokość 24 = 6 (góra) + 15 + 3 (dół); od lewej 16 |
 | wiersz pliku i węzła folderu | wysokość 24; tekst wyśrodkowany w pionie |
 | widok płaski | nazwa pliku od 28; za nią folder nadrzędny (12, `dim`) po odstępie 8 |
+| pusta grupa STAGED (P13b) | gdy repo ma jakiekolwiek zmiany, nagłówek „STAGED 0” zostaje na swoim miejscu, a pod nim jeden wiersz 24 pt od 28: „pusto · spacja na pliku dodaje go do commita” (12, `dim`; „spacja” w stylu `kbd`); wiersza nie da się zaznaczyć ani najechać, strzałki i ⌘A go pomijają; repo bez zmian i merge bez plików bez zmian (P5, P11a) (DEC-VCS-076, `E-01-staged.html`) |
+| długi tekst (P12) | folder albo „← stara” skracane w środku („…”), żeby zostało 16 pt przed podpowiedzią, a bez niej przed prawą krawędzią wiersza (16 od prawej); nazwa pliku, która nie mieści się sama, dostaje „…” na końcu, a folder znika (DEC-VCS-071, `E-01-podpowiedzi.html`) |
 | widok folderów | strzałka 28 (szerokość 12; „▾” rozwinięty, „▸” zwinięty, `dim`); ikona 46 (16 × 13, `folder-icon`); nazwa folderu 68; pliki w folderze od 68, pliki z katalogu głównego od 46; bez folderu za nazwą |
 | zmiana nazwy | „nowa” w kolorze `file-ren`, za nią „← stara” (12, `dim`) po odstępie 8 |
 | węzeł folderu | pełna ścieżka katalogu; liczba plików po odstępie 8; najpierw węzły alfabetycznie, potem pliki z katalogu głównego |

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · E-01 pusty Staged</title>
+<style>
+  /* Tokens and rules of E-01-lista.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73; --accent: #0a66d8; --accent-soft: #e3eefc;
+    --file-mod: #002daa; --file-unv: #a92c3e; --conf: #c2302a;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1120px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 86ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .pid.alt { background: #8e8e93; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 88ch; }
+  .trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 18px; }
+  .pane { background: var(--bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 10px 26px rgba(0,0,0,.14); padding: 6px 0 10px; }
+  .pane-cap { font-size: 12px; font-weight: 600; color: #3a3a40; margin: 0 0 6px; }
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .row { height: 24px; display: flex; align-items: center; padding: 0 16px 0 28px; white-space: nowrap; }
+  .M { color: var(--file-mod); } .U { color: var(--file-unv); }
+  .fd { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .empty-row { color: var(--dim); font-size: 12px; }                                        /* NEW */
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+  .reason { margin: 8px 16px 0; color: var(--dim); font-size: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>vcs-lite — P13: grupa STAGED zawsze widoczna</h1>
+    <p class="lead">Pomysł użytkownika 2026-10-23 po „Dodaj do .gitignore” w repo <code>cv</code>: commit był zablokowany, bo <code>.gitignore</code> trafił do Changes, a pusta grupa Staged była ukryta. Propozycja: STAGED widoczne zawsze, gdy repo ma jakiekolwiek zmiany; pusta grupa ma szary wiersz zamiast pliku.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid alt">Dziś</span> · <span class="pid alt">P13a</span> pomysł użytkownika · <span class="pid">P13b</span> rekomendacja agenta</h2>
+    <p class="cap">Ten sam stan repo <code>cv</code>: <code>.gitignore</code> w Changes, 13 plików w Unversioned, nic w Staged.</p>
+    <div class="trio">
+      <div>
+        <p class="pane-cap">Dziś: pusta grupa ukryta</p>
+        <div class="pane">
+          <div class="group">Changes <span class="n">1</span></div>
+          <div class="row"><span class="M">.gitignore</span></div>
+          <div class="group">Unversioned <span class="n">13</span></div>
+          <div class="row"><span class="U">.jjit-decisions-2026-09-16.json</span><span class="fd">szukanie2</span></div>
+          <div class="row"><span class="U">kolejka.html</span><span class="fd">szukanie2/scripts/…/baseline</span></div>
+          <div class="reason">ⓘ Brak plików w Staged.</div>
+        </div>
+      </div>
+      <div>
+        <p class="pane-cap">P13a: „(empty)”</p>
+        <div class="pane">
+          <div class="group">Staged <span class="n">0</span></div>
+          <div class="row"><span class="empty-row">(empty)</span></div>
+          <div class="group">Changes <span class="n">1</span></div>
+          <div class="row"><span class="M">.gitignore</span></div>
+          <div class="group">Unversioned <span class="n">13</span></div>
+          <div class="row"><span class="U">.jjit-decisions-2026-09-16.json</span><span class="fd">szukanie2</span></div>
+          <div class="reason">ⓘ Brak plików w Staged.</div>
+        </div>
+      </div>
+      <div>
+        <p class="pane-cap">P13b: po polsku, z podpowiedzią</p>
+        <div class="pane">
+          <div class="group">Staged <span class="n">0</span></div>
+          <div class="row"><span class="empty-row">pusto · <kbd>spacja</kbd> na pliku dodaje go do commita</span></div>
+          <div class="group">Changes <span class="n">1</span></div>
+          <div class="row"><span class="M">.gitignore</span></div>
+          <div class="group">Unversioned <span class="n">13</span></div>
+          <div class="row"><span class="U">.jjit-decisions-2026-09-16.json</span><span class="fd">szukanie2</span></div>
+          <div class="reason">ⓘ Brak plików w Staged.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Reguły P13</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Sytuacja</th><th>Co widać</th></tr>
+      <tr><td>Repo ma zmiany, Staged pusty</td><td>nagłówek „STAGED 0” na swoim miejscu (pod CONFLICTS, nad CHANGES) i jeden szary wiersz 24 pt od 28 pt, 12 pt <code>dim</code>; „spacja” w stylu <code>kbd</code></td></tr>
+      <tr><td>Repo bez zmian</td><td>bez zmian: pusty stan „Brak zmian” (P5), bez nagłówka STAGED</td></tr>
+      <tr><td>Merge gotowy do commita bez plików (P11a)</td><td>bez zmian: pusty stan „Merge gotowy do commita”</td></tr>
+      <tr><td>Widok folderów</td><td>ten sam szary wiersz od 28 pt</td></tr>
+      <tr><td>Zaznaczanie, kursor, klawiatura</td><td>szary wiersz nie jest wierszem pliku: nie da się go zaznaczyć ani najechać, strzałki i Shift go pomijają, Ctrl+A go nie obejmuje</td></tr>
+      <tr><td>Pozostałe grupy</td><td>bez zmian: puste Changes, Unversioned i Conflicts są ukryte (REQ-VCS-003 dopuszcza oba sposoby)</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

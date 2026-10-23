@@ -284,3 +284,41 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then Commit jest aktywny, choć grupa Staged jest pusta
     When użytkownik wybiera Commit
     Then powstaje commit scalający z dwoma rodzicami i merge się kończy
+
+  @AT_VCS_035 @confirmed @UC_VCS_04 @REQ_VCS_028 @DEC_VCS_072 @VER_VCS_002
+  Scenario: Przegląd plik po pliku: po spacji zaznaczenie przechodzi na następny plik grupy
+    Given w grupie Unversioned są "u1.txt", "u2.txt" i "u3.txt"
+    And zaznaczony jest "u1.txt"
+    When użytkownik naciska spację
+    Then do zakończenia operacji zaznaczony pozostaje "u1.txt"
+    And po jej zakończeniu "u1.txt" jest w grupie Staged, a zaznaczony jest "u2.txt" w grupie Unversioned
+    When użytkownik zaznacza "u3.txt" i naciska spację
+    Then zaznaczony jest "u2.txt", bo "u3.txt" był ostatni w grupie
+
+  @AT_VCS_036 @confirmed @UC_VCS_04 @REQ_VCS_029 @DEC_VCS_073 @VER_VCS_002
+  Scenario: Zaznaczanie wielu plików jak w Eksploratorze i stage ich jedną spacją
+    Given w grupie Unversioned są "u1.txt", "u2.txt", "u3.txt" i "u4.txt"
+    When użytkownik klika "u1.txt", a potem z klawiszem Shift klika "u3.txt"
+    Then zaznaczone są "u1.txt", "u2.txt" i "u3.txt"
+    When użytkownik z klawiszem Ctrl klika "u2.txt"
+    Then zaznaczone są "u1.txt" i "u3.txt"
+    When użytkownik naciska spację
+    Then "u1.txt" i "u3.txt" są w grupie Staged po jednym wywołaniu git add
+    And zaznaczony jest "u4.txt"
+
+  @AT_VCS_037 @confirmed @UC_VCS_04 @REQ_VCS_005 @REQ_VCS_029 @DEC_VCS_040 @VER_VCS_002
+  Scenario: Menu kontekstowe robi stage zaznaczonych plików
+    Given w grupie Unversioned zaznaczone są "u1.txt" i "u2.txt"
+    When użytkownik klika prawym przyciskiem "u2.txt"
+    Then zaznaczenie się nie zmienia, a menu ma aktywną pozycję „Stage (2)” i nieaktywne „Unstage” oraz „Porównaj”
+    When użytkownik wybiera „Stage (2)”
+    Then "u1.txt" i "u2.txt" są w grupie Staged
+
+  @AT_VCS_038 @confirmed @UC_VCS_04 @REQ_VCS_030 @DEC_VCS_074 @VER_VCS_002
+  Scenario: Zaznaczone pliki poza kontrolą trafiają do .gitignore z menu kontekstowego
+    Given w grupie Unversioned są "u1.txt", "u2.txt" i "u3.txt", a repo nie ma pliku .gitignore
+    And zaznaczone są "u1.txt" i "u2.txt"
+    When użytkownik wybiera z menu kontekstowego „Dodaj do .gitignore (2)”
+    Then .gitignore zawiera linie "/u1.txt" i "/u2.txt"
+    And grupa Unversioned zawiera ".gitignore" i "u3.txt", a nie zawiera "u1.txt" ani "u2.txt"
+    And zaznaczony jest "u3.txt"
