@@ -21,6 +21,7 @@ class World:
         self.git = GitCli(env=GIT_ENV)
         self.worker = ManualWorker()
         self.tool = FakeDiffTool()
+        self.md_tool = FakeDiffTool()  # the rendered Markdown diff (REQ-VCS-031)
         self.questions: list[str] = []
         self.answer = True
         self.model: AppModel | None = None
@@ -40,7 +41,8 @@ class World:
         extra = {"clock": self.clock} if self.clock else {}
         if self.save_settings:
             extra["save_settings"] = self.save_settings
-        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, worker=self.worker, confirm=self._confirm, **extra)
+        self.model = AppModel(settings, git=self.git, diff_tool=self.tool, markdown_tool=self.md_tool, worker=self.worker,
+                              confirm=self._confirm, **extra)
         self.model.refresh_all()
         self.worker.settle()
         return self.model

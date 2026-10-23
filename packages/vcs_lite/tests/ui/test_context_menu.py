@@ -163,3 +163,22 @@ def test_req_vcs_030_g16_write_error_shows_the_banner_and_keeps_the_file(listed,
         assert ignore.read_text() == "*.tmp\n"
     finally:
         ignore.chmod(0o644)
+
+
+# ---------- Markdown (REQ-VCS-031) ----------
+
+def test_req_vcs_031_markdown_offers_the_source_compare_in_beyond_compare(listed, world):  # noqa: F811
+    window, model = listed
+    (world.root / "alpha" / "NOTES.md").write_text("# Notatki\n")
+    model.refresh_all(); world.worker.settle()
+    menu = window.file_list.prepare_menu(y(window, (U, "NOTES.md")))
+    assert entries(menu)["Porównaj"] and entries(menu)["Porównaj źródło"]
+    run(menu, "Porównaj źródło", world)
+    assert [c["right"].name for c in world.tool.calls] == ["NOTES.md"] and world.md_tool.calls == []
+    run(menu, "Porównaj", world)
+    assert [c["right"].name for c in world.md_tool.calls] == ["NOTES.md"]
+
+
+def test_req_vcs_031_other_files_have_no_source_compare(listed):
+    window, _ = listed
+    assert "Porównaj źródło" not in entries(window.file_list.prepare_menu(y(window, (C, "c1.txt"))))

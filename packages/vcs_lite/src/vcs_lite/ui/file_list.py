@@ -4,7 +4,7 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, DEC-VCS-076, T-VCS-01
+Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, DEC-VCS-076, T-VCS-01
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from vcs_lite.app.model import AppModel, EmptyState, RepoState, files_label
+from vcs_lite.app.model import AppModel, EmptyState, RepoState, files_label, is_markdown
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import elide, elide_middle, rounded_rect
@@ -116,11 +116,13 @@ class FileList(tk.Frame):
                  on_activate: Callable[[FileChange], None], on_toggle_folder: Callable[[Group, str], None],
                  on_empty_action: Callable[[str], None],
                  on_toggle_many: Callable[[Group, list[FileChange]], None] = lambda group, changes: None,
-                 on_ignore: Callable[[list[str], list[str]], None] = lambda files, folders: None):
+                 on_ignore: Callable[[list[str], list[str]], None] = lambda files, folders: None,
+                 on_compare_source: Callable[[FileChange], None] = lambda change: None):
         super().__init__(master, bg=C["bg"])
         self._on_toggle, self._on_activate = on_toggle, on_activate
         self._on_toggle_folder, self._on_empty_action = on_toggle_folder, on_empty_action
         self._on_toggle_many, self._on_ignore = on_toggle_many, on_ignore
+        self._on_compare_source = on_compare_source
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self._rows: list[ListRow] = []
@@ -367,14 +369,18 @@ class FileList(tk.Frame):
             paths |= self._folder_paths(r) if r.kind == "folder" else {r.path}
         count = f" ({len(paths)})" if len(paths) > 1 else ""
         single_file = len(rows) == 1 and rows[0].kind == "file"
-        return [
+        compare_ok = single_file and group is not Group.CONFLICTS
+        entries = [
             (f"Stage{count}", free and group in (Group.CHANGES, Group.UNVERSIONED), self.press_space),
             (f"Unstage{count}", free and group is Group.STAGED, self.press_space),
             ("Oznacz jako rozwiązany", free and group is Group.CONFLICTS and single_file, self.press_space),
-            ("Porównaj", single_file and group is not Group.CONFLICTS, self.press_return),
-            (f"Dodaj do .gitignore{self._ignore_count(rows)}", free and group is Group.UNVERSIONED,
-             lambda: self._ignore_selection(rows)),
+            ("Porównaj", compare_ok, self.press_return),
         ]
+        if single_file and is_markdown(rows[0].path):  # "Porównaj" is the rendered diff; the source goes to the tool
+            entries.append(("Porównaj źródło", compare_ok, lambda: self._on_compare_source(rows[0].change)))
+        entries.append((f"Dodaj do .gitignore{self._ignore_count(rows)}", free and group is Group.UNVERSIONED,
+                        lambda: self._ignore_selection(rows)))
+        return entries
 
     @staticmethod
     def _ignore_count(rows: list[ListRow]) -> str:

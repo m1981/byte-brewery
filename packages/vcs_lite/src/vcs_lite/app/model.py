@@ -1,6 +1,6 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-016, DES-VCS-046, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from pathlib import Path
 from vcs_lite.app.worker import Executor, Outcome
 from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool, compare
 from vcs_lite.core.gitcli import GitCli, GitResult
+from vcs_lite.core.mdview import MarkdownDiffTool
 from vcs_lite.core.repo import GitError, GitRepo
 from vcs_lite.core.settings import Settings, SettingsError, scan_rootdir
 from vcs_lite.core.status import FileChange, Group, RepoStatus, Side
@@ -28,6 +29,11 @@ def files_label(n: int) -> str:
     if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
         return f"{n} pliki"
     return f"{n} plików"
+
+
+def is_markdown(path: str) -> bool:
+    """Files opened as a rendered diff by a double click (REQ-VCS-031)."""
+    return Path(path).suffix.lower() == ".md"
 
 
 class RepoState(Enum):
@@ -107,12 +113,14 @@ REFRESH_FAILED = "Odświeżanie nie powiodło się"
 class AppModel:
     def __init__(self, settings: Settings, *, git: GitCli, diff_tool: ExternalDiffTool, worker: Executor,
                  confirm: Callable[[str, str], bool], clock: Callable[[], datetime] = datetime.now,
-                 save_settings: Callable[[Settings], None] = lambda settings: None):
+                 save_settings: Callable[[Settings], None] = lambda settings: None,
+                 markdown_tool: ExternalDiffTool | None = None):
         self._settings = settings
         self._save_settings = save_settings
         self._clock = clock
         self._git = git
         self._diff_tool = diff_tool
+        self._markdown_tool = markdown_tool or MarkdownDiffTool(theme=lambda: self._settings.markdown_theme)
         self._worker = worker
         self._confirm = confirm
         self._rootdir = settings.rootdir
@@ -165,6 +173,17 @@ class AppModel:
     @show_folders.setter
     def show_folders(self, value: bool) -> None:
         self._settings = replace(self._settings, show_folders=value)
+        self._save_settings(self._settings)
+        self._changed()
+
+    @property
+    def markdown_theme(self) -> str:
+        """Colours of the rendered Markdown diff: system, light or dark (REQ-VCS-031)."""
+        return self._settings.markdown_theme
+
+    @markdown_theme.setter
+    def markdown_theme(self, value: str) -> None:
+        self._settings = replace(self._settings, markdown_theme=value)
         self._save_settings(self._settings)
         self._changed()
 
@@ -437,19 +456,21 @@ class AppModel:
         repo = self._repo(view)
         self._run(view, IGNORE, lambda: repo.ignore(files, members))
 
-    def activate(self, change: FileChange) -> None:
-        """Double click or Enter: compare the file in the external tool (DEC-VCS-040)."""
+    def activate(self, change: FileChange, *, source: bool = False) -> None:
+        """Double click or Enter: compare the file in the external tool (DEC-VCS-040); a Markdown file as a
+        rendered diff, unless its source is asked for (REQ-VCS-031)."""
         view = self._current()
         if change.left is None or change.right is None:
             return
+        tool = self._markdown_tool if is_markdown(change.path) and not source else self._diff_tool
         # Its own key, so the repository stays usable while the diff window is open.
         self._worker.submit(f"{view.name}:diff:{change.group.value}:{change.path}",
-                            lambda: self._compare(view, change),
+                            lambda: self._compare(view, change, tool),
                             lambda outcome: self._compared(view, outcome))
 
-    def _compare(self, view: RepoView, change: FileChange):
+    def _compare(self, view: RepoView, change: FileChange, tool: ExternalDiffTool):
         left, right = self._repo(view).sides(change)
-        return compare(self._diff_tool, left, right, name=Path(change.path).name,
+        return compare(tool, left, right, name=Path(change.path).name,
                        left_title=f"{change.path} ({SIDE_LABELS[change.left]})",
                        right_title=f"{change.path} ({SIDE_LABELS[change.right]})")
 

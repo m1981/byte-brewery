@@ -1,6 +1,6 @@
 """External diff tool behind a port, so Beyond Compare can be swapped for any CLI tool.
 
-Trace: DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039, REQ-VCS-023
+Trace: DES-VCS-036, DES-VCS-037, DES-VCS-038, DES-VCS-039, DES-VCS-049, REQ-VCS-023
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ BEYOND_COMPARE = (
 Content = Union[bytes, Path]
 
 
+_TEMP_PREFIX = "vcs-lite-"
 _PLACEHOLDER = re.compile(r"\{(?:left|right|left_title|right_title)\}")
 
 
@@ -83,6 +84,11 @@ class CommandTemplateDiffTool:
         return _Process(proc)
 
 
+def is_temporary_side(path: Path) -> bool:
+    """A side written by `compare` from git content, as opposed to the working-tree file itself."""
+    return path.parent.name in ("left", "right") and path.parent.parent.name.startswith(_TEMP_PREFIX)
+
+
 def _materialize(content: Content, folder: Path, name: str) -> Path:
     if isinstance(content, Path):
         return content
@@ -96,7 +102,7 @@ def _materialize(content: Content, folder: Path, name: str) -> Path:
 def compare(tool: ExternalDiffTool, left: Content, right: Content, *, name: str,
             left_title: str, right_title: str) -> DiffResult:
     """Open both sides in the tool, wait until its window closes, then remove the temp files."""
-    tmp = Path(tempfile.mkdtemp(prefix="vcs-lite-"))
+    tmp = Path(tempfile.mkdtemp(prefix=_TEMP_PREFIX))
     try:
         left_path = _materialize(left, tmp / "left", name)
         right_path = _materialize(right, tmp / "right", name)

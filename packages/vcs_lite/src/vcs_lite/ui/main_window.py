@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-018, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, DEC-VCS-064, DEC-VCS-068, E-01, E-02
+Trace: DES-VCS-018, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, DEC-VCS-064, DEC-VCS-083, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from vcs_lite.ui.widgets import Pill, Tooltip, kbd, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 PLACEHOLDER = "Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push"
+MARKDOWN_THEMES = (("system", "Systemowy"), ("light", "Jasny"), ("dark", "Ciemny"))  # DEC-VCS-083
 FOCUS_REFRESH_MS = 300  # several focus events on the way back give one refresh (DES-VCS-018)
 
 
@@ -46,6 +47,7 @@ class MainWindow(tk.Frame):
         self._build()
         self._bind_shortcuts()
         self._bind_focus_refresh()
+        self._build_menu()
         model.subscribe(self.render)
         self.render()
 
@@ -96,7 +98,8 @@ class MainWindow(tk.Frame):
         self._build_banner(files)
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
                                   on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action,
-                                  on_toggle_many=self.model.toggle_many, on_ignore=self.model.add_to_gitignore)
+                                  on_toggle_many=self.model.toggle_many, on_ignore=self.model.add_to_gitignore,
+                                  on_compare_source=lambda change: self.model.activate(change, source=True))
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
 
@@ -229,6 +232,25 @@ class MainWindow(tk.Frame):
             self._show_placeholder()
         else:
             self.message_box.delete("1.0", tk.END)
+
+    # ---------- menu bar (DEC-VCS-083) ----------
+
+    def _build_menu(self) -> None:
+        """Widok → Motyw diffu Markdown; on macOS the bar sits at the top of the screen."""
+        top = self.winfo_toplevel()
+        self.menubar = tk.Menu(top)
+        self.view_menu = tk.Menu(self.menubar, tearoff=0)
+        self.theme_menu = tk.Menu(self.view_menu, tearoff=0)
+        self.markdown_theme = tk.StringVar(self, value=self.model.markdown_theme)
+        for value, label in MARKDOWN_THEMES:
+            self.theme_menu.add_radiobutton(label=label, value=value, variable=self.markdown_theme,
+                                            command=self._markdown_theme_chosen)
+        self.view_menu.add_cascade(label="Motyw diffu Markdown", menu=self.theme_menu)
+        self.menubar.add_cascade(label="Widok", menu=self.view_menu)
+        top.configure(menu=self.menubar)
+
+    def _markdown_theme_chosen(self) -> None:
+        self.model.markdown_theme = self.markdown_theme.get()
 
     # ---------- refresh on return (DES-VCS-018, DEC-VCS-059) ----------
 

@@ -104,15 +104,35 @@ def test_req_vcs_101_the_model_makes_no_git_calls_while_idle(world):
 # ---------- stage, unstage, compare ----------
 
 def test_at_vcs_029_double_click_opens_compare_and_space_stages(world):
-    world.repo("alpha").write("README.md", "changed\n")
+    a = world.repo("alpha")
+    a.write("app.py", "a\n"); a.commit(); a.write("app.py", "b\n")
+    model = world.start("alpha"); world.select("alpha")
+    model.activate(change(model, Group.CHANGES, "app.py")); world.worker.settle()
+    assert world.tool.calls[0]["right"] == world.root / "alpha" / "app.py"
+    assert paths(model, Group.CHANGES) == ["app.py"]
+    model.toggle(change(model, Group.CHANGES, "app.py")); world.worker.settle()
+    assert paths(model, Group.STAGED) == ["app.py"]
+    model.toggle(change(model, Group.STAGED, "app.py")); world.worker.settle()
+    assert paths(model, Group.STAGED) == [] and paths(model, Group.CHANGES) == ["app.py"]
+
+
+def test_at_vcs_039_double_click_on_markdown_opens_the_rendered_diff(world):
+    a = world.repo("alpha")
+    a.write("README.md", "# Plan\n\nNowy akapit.\n"); a.write("app.py", "x\n")
     model = world.start("alpha"); world.select("alpha")
     model.activate(change(model, Group.CHANGES, "README.md")); world.worker.settle()
-    assert world.tool.calls[0]["right"] == world.root / "alpha" / "README.md"
-    assert paths(model, Group.CHANGES) == ["README.md"]
-    model.toggle(change(model, Group.CHANGES, "README.md")); world.worker.settle()
-    assert paths(model, Group.STAGED) == ["README.md"]
-    model.toggle(change(model, Group.STAGED, "README.md")); world.worker.settle()
-    assert paths(model, Group.STAGED) == [] and paths(model, Group.CHANGES) == ["README.md"]
+    assert [c["right"] for c in world.md_tool.calls] == [a.path / "README.md"] and world.tool.calls == []
+    assert world.md_tool.calls[0]["right_title"] == "README.md (kopia robocza)"
+    model.activate(change(model, Group.CHANGES, "README.md"), source=True); world.worker.settle()
+    model.activate(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
+    assert [c["right"].name for c in world.tool.calls] == ["README.md", "app.py"]  # source and other files: Beyond Compare
+    assert len(world.md_tool.calls) == 1
+
+
+def test_req_vcs_031_markdown_is_recognised_by_its_extension():
+    from vcs_lite.app.model import is_markdown
+    assert [is_markdown(p) for p in ("a.md", "docs/SPEC.MD", "a.markdown", "md", "a.mdx", "a.txt")] == [
+        True, True, False, False, False, False]
 
 
 def test_at_vcs_004_external_tool_gets_the_sides_of_the_chosen_group(world):
@@ -131,9 +151,9 @@ def test_at_vcs_004_external_tool_gets_the_sides_of_the_chosen_group(world):
 
 def test_at_vcs_027_temp_files_disappear_and_the_repo_is_refreshed_after_closing(world):
     a = world.repo("alpha")
-    a.write("README.md", "staged\n"); a.git("add", "README.md")
+    a.write("app.py", "staged\n"); a.git("add", "app.py")
     model = world.start("alpha"); world.select("alpha")
-    model.activate(change(model, Group.STAGED, "README.md")); world.worker.settle()
+    model.activate(change(model, Group.STAGED, "app.py")); world.worker.settle()
     call = world.tool.calls[0]
     assert not call["left"].exists() and not call["right"].exists()
     assert world.worker.history[-1] == "alpha"  # a refresh of the repository ran after the tool closed
@@ -150,14 +170,14 @@ def test_at_vcs_028_change_saved_in_the_tool_is_visible_after_closing(world):
 
 
 def test_at_vcs_025_missing_diff_tool_gives_a_message_and_the_app_keeps_working(world, tmp_path):
-    world.repo("alpha").write("README.md", "changed\n")
+    world.repo("alpha").write("app.py", "changed\n")
     settings = Settings(rootdir=str(world.root), repos=("alpha",), diff_tool=("/nonexistent/inny-diff", "{left}", "{right}"))
     model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda title, message: False)
     model.select("alpha"); world.worker.settle()
-    model.activate(change(model, Group.CHANGES, "README.md")); world.worker.settle()
+    model.activate(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
     assert "/nonexistent/inny-diff" in model.error
-    model.toggle(change(model, Group.CHANGES, "README.md")); world.worker.settle()
-    assert paths(model, Group.STAGED) == ["README.md"]
+    model.toggle(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
+    assert paths(model, Group.STAGED) == ["app.py"]
 
 
 def test_at_vcs_026_the_diff_tool_can_be_swapped_in_settings(world, tmp_path):
@@ -167,13 +187,13 @@ def test_at_vcs_026_the_diff_tool_can_be_swapped_in_settings(world, tmp_path):
         import json, sys
         json.dump(sys.argv[1:], open({str(out)!r}, "w"))
     """))
-    world.repo("alpha").write("README.md", "changed\n")
+    world.repo("alpha").write("app.py", "changed\n")
     settings = Settings(rootdir=str(world.root), repos=("alpha",), diff_tool=(sys.executable, str(script), "{left}", "{right}"))
     model = AppModel.from_settings(settings, git=world.git, worker=world.worker, confirm=lambda title, message: False)
     model.select("alpha"); world.worker.settle()
-    model.activate(change(model, Group.CHANGES, "README.md")); world.worker.settle()
+    model.activate(change(model, Group.UNVERSIONED, "app.py")); world.worker.settle()
     left, right = json.loads(out.read_text())
-    assert Path(left).name == "README.md" and right == str(world.root / "alpha" / "README.md")
+    assert Path(left).name == "app.py" and right == str(world.root / "alpha" / "app.py")
 
 
 # ---------- commit ----------
@@ -724,3 +744,13 @@ def test_req_vcs_029_toggle_many_stages_or_unstages_files_of_one_group(world):
     assert paths(model, Group.STAGED) == ["u1.txt", "u2.txt"]
     model.toggle_many(Group.STAGED, model.files(Group.STAGED)); world.worker.settle()
     assert paths(model, Group.UNVERSIONED) == ["u1.txt", "u2.txt"]
+
+
+def test_req_vcs_031_markdown_theme_is_kept_in_the_settings(world):
+    saved = []
+    world.save_settings = saved.append
+    world.repo("alpha")
+    model = world.start("alpha")
+    assert model.markdown_theme == "system"
+    model.markdown_theme = "light"
+    assert model.markdown_theme == "light" and saved[-1].markdown_theme == "light"

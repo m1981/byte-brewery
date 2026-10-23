@@ -151,3 +151,12 @@ def test_req_vcs_025_folder_view_choice_is_stored(tmp_path):
     SettingsStore(path).save(Settings(show_folders=True))
     assert json.loads(path.read_text())["show_folders"] is True
     assert SettingsStore(path).load().show_folders is True
+
+
+def test_req_vcs_031_markdown_theme_is_stored_and_checked():
+    assert Settings().markdown_theme == "system"
+    settings = Settings.from_dict({"markdown_theme": "dark"})
+    assert settings.markdown_theme == "dark" and settings.to_dict()["markdown_theme"] == "dark"
+    for wrong in ("blue", 1, None):
+        with pytest.raises(ValueError, match="markdown_theme"):
+            Settings.from_dict({"markdown_theme": wrong})

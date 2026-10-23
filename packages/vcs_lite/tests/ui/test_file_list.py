@@ -99,12 +99,12 @@ def test_at_vcs_029_space_stages_and_selection_moves_on_in_the_group(shown, worl
 
 def test_at_vcs_029_double_click_and_enter_open_the_compare(shown, world):
     window, _ = shown
-    readme = by_path(window, Group.CHANGES, "README.md")
-    window.file_list.double_click(readme.top + 5)
+    both = by_path(window, Group.CHANGES, "both.py")
+    window.file_list.double_click(both.top + 5)
     world.worker.settle()
     window.file_list.press_return()
     world.worker.settle()
-    assert len(world.tool.calls) == 2 and world.tool.calls[0]["right"].name == "README.md"
+    assert len(world.tool.calls) == 2 and world.tool.calls[0]["right"].name == "both.py"
 
 
 def test_des_vcs_024_arrow_keys_move_the_selection(shown):
