@@ -116,14 +116,20 @@ def test_des_vcs_042_merge_chip_is_blue_and_takes_the_place_of_the_conflict_chip
     assert [r.dot for r in window.sidebar.rows()] == ["#b4690e"]
 
 
-def test_des_vcs_042_commit_button_is_the_default_button_and_names_the_repo(root, world):
-    world.repo("alpha")
+def test_des_vcs_042_commit_button_is_the_default_button_only_while_it_can_commit(root, world):
+    r = world.repo("alpha")
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")
-    assert str(window.commit_button.cget("default")) == "active"
     assert window.commit_button.cget("text") == "Commit do alpha"
     assert window.reason.cget("text") == "ⓘ Brak plików w Staged."
+    # aqua paints a default button blue in an inactive window even when it is disabled (zrzut 2026-10-22)
+    assert str(window.commit_button.cget("default")) == "normal"
+    r.write("a.py", "a\n"); r.git("add", "a.py")
+    model.refresh_all(); world.worker.settle()
+    window.type_message("fix")
+    assert str(window.commit_button.cget("state")) == "normal"
+    assert str(window.commit_button.cget("default")) == "active"
 
 
 def test_des_vcs_042_placeholder_is_shown_but_never_becomes_the_message(root, world):

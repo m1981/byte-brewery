@@ -160,7 +160,7 @@ class MainWindow(tk.Frame):
         self.message_box.bind("<KeyRelease>", lambda _e: self._sync_message())
         buttons = tk.Frame(panel, bg=C["panel"])
         buttons.grid(row=0, column=1, sticky=tk.N)
-        self.commit_button = button(buttons, "Commit", C["panel"], default="active", command=self.model.commit)
+        self.commit_button = button(buttons, "Commit", C["panel"], command=self.model.commit)
         self.commit_button.pack(fill=tk.X)
         self.commit_push_button = button(buttons, "Commit & Push", C["panel"], command=self.model.commit_and_push)
         self.commit_push_button.pack(fill=tk.X, pady=(S["commit_buttons_gap"], 0))
@@ -381,8 +381,10 @@ class MainWindow(tk.Frame):
         if self._shown_repo != self.model.selected or self._message_text() != self.model.message:
             self._shown_repo = self.model.selected  # another repository, or the model cleared the draft after a commit
             self._load_draft()
-        self.commit_button.configure(text=self.model.commit_label,
-                                     state=tk.NORMAL if self.model.can_commit else tk.DISABLED)
+        can_commit = self.model.can_commit
+        # Default (blue) only while it can act: aqua paints a disabled default button blue in an inactive window.
+        self.commit_button.configure(text=self.model.commit_label, state=tk.NORMAL if can_commit else tk.DISABLED,
+                                     default="active" if can_commit else "normal")
         self.commit_push_button.configure(state=tk.NORMAL if self.model.can_commit_and_push else tk.DISABLED)
         reason = self.model.commit_disabled_reason
         self.reason.configure(text=f"ⓘ {reason}" if reason else "")
