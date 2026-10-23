@@ -2,20 +2,20 @@ Kontynuujemy projekt vcs-lite (lekki panel gita w Tkinterze na macOS) w ~/Pychar
 
 Zanim cokolwiek zrobisz, przeczytaj:
 1. docs/WSPOLPRACA.md: konwencja współpracy (BLUF, decyzje do podpisu z rekomendacją, lista spraw dla mnie (CCIR), jeden temat na wiadomość, tabela „Otwarte” z właścicielem). Ma pierwszeństwo nad pozostałymi zasadami.
-2. docs/SPEC.md: decyzje DEC-VCS-001–109 z cytatami, wymagania REQ-VCS-001–034, rejestr pytań i sekcja „Punkt wznowienia” (stan i następne kroki).
-3. docs/DESIGN.md: DES-VCS-001–060.
+2. docs/SPEC.md: decyzje DEC-VCS-001–112 z cytatami, wymagania REQ-VCS-001–034 i REQ-VCS-100–104, rejestr pytań i sekcja „Punkt wznowienia” (stan i następne kroki).
+3. docs/DESIGN.md: DES-VCS-001–062.
 4. docs/ui-reference/UI-REFERENCE.md oraz E-01*.html, E-01.png, E-03*.html, E-04-szukaj.html, E-05-diff.html: wiążący wzorzec wyglądu (E-03 strona diffu Markdown, E-04 okno „Szukaj w plikach”, E-05 diff lewo–prawo w przeglądarce).
 5. docs/PROPOZYCJA-szukaj.md: analiza „Szukaj w plikach” (wykonane, REQ-VCS-033).
 6. docs/RETROSPEKTYWA.md: jak pracowaliśmy i czego unikać.
-7. docs/ACCEPTANCE.feature (AT-VCS-001–046), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17 potwierdzone).
+7. docs/ACCEPTANCE.feature (AT-VCS-001–047), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17 potwierdzone, 18 czeka).
 
 Zasady pracy:
 - Po polsku, według docs/WSPOLPRACA.md.
 - Commity tylko na moje polecenie; pushe robię sam albo na wyraźne polecenie. Przed commitem: testy na samym stanie indeksu (git checkout-index do katalogu tymczasowego). Nigdy git add na całym katalogu (wpada .DS_Store), tylko wskazane pliki. Kolejność: najpierw commit ze specyfikacją, potem kod z testami i TRACE.md.
 - Specyfikacja przed kodem: decyzja (DEC z moim cytatem) → REQ/DES/AT → test, który oblewa z właściwego powodu → kod. Nazwy testów od ID (test_req_vcs_…, test_at_vcs_…, test_des_vcs_…); każdy moduł w src/ ma linię „Trace: …”. Wygląd: najpierw makieta HTML do akceptacji.
-- Testy w ~/PycharmProjects/byte-brewery: .venv/bin/python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests > <scratchpad>/log.txt 2>&1 i czytaj pełny log (nie ucinaj grepem treści błędów). Obecnie 553 testy przechodzą. Nazwy plików testów muszą być unikalne w całym katalogu tests/.
+- Testy w ~/PycharmProjects/byte-brewery: .venv/bin/python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests > <scratchpad>/log.txt 2>&1 i czytaj pełny log (nie ucinaj grepem treści błędów). Obecnie 563 testy przechodzą. Nazwy plików testów muszą być unikalne w całym katalogu tests/.
 - Zrzuty robię sam. Po zmianie UI uruchom okno i poproś o zrzut.
-- Okno do pracy: w byte-brewery `uv run vcs-lite` (moje ustawienia, ~/Library/Application Support/vcs-lite/settings.json; pakiet zainstalowany edytowalnie, więc restart okna wystarcza). Okno do prób: python tools/make_demo.py <pusty folder w scratchpadzie>, potem w packages/vcs_lite: PYTHONPATH=src ../../.venv/bin/python -m vcs_lite.ui.main --settings <folder>/settings.json (w tle).
+- Aplikacja: /Applications/vcs-lite.app (python tools/make_app.py w packages/vcs_lite; przebudowa tylko przy zmianie logo). Okno do pracy: w byte-brewery `uv run vcs-lite` (moje ustawienia, ~/Library/Application Support/vcs-lite/settings.json; pakiet zainstalowany edytowalnie, więc restart okna wystarcza). Okno do prób: python tools/make_demo.py <pusty folder w scratchpadzie>, potem w packages/vcs_lite: PYTHONPATH=src ../../.venv/bin/python -m vcs_lite.ui.main --settings <folder>/settings.json (w tle).
 
 Ustalenia techniczne:
 - Tk w .venv wymaga ui/tkenv.prepare_tk() (OBS-VCS-009). Przyciski to tk.Button z highlightbackground, nie ttk. Zaokrąglenia: widgets.rounded_rect. Własne kontrolki (pasek boczny, lista plików, przełącznik „Widok” SegmentedControl) rysujemy na tk.Canvas.

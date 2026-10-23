@@ -406,3 +406,13 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then strona ma po lewej i po prawej numery linii, a wiersz linii 2 ma podkreślone "2" po lewej i "3" po prawej
     And wiersz linii 30 ma po prawej stronie zakreskowane pole
     And niezmienione linie dalej niż 3 od zmiany są zwinięte z liczbą linii
+
+  @AT_VCS_047 @confirmed @REQ_VCS_104 @DEC_VCS_110 @VER_VCS_018
+  Scenario: vcs-lite jako aplikacja macOS z logo
+    Given "assets/logo.png" jest kwadratowym logo bez przezroczystości
+    When użytkownik uruchamia "tools/make_app.py" z katalogiem docelowym
+    Then w katalogu jest "vcs-lite.app" z nazwą "vcs-lite", ikoną "vcs-lite.icns" i programem uruchamiającym vcs-lite z byte-brewery
+    And ikona ma przezroczyste rogi i margines, a środek pochodzi z logo
+    When użytkownik uruchamia "tools/make_app.py" ponownie
+    Then "vcs-lite.app" zostaje zastąpiona nową
+    And obca "vcs-lite.app" w tym katalogu nie zostaje zastąpiona
