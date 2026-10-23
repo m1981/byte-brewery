@@ -322,3 +322,12 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then .gitignore zawiera linie "/u1.txt" i "/u2.txt"
     And grupa Unversioned zawiera ".gitignore" i "u3.txt", a nie zawiera "u1.txt" ani "u2.txt"
     And zaznaczony jest "u3.txt"
+
+  @AT_VCS_039 @confirmed @UC_VCS_03 @REQ_VCS_031 @DEC_VCS_080 @VER_VCS_016
+  Scenario: Dwuklik na pliku .md otwiera wyrenderowany diff, a źródło jest w Beyond Compare
+    Given plik "README.md" ma w kopii roboczej nowy akapit
+    When użytkownik klika dwukrotnie "README.md"
+    Then otwiera się wyrenderowany diff "README.md" z tytułem "README.md (kopia robocza)"
+    When użytkownik wybiera z menu kontekstowego „Porównaj źródło”
+    Then ten sam plik otwiera się w Beyond Compare
+    And dwuklik na pliku innym niż .md nadal otwiera Beyond Compare

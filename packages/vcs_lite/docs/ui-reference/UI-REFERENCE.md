@@ -2,7 +2,7 @@
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
 
-1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
+1. `E-01.html`: makieta, z której pochodzą wszystkie wartości poniżej (CSS w nagłówku pliku). `E-01-stany.html`: stany spoza makiety, zaakceptowane P2–P10 (DEC-VCS-049), źródło sekcji 8. `E-01-lista.html`: lista plików w stylu PyCharma (DEC-VCS-052–057), źródło sekcji 9; `E-01-scalanie.html`: merge w toku P11 (DEC-VCS-068, DEC-VCS-069); `E-01-podpowiedzi.html`: podpowiedzi i długie ścieżki P12 (DEC-VCS-071); `E-01-staged.html`: pusta grupa STAGED P13 (DEC-VCS-076); `E-03-md-diff.html`: wyrenderowany diff Markdown, wariant A bez przekreśleń (DEC-VCS-078); **zastępuje listę plików z `E-01.html` i kwadraty z P1**.
 2. `E-01.png`: zrzut makiety wykonany przez użytkownika (1135 × 712 px); pokazuje, jak wartości wyglądają razem.
 3. Ten dokument: każda wartość wypisana jawnie, z odwzorowaniem w Tk 8.6 i listą przybliżeń.
 

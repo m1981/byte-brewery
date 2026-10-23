@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · diff Markdown</title>
+<style>
+  :root {
+    --bg: #ffffff; --page: #d9dbe0; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73; --accent: #0a66d8;
+    --add: #1f7a3a; --add-soft: #e6f4ea; --add-word: #b7e1c1;
+    --del: #c2302a; --del-soft: #fbe9e7; --del-word: #f4c4bf;
+    --mod: #b4690e;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1e1e20; --page: #111113; --line: #3a3a3e; --ink: #ececee; --dim: #a1a1a6;
+      --add-soft: #16301f; --add-word: #23502f; --del-soft: #3a1b19; --del-word: #6a2722; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font: 14px/1.55 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1180px; margin: 0 auto; display: grid; gap: 26px; }
+  h1.t { font-size: 20px; margin: 0; } .lead { color: var(--dim); margin: 4px 0 0; max-width: 90ch; }
+  h2.sec { font-size: 16px; margin: 0 0 4px; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: var(--dim); margin: 0 0 10px; max-width: 90ch; }
+  .win { background: var(--bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 12px 30px rgba(0,0,0,.18); }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .bar .f { font-weight: 650; } .bar .sides { color: var(--dim); } .spacer { flex: 1; }
+  .seg { display: inline-flex; border: 1px solid #c9c9cf; border-radius: 6px; overflow: hidden; }
+  .seg span { padding: 3px 10px; } .seg .on { background: var(--accent); color: #fff; }
+  .stats { font: 12px var(--mono); } .stats .a { color: var(--add); } .stats .d { color: var(--del); }
+  .doc { padding: 18px 28px 26px; }
+  .doc h1, .doc h2 { margin: 18px 0 8px; } .doc h1 { font-size: 22px; } .doc h2 { font-size: 17px; }
+  .doc p, .doc ul, .doc table, .doc pre { margin: 0 0 10px; }
+  .doc table { border-collapse: collapse; font-size: 13px; } .doc td, .doc th { border: 1px solid var(--line); padding: 4px 10px; text-align: left; }
+  .doc pre { font: 12px/1.5 var(--mono); background: rgba(127,127,127,.08); border-radius: 6px; padding: 8px 10px; overflow-x: auto; }
+  .blk { position: relative; padding: 2px 0 2px 12px; margin-left: -12px; border-left: 3px solid transparent; }
+  .blk.add { border-left-color: var(--add); background: var(--add-soft); }
+  .blk.del { border-left-color: var(--del); background: var(--del-soft); }
+  .blk.mod { border-left-color: var(--mod); }
+  ins { background: var(--add-word); text-decoration: none; border-radius: 3px; padding: 0 1px; }
+  del { background: var(--del-word); text-decoration: none; border-radius: 3px; padding: 0 1px; }  /* DEC-VCS-078: no strike-through */
+  tr.add td { background: var(--add-soft); } tr.del td { background: var(--del-soft); }
+  .fold { color: var(--dim); font-size: 12px; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 4px 0; margin: 8px 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; }
+  .two .doc + .doc { border-left: 1px solid var(--line); }
+  .col-h { font-size: 12px; color: var(--dim); padding: 8px 28px 0; }
+  .ph { visibility: hidden; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } .two .doc + .doc { border-left: 0; border-top: 1px solid var(--line); } }
+  .notes { background: var(--bg); border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  .notes table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  .notes th, .notes td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  code { font: 12px var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1 class="t">vcs-lite — diff Markdown w wyrenderowanej postaci (makieta)</h1>
+    <p class="lead"><b>Wzorzec E-03: wariant A przyjęty bez przekreśleń (DEC-VCS-078); wariant B tylko jako odrzucona alternatywa.</b> Pomysł użytkownika 2026-10-23: dwuklik na pliku <code>.md</code> pokazuje różnice w wyrenderowanym dokumencie, a nie w surowym tekście. Przykład: zmiany w specyfikacji między HEAD a kopią roboczą. Strona otwiera się w przeglądarce, jak porównanie w Beyond Compare w osobnym oknie.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid">A</span> Jeden dokument z poprawkami (jak „rich diff” GitHuba i śledzenie zmian w Wordzie)</h2>
+    <p class="cap">Czyta się jak zwykły dokument. Bloki zmienione mają pasek po lewej (pomarańczowy: zmieniony, zielony: nowy, czerwony: usunięty), a w środku zmienione słowa. Długie niezmienione fragmenty są zwinięte.</p>
+    <div class="win">
+      <div class="bar"><span class="f">SPEC.md</span><span class="sides">HEAD → kopia robocza</span><span class="stats"><span class="a">+3</span> <span class="d">−2</span> bloki</span><span class="spacer"></span>
+        <span class="seg"><span class="on">Wyrenderowany</span><span>Źródło</span></span></div>
+      <div class="doc">
+        <h1>vcs-lite — specyfikacja funkcjonalna v1</h1>
+        <div class="fold">⋯ 3 niezmienione sekcje</div>
+        <h2>Potrzeby</h2>
+        <div class="blk mod"><p>Przeglądać i commitować zmiany bez uruchamiania <del>PyCharm</del><ins>PyCharma</ins> lub GitHub Desktop, bo zużywają za dużo RAM-u<ins>, a pliki <code>.md</code> czytam częściej niż kod</ins>.</p></div>
+        <ul>
+          <li>Stage całych plików.</li>
+          <div class="blk add"><li>Diff plików <code>.md</code> w wyrenderowanej postaci.</li></div>
+          <li>Pull fast-forward.</li>
+        </ul>
+        <div class="blk del"><p>Repozytoria zagnieżdżone głębiej niż pierwszy poziom są pomijane bez komunikatu.</p></div>
+        <table>
+          <tr><th>ID</th><th>Wymaganie</th><th>Status</th></tr>
+          <tr><td>REQ-VCS-009</td><td>Commit zapisuje wyłącznie Staged.</td><td>Potwierdzone</td></tr>
+          <tr class="del"><td>REQ-VCS-031</td><td>Diff Markdown w Beyond Compare.</td><td>Propozycja</td></tr>
+          <tr class="add"><td>REQ-VCS-031</td><td>Diff Markdown w wyrenderowanej postaci.</td><td>Propozycja</td></tr>
+        </table>
+        <pre>uv run vcs-lite</pre>
+        <div class="fold">⋯ 12 niezmienionych sekcji</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">B</span> Obok siebie (jak Beyond Compare, ale wyrenderowane)</h2>
+    <p class="cap">Przed i po w dwóch kolumnach, bloki wyrównane w wierszach, zmienione słowa podświetlone po obu stronach. Lepsze przy dużych przeróbkach; na wąskim ekranie kolumny układają się jedna pod drugą.</p>
+    <div class="win">
+      <div class="bar"><span class="f">SPEC.md</span><span class="sides">HEAD → kopia robocza</span><span class="spacer"></span>
+        <span class="seg"><span>Jeden dokument</span><span class="on">Obok siebie</span><span>Źródło</span></span></div>
+      <div class="two">
+        <div><div class="col-h">HEAD</div><div class="doc">
+          <h2>Potrzeby</h2>
+          <div class="blk del"><p>Przeglądać i commitować zmiany bez uruchamiania <del>PyCharm</del> lub GitHub Desktop, bo zużywają za dużo RAM-u.</p></div>
+          <ul><li>Stage całych plików.</li><li class="ph">—</li><li>Pull fast-forward.</li></ul>
+          <div class="blk del"><p>Repozytoria zagnieżdżone głębiej niż pierwszy poziom są pomijane bez komunikatu.</p></div>
+        </div></div>
+        <div><div class="col-h">Kopia robocza</div><div class="doc">
+          <h2>Potrzeby</h2>
+          <div class="blk add"><p>Przeglądać i commitować zmiany bez uruchamiania <ins>PyCharma</ins> lub GitHub Desktop, bo zużywają za dużo RAM-u<ins>, a pliki <code>.md</code> czytam częściej niż kod</ins>.</p></div>
+          <ul><li>Stage całych plików.</li><div class="blk add"><li>Diff plików <code>.md</code> w wyrenderowanej postaci.</li></div><li>Pull fast-forward.</li></ul>
+          <p class="ph">—</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Jak to działa (propozycja techniczna)</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Krok</th><th>Jak</th></tr>
+      <tr><td>Wejście</td><td>Te same strony co dziś dla Beyond Compare (T-VCS-01): HEAD, indeks, kopia robocza albo pusta.</td></tr>
+      <tr><td>Bloki</td><td>Markdown dzielony na bloki (nagłówek, akapit, element listy, wiersz tabeli, blok kodu) z numerami linii źródła.</td></tr>
+      <tr><td>Dopasowanie</td><td><code>difflib.SequenceMatcher</code> (biblioteka standardowa) na listach bloków: równe, zmienione, nowe, usunięte.</td></tr>
+      <tr><td>Słowa</td><td>W zmienionym bloku drugi <code>SequenceMatcher</code> na słowach daje <code>&lt;del&gt;</code> i <code>&lt;ins&gt;</code>.</td></tr>
+      <tr><td>Renderowanie</td><td>Każdy blok zamieniany na HTML; jedna samowystarczalna strona (CSS w środku, tryb jasny i ciemny) w pliku tymczasowym.</td></tr>
+      <tr><td>Okno</td><td>Domyślna przeglądarka (<code>open plik.html</code>); generowanie w krótkim osobnym procesie, więc pamięć vcs-lite (limit 60 MB) się nie zmienia, jak przy Beyond Compare (DEC-VCS-042).</td></tr>
+      <tr><td>Przełącznik „Źródło”</td><td>Pokazuje na tej samej stronie różnice w surowym tekście Markdown (linie dodane i usunięte); strona z pliku nie może uruchomić Beyond Compare, które zostaje w menu kontekstowym jako „Porównaj źródło” (DEC-VCS-080).</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>
