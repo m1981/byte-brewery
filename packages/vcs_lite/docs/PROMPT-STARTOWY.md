@@ -7,13 +7,13 @@ Zanim cokolwiek zrobisz, przeczytaj:
 4. docs/ui-reference/UI-REFERENCE.md oraz E-01*.html, E-01.png, E-03*.html, E-04-szukaj.html, E-05-diff.html: wiążący wzorzec wyglądu (E-03 strona diffu Markdown, E-04 okno „Szukaj w plikach”, E-05 diff lewo–prawo w przeglądarce).
 5. docs/PROPOZYCJA-szukaj.md: analiza „Szukaj w plikach” (wykonane, REQ-VCS-033).
 6. docs/RETROSPEKTYWA.md: jak pracowaliśmy i czego unikać.
-7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17, 20 i 21 potwierdzone, 18, 19 i 22 czekają).
+7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17 i 20–22 potwierdzone, 18, 19 i 23 czekają).
 
 Zasady pracy:
 - Po polsku, według docs/WSPOLPRACA.md.
 - Commit po każdym logicznym przyroście bez pytania (od 2026-10-26: „rob commity po kazdym logicznym przyroscie”); pushe robię sam albo na wyraźne polecenie. Commit tylko wskazanych plików (`git commit -- <ścieżki>`), bo w indeksie mogą czekać moje zmiany. Przed commitem: testy na samym stanie indeksu (git checkout-index do katalogu tymczasowego). Nigdy git add na całym katalogu (wpada .DS_Store), tylko wskazane pliki. Kolejność: najpierw commit ze specyfikacją, potem kod z testami i TRACE.md.
 - Specyfikacja przed kodem: decyzja (DEC z moim cytatem) → REQ/DES/AT → test, który oblewa z właściwego powodu → kod. Nazwy testów od ID (test_req_vcs_…, test_at_vcs_…, test_des_vcs_…); każdy moduł w src/ ma linię „Trace: …”. Wygląd: najpierw makieta HTML do akceptacji.
-- Testy w ~/PycharmProjects/byte-brewery: .venv/bin/python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests > <scratchpad>/log.txt 2>&1 i czytaj pełny log (nie ucinaj grepem treści błędów). Obecnie 639 testów przechodzi. Nazwy plików testów muszą być unikalne w całym katalogu tests/.
+- Testy w ~/PycharmProjects/byte-brewery: .venv/bin/python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests > <scratchpad>/log.txt 2>&1 i czytaj pełny log (nie ucinaj grepem treści błędów). Obecnie 650 testów przechodzi. Nazwy plików testów muszą być unikalne w całym katalogu tests/.
 - Zrzuty robię sam. Po zmianie UI uruchom okno i poproś o zrzut.
 - Aplikacja: /Applications/vcs-lite.app (python tools/make_app.py w packages/vcs_lite; przebudowa tylko przy zmianie logo). Okno do pracy: w byte-brewery `uv run vcs-lite` (moje ustawienia, ~/Library/Application Support/vcs-lite/settings.json; pakiet zainstalowany edytowalnie, więc restart okna wystarcza). Okno do prób: python tools/make_demo.py <pusty folder w scratchpadzie>, potem w packages/vcs_lite: PYTHONPATH=src ../../.venv/bin/python -m vcs_lite.ui.main --settings <folder>/settings.json (w tle).
 
