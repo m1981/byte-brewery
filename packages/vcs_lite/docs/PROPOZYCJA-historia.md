@@ -121,6 +121,18 @@ Checkout commita, cherry-pick, revert, reset, rebase, amend, edycja wiadomości,
 | H-48 | vcs-lite pokazuje datę jako „dziś 14:05”, „wczoraj 18:22” albo „24.10.2026” w strefie lokalnej, a pełną datę i godzinę w podpowiedzi. |
 | H-49 | Nagłówek panelu podaje liczbę commitów w zakresie (`git rev-list --count`), z polską odmianą („1 commit”, „3 commity”, „5 commitów”). |
 
+### Historia pliku (DEC-VCS-124)
+
+| ID | Reguła (EARS) |
+|---|---|
+| H-50 | Gdy użytkownik wybiera „Pokaż historię” w menu kontekstowym pliku (lista zmian, drzewo PROJEKT, pliki commita w panelu), panel pokazuje commity, które zmieniały ten plik, także pod dawnymi nazwami (`git log --follow -- <plik>`), a nagłówek ma znacznik „Plik: <ścieżka> ✕”. |
+| H-51 | Gdy użytkownik wybiera „Pokaż historię” na folderze (widok Foldery, drzewo PROJEKT), panel pokazuje commity zmieniające cokolwiek w folderze (bez `--follow`), ze znacznikiem „Folder: <ścieżka> ✕”. |
+| H-52 | Gdy użytkownik kliknie znacznik albo wybierze inne repo, panel wraca do całej historii (decyzja agenta: historia pliku należy do repo). |
+| H-53 | Historia ścieżki działa razem z filtrem tekstu (commity spełniające oba) i z zakresem gałęzi; lista ma same kropki, bez linii grafu, jak przy filtrze (H-34). |
+| H-54 | Historia ścieżki jest czytana naraz, najwyżej 5000 commitów, bez kolejnych stron; licznik podaje ich liczbę (decyzja agenta: `--follow` i `rev-list --count` liczą inaczej przy zmianie nazwy). |
+| H-55 | Gdy użytkownik klika dwukrotnie commit albo naciska Enter w historii pliku, vcs-lite otwiera diff tego pliku w tym commicie, pod nazwą, jaką plik miał w tym commicie; w historii folderu dwuklik tylko zaznacza commit. |
+| H-56 | Plik w grupie Unversioned nie ma historii: pozycja „Pokaż historię” jest nieaktywna. Gdy ścieżka nie ma commitów, panel pokazuje „Brak commitów dla <ścieżka>.” |
+
 ## Wpływ na architekturę i plan prac
 
 ### Zasada: historia jako drugi „moduł obok”, tak jak wyszukiwanie

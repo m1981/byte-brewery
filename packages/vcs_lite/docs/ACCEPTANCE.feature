@@ -525,3 +525,32 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then w schowku jest "https://github.com/m1981/app/commit/<pełny hash M>"
     Given zaznaczony pierwszy commit repo
     Then jego pliki są wszystkie dodane
+
+  @AT_VCS_061 @confirmed @UC_VCS_09 @REQ_VCS_041 @DEC_VCS_124 @VER_VCS_020
+  Scenario: Pokaż historię pliku z listy zmian, także po zmianie nazwy
+    Given plik "b.txt" powstał przez zmianę nazwy "a.txt" i ma 4 commity, a w repo są też inne commity
+    When użytkownik wybiera „Pokaż historię” w menu kontekstowym "b.txt" w grupie Changes
+    Then panel „Historia” pokazuje tylko 4 commity pliku, bez linii grafu, ze znacznikiem „Plik: b.txt ✕”
+    When użytkownik klika dwukrotnie najstarszy commit
+    Then w przeglądarce otwiera się diff pliku "a.txt" z tego commita
+    When użytkownik klika znacznik
+    Then panel pokazuje całą historię z grafem
+
+  @AT_VCS_062 @confirmed @UC_VCS_09 @REQ_VCS_041 @DEC_VCS_124 @VER_VCS_020
+  Scenario: Historia folderu i historia pliku razem z filtrem
+    Given folder "docs" z plikami zmienianymi w kilku commitach
+    When użytkownik wybiera „Pokaż historię” na folderze "docs" w drzewie PROJEKT
+    Then panel pokazuje commity zmieniające cokolwiek w "docs", ze znacznikiem „Folder: docs ✕”
+    When użytkownik wpisuje w filtr tekst z wiadomości jednego z nich
+    Then lista ma tylko commity spełniające oba warunki
+    When użytkownik wybiera inne repo
+    Then panel pokazuje całą historię tego repo
+
+  @AT_VCS_063 @confirmed @UC_VCS_09 @REQ_VCS_041 @DEC_VCS_124 @VER_VCS_020
+  Scenario: Plik bez historii i historia pliku z panelu historii
+    Given plik "nowy.txt" w grupie Unversioned
+    Then pozycja „Pokaż historię” w jego menu jest nieaktywna
+    Given zaznaczony commit z plikiem "a.py" w szczegółach
+    When użytkownik wybiera „Pokaż historię” w menu pliku "a.py" w szczegółach
+    Then panel pokazuje historię "a.py"
+
