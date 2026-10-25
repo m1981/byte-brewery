@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vcs-lite · E-06 Historia (makieta)</title>
+<style>
+  /* Tokens of E-01-lista.html and E-01-widok.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --chrome: #ececee; --sidebar: #f2f2f5; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73;
+    --accent: #0a66d8; --accent-soft: #e3eefc; --row-hover: #f5f7fb; --mod: #b4690e; --conf: #c2302a;
+    --file-mod: #002daa; --file-add: #0c7216; --file-del: #6e6e73; --file-unv: #a92c3e;
+    --track: #e4e4e9; --track-line: #d4d4da; --thumb: #ffffff; --thumb-edge: #cfcfd5; --seg-ink: #3a3a40;
+    --lane-0: #0a66d8; --lane-1: #1f9e5a; --lane-2: #c56a12;                               /* NEW: graph lanes */
+    --ref-local: #e3eefc; --ref-local-ink: #0a4fae;                                        /* NEW: local branch */
+    --ref-remote: #eef0f3; --ref-remote-ink: #3a3a40;                                      /* NEW: remote branch */
+    --ref-tag: #fff3d6; --ref-tag-ink: #7a5300;                                            /* NEW: tag */
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1240px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 100ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 100ch; }
+  .scroll { overflow-x: auto; } .inner { min-width: 1080px; }
+  .win { background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 38px; background: var(--chrome); display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .title { flex: 1; text-align: center; font-weight: 600; color: #4a4a50; margin-right: 52px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fafafb; border-bottom: 1px solid var(--line); }
+  .repo-title { font-size: 15px; font-weight: 650; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; background: #eef0f3; color: #3a3a40; font-size: 12px; white-space: nowrap; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; border: 1px solid #c9c9cf; background: #fff; border-radius: 6px; padding: 3px 12px; color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .label { color: var(--dim); font-size: 12px; }
+  .seg { display: inline-flex; align-items: center; height: 24px; padding: 2px; border-radius: 12px; background: var(--track); box-shadow: inset 0 0 0 1px var(--track-line); }
+  .seg span { position: relative; height: 20px; padding: 0 12px; border-radius: 10px; display: inline-flex; align-items: center; font-size: 12px; color: var(--seg-ink); }
+  .seg span + span::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 1px; background: #c3c3ca; }
+  .seg span.on { background: var(--thumb); color: var(--ink); box-shadow: 0 0 0 0.5px var(--thumb-edge), 0 1px 2px rgba(0,0,0,.16); }
+  .seg span.on::before, .seg span.on + span::before { display: none; }
+  .body { display: grid; grid-template-columns: 230px 1fr; height: 300px; }
+  .right { display: flex; flex-direction: column; min-width: 0; }                                     /* NEW: files over commit */
+  .side-foot { margin-top: auto; padding: 8px; display: flex; }
+  .wire { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+  .wf { background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); padding: 10px; display: grid; gap: 4px; font-size: 12px; }
+  .wf .b { border-radius: 5px; display: grid; place-items: center; color: #3a3a40; padding: 4px; text-align: center; }
+  .wf .tb { background: #eef0f3; height: 26px; } .wf .sb { background: #e6e7ec; } .wf .fl { background: #f6f7f9; } .wf .cm { background: #e3eefc; height: 44px; }
+  .wf .hi { background: #e2f3e8; height: 90px; } .wf .st { background: #ececee; height: 20px; }
+  .wf .mid { display: grid; grid-template-columns: 30% 1fr; gap: 4px; height: 130px; } .wf .col { display: grid; grid-template-rows: 1fr 44px; gap: 4px; }
+  .wf .t { font-weight: 650; font-size: 13px; color: var(--ink); margin-bottom: 4px; }
+  .sidebar { background: var(--sidebar); border-right: 1px solid var(--line); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .side-h { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--dim); padding: 6px 8px; text-transform: uppercase; }
+  .repo { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 7px; }
+  .repo.sel { background: var(--accent); color: #fff; } .repo.sel .branch { color: #dbe8fb; }
+  .repo .name { font-weight: 600; } .repo .branch { font-size: 11.5px; color: var(--dim); }
+  .badge { min-width: 22px; text-align: center; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 1px 7px; background: #dfe1e6; color: #3a3a40; }
+  .repo.sel .badge { background: rgba(255,255,255,.25); color: #fff; }
+  .state { width: 9px; height: 9px; border-radius: 50%; } .s-changes { background: var(--mod); } .s-clean { background: #9fd3ad; }
+  .files { padding: 6px 0 0; overflow: hidden; flex: 1; }
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .row { height: 24px; display: flex; align-items: center; padding: 0 16px 0 28px; white-space: nowrap; }
+  .M { color: var(--file-mod); } .A { color: var(--file-add); } .D { color: var(--file-del); text-decoration: line-through; } .U { color: var(--file-unv); }
+  .fd { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .commit { border-top: 1px solid var(--line); background: #fafafb; padding: 10px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+  .msgbox { border: 1px solid #c9c9cf; border-radius: 8px; padding: 8px 10px; height: 48px; color: #a0a0a6; background: #fff; }
+  .actions { display: flex; flex-direction: column; gap: 6px; }
+  .status { display: flex; gap: 14px; align-items: center; padding: 4px 14px; font-size: 11.5px; color: var(--dim); border-top: 1px solid var(--line); background: var(--chrome); }
+  .tool { font-size: 11.5px; padding: 1px 8px; border-radius: 5px; color: #3a3a40; }                 /* NEW: panel toggle */
+  .tool.on { background: #d6d7dc; color: var(--ink); }
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+
+  /* NEW: history panel */
+  .hist { border-top: 1px solid var(--line); background: var(--bg); position: relative; }
+  .grip { position: absolute; top: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+  .grip::after { content: ""; position: absolute; left: 50%; top: 2px; width: 36px; margin-left: -18px; height: 3px; border-radius: 2px; background: #cfcfd5; }
+  .hhead { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: #fafafb; }
+  .hhead .t { font-weight: 650; }
+  .search { display: inline-flex; align-items: center; gap: 6px; width: 300px; height: 24px; padding: 0 8px; border: 1px solid #c9c9cf; border-radius: 6px; background: #fff; color: #a0a0a6; font-size: 12px; }
+  .close { color: var(--dim); font-size: 14px; padding: 0 4px; }
+  .hbody { display: grid; grid-template-columns: 62% 38%; height: 264px; }
+  .log { position: relative; overflow: hidden; border-right: 1px solid var(--line); }
+  .lr { height: 24px; display: grid; grid-template-columns: 52px 1fr 120px 104px; align-items: center; padding-right: 12px; white-space: nowrap; }
+  .lr.sel { background: var(--accent-soft); }
+  .lr .s { overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+  .lr .a, .lr .d { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .lr.out .subj { font-weight: 650; }                                                                   /* unpushed */
+  .up { color: var(--accent); font-weight: 700; font-size: 12px; }
+  .ref { font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px; flex: none; }
+  .ref.l { background: var(--ref-local); color: var(--ref-local-ink); font-weight: 600; }
+  .ref.r { background: var(--ref-remote); color: var(--ref-remote-ink); }
+  .ref.t { background: var(--ref-tag); color: var(--ref-tag-ink); }
+  .graph { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .more { height: 24px; padding-left: 52px; display: flex; align-items: center; color: var(--dim); font-size: 12px; }
+  .det { overflow: hidden; padding: 10px 14px; display: grid; align-content: start; gap: 4px; }
+  .det .h { font-weight: 650; font-size: 13.5px; }
+  .det .meta { color: var(--dim); font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .det .meta code { color: var(--ink); }
+  .det .msg { white-space: pre-wrap; font-size: 12.5px; color: #3a3a40; margin: 4px 0 6px; }
+  .det .group { padding: 6px 0 3px; }
+  .det .row { padding-left: 0; }
+  .det .row.hover { background: var(--row-hover); margin: 0 -14px; padding: 0 14px; }
+  .hint { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+  .link { color: var(--accent); }
+  code { font: 12px var(--mono); }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { background: #fafafb; border-radius: 10px; padding: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .card p { margin: 8px 0 0; color: var(--dim); font-size: 12px; }
+  .mini { background: #fff; border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.1); overflow: hidden; }
+  .empty { height: 90px; display: grid; place-items: center; color: var(--dim); text-align: center; font-size: 12.5px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>vcs-lite — E-06 „Historia”: stały dolny panel jak Git → Log w PyCharmie (makieta do akceptacji)</h1>
+    <p class="lead">Decyzje użytkownika 2026-10-25: historia w v1 z grafem gałęzi; dolny panel zawsze widoczny; panel commita tylko pod listą plików, a pasek repozytoriów sięga do panelu historii. Opis zakresu: <code>docs/PROPOZYCJA-historia.md</code>. Przykład: repo <code>byte-brewery</code>, dwa commity niewypchnięte, gałąź <code>feature/log</code> scalona do <code>main</code>; zaznaczony commit „Draw the commit graph”.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="pid">1</span> Jak rozumiem zmianę układu</h2>
+    <p class="cap">Dziś panel commita biegnie pod całym oknem, także pod paskiem repozytoriów. Po zmianie commit należy do kolumny listy plików, pasek repozytoriów schodzi aż do historii, a historia zajmuje całą szerokość nad paskiem stanu i nie da się jej schować.</p>
+    <div class="wire">
+      <div class="wf"><div class="t">Dziś</div>
+        <div class="b tb">pasek narzędzi</div>
+        <div class="mid"><div class="b sb">repozytoria</div><div class="b fl">lista plików</div></div>
+        <div class="b cm">panel commita (cała szerokość)</div>
+        <div class="b st">pasek stanu</div></div>
+      <div class="wf"><div class="t">Po zmianie</div>
+        <div class="b tb">pasek narzędzi</div>
+        <div class="mid"><div class="b sb">repozytoria<br>(do samej historii)</div><div class="col"><div class="b fl">lista plików</div><div class="b cm">panel commita</div></div></div>
+        <div class="b hi">historia: zawsze widoczna, cała szerokość, wysokość przeciągana</div>
+        <div class="b st">pasek stanu</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">2</span> Okno z panelem „Historia”</h2>
+    <p class="cap">Lista plików i panel commita tworzą prawą kolumnę; pasek repozytoriów ma pełną wysokość tej części okna. Granicę między górną częścią a historią można przeciągnąć. Po lewej w historii commity z grafem, po prawej szczegóły zaznaczonego commita i jego pliki.</p>
+    <div class="scroll"><div class="win inner">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">vcs-lite — byte-brewery</span></div>
+      <div class="toolbar">
+        <span class="repo-title">byte-brewery</span>
+        <span class="chip">⎇ main → origin/main · ↑2</span>
+        <span class="spacer"></span>
+        <span class="label">Widok</span><span class="seg"><span class="on">Zmiany</span><span>Foldery</span><span>Projekt</span></span>
+        <span class="btn">⇣ Pull</span><span class="btn">⟳ Odśwież</span>
+      </div>
+      <div class="body">
+        <aside class="sidebar">
+          <div class="side-h">Repozytoria</div>
+          <div class="repo sel"><span class="state s-changes"></span><span><span class="name">byte-brewery</span><br><span class="branch">main · ↑2 ↓0</span></span><span class="badge">2</span></div>
+          <div class="repo"><span class="state s-clean"></span><span><span class="name">kitchen-crm</span><br><span class="branch">main</span></span><span></span></div>
+          <div class="repo"><span class="state s-clean"></span><span><span class="name">mychat</span><br><span class="branch">develop</span></span><span></span></div>
+          <div class="side-foot"><span class="btn">⚙ Repozytoria…</span></div>
+        </aside>
+        <div class="right">
+        <main class="files">
+          <div class="group">Staged <span class="n">0</span></div>
+          <div class="group">Changes <span class="n">2</span></div>
+          <div class="row"><span class="M">SPEC.md</span><span class="fd">packages/vcs_lite/docs</span></div>
+          <div class="row"><span class="M">sidebar.py</span><span class="fd">packages/vcs_lite/src/vcs_lite/ui</span></div>
+        </main>
+        <div class="commit">
+          <div class="msgbox">Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push</div>
+          <div class="actions"><span class="btn primary" style="opacity:.45">Commit</span><span class="btn" style="opacity:.45">Commit &amp; Push</span></div>
+        </div>
+        </div>
+      </div>
+
+      <div class="hist">
+        <div class="grip" title="Przeciągnij, żeby zmienić wysokość historii"></div>
+        <div class="hhead">
+          <span class="t">Historia</span>
+          <span class="search">⌕ Filtr: wiadomość, hash albo autor</span>
+          <span class="label">Gałęzie</span><span class="seg"><span class="on">Wszystkie</span><span>Bieżąca</span></span>
+          <span class="spacer"></span>
+          <span class="label">1 248 commitów</span>
+        </div>
+        <div class="hbody">
+          <div class="log">
+            <svg class="graph" width="52" height="240" viewBox="0 0 52 240">
+              <path d="M12 12 V228" stroke="var(--lane-0)" stroke-width="2" fill="none"/>
+              <path d="M12 60 C12 74 28 70 28 84 V132 C28 146 12 166 12 180" stroke="var(--lane-1)" stroke-width="2" fill="none"/>
+              <g fill="var(--lane-0)"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="36" r="4"/><circle cx="12" cy="84" r="4"/><circle cx="12" cy="156" r="4"/><circle cx="12" cy="180" r="4"/><circle cx="12" cy="204" r="4"/><circle cx="12" cy="228" r="4"/></g>
+              <circle cx="12" cy="60" r="4" fill="#fff" stroke="var(--lane-0)" stroke-width="2"/>
+              <g fill="var(--lane-1)"><circle cx="28" cy="108" r="5"/><circle cx="28" cy="132" r="4"/></g>
+            </svg>
+            <div class="lr out"><span></span><span class="s"><span class="up" title="Niewypchnięty">↑</span><span class="ref l">main</span><span class="subj">Add search in files and open files in the browser</span></span><span class="a">Michal</span><span class="d">dziś 14:05</span></div>
+            <div class="lr out"><span></span><span class="s"><span class="up" title="Niewypchnięty">↑</span><span class="subj">Specify search in files</span></span><span class="a">Michal</span><span class="d">dziś 11:40</span></div>
+            <div class="lr"><span></span><span class="s"><span class="ref r">origin/main</span><span class="subj">Merge branch 'feature/log'</span></span><span class="a">Michal</span><span class="d">wczoraj 18:22</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Fix sidebar scrolling on short lists</span></span><span class="a">Michal</span><span class="d">wczoraj 16:03</span></div>
+            <div class="lr sel"><span></span><span class="s"><span class="ref l">feature/log</span><span class="subj">Draw the commit graph</span></span><span class="a">Michal</span><span class="d">wczoraj 15:47</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Read git log into commit values</span></span><span class="a">Michal</span><span class="d">wczoraj 12:10</span></div>
+            <div class="lr"><span></span><span class="s"><span class="ref t">v0.3</span><span class="subj">Use the close-up logo and keep the previous one</span></span><span class="a">Michal</span><span class="d">24.10.2026</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Build vcs-lite.app with the logo</span></span><span class="a">Michal</span><span class="d">23.10.2026</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Specify vcs-lite as a macOS application</span></span><span class="a">Michal</span><span class="d">23.10.2026</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Add search in files</span></span><span class="a">Ola Nowak</span><span class="d">22.10.2026</span></div>
+            <div class="more">…kolejne 500 wczytują się po przewinięciu do końca</div>
+          </div>
+          <div class="det">
+            <div class="h">Draw the commit graph</div>
+            <div class="meta"><code>3f9a2c1</code><span>Michal &lt;michal@example.com&gt;</span><span>wczoraj 15:47</span><span>rodzic <span class="link">8be0d47</span></span></div>
+            <div class="msg">Lanes are assigned in core/graph.py without Tk;
+the canvas draws only the visible rows.</div>
+            <div class="group">Pliki <span class="n">4</span></div>
+            <div class="row"><span class="A">graph.py</span><span class="fd">src/vcs_lite/core</span></div>
+            <div class="row hover"><span class="A">history_panel.py</span><span class="fd">src/vcs_lite/ui</span><span class="hint"><kbd>dwuklik</kbd> porównaj</span></div>
+            <div class="row"><span class="M">model.py</span><span class="fd">src/vcs_lite/app</span></div>
+            <div class="row"><span class="A">test_graph.py</span><span class="fd">tests/core</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="status"><span>Odświeżono 14:06</span><span>Dwuklik: porównanie w przeglądarce</span><span><kbd>⌘1</kbd>–<kbd>⌘9</kbd> wybór repo</span></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="pid">3</span> Stany panelu</h2>
+    <div class="states">
+      <div class="card"><div class="mini"><div class="empty">Brak commitów pasujących do „parser”.<br><span class="link">Wyczyść filtr</span></div></div><p>Filtr bez wyników.</p></div>
+      <div class="card"><div class="mini"><div class="empty">Repo nie ma jeszcze commitów.</div></div><p>Świeże repo bez HEAD; repo niedostępne: „Repo niedostępne”.</p></div>
+      <div class="card"><div class="mini"><div class="det" style="padding:10px 12px"><div class="h">Merge branch 'feature/log'</div><div class="meta"><code>c41d7e0</code><span>rodzice <span class="link">5a0e913</span>, <span class="link">3f9a2c1</span></span></div><div class="group">Pliki <span class="n" style="text-transform:none">4 · względem 5a0e913</span></div></div></div><p>Zaznaczony merge: szczegóły podają dwóch rodziców, pliki są porównane z pierwszym rodzicem (zmiany wniesione przez scalenie).</p></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2>Reguły (etap H1, tylko odczyt)</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Element</th><th>Zachowanie</th></tr>
+      <tr><td>Układ</td><td>historia zawsze widoczna, bez zamykania; pod nią tylko pasek stanu; nad nią pasek repozytoriów (pełna wysokość) i prawa kolumna: lista plików, pod nią panel commita; granica przeciągana, wysokość historii zapamiętana w ustawieniach (domyślnie 240 pt); górna część nie mniejsza niż 220 pt, historia nie mniejsza niż 120 pt; domyślne okno 1100 × 820 zamiast 960 × 620</td></tr>
+      <tr><td>Lista commitów</td><td>wybrane repo; najnowsze na górze, kolejność topologiczna; graf: tor na gałąź, kolory torów po kolei (niebieski, zielony, pomarańczowy…), kropka commita, pusta kropka dla merge, zaznaczony commit z większą kropką; najwyżej 8 torów, dalej „…”</td></tr>
+      <tr><td>Etykiety</td><td>gałąź lokalna (niebieska, pogrubiona), zdalna (szara), tag (żółty); <code>HEAD</code> przy etykiecie bieżącej gałęzi; <code>origin/HEAD</code> pomijany</td></tr>
+      <tr><td>Niewypchnięte</td><td>commity przed upstreamem bieżącej gałęzi: strzałka ↑ i pogrubiony tytuł; bez upstreamu bez znacznika</td></tr>
+      <tr><td>Daty</td><td>„dziś 14:05”, „wczoraj 18:22”, starsze „24.10.2026”; pełna data i godzina w podpowiedzi</td></tr>
+      <tr><td>Filtr</td><td>tekst w wiadomości, początek hasha albo autor, bez wielkości liter; 250 ms po ostatnim znaku</td></tr>
+      <tr><td>Gałęzie</td><td>„Wszystkie” (domyślnie, jak PyCharm) albo „Bieżąca”</td></tr>
+      <tr><td>Szczegóły</td><td>tytuł, treść wiadomości, skrócony hash, autor, data, rodzice (kliknięcie przechodzi do rodzica); pliki z kolorami statusu jak w liście zmian, folder za nazwą</td></tr>
+      <tr><td>Plik commita</td><td>dwuklik albo Enter: diff w przeglądarce rodzic ↔ commit, te same strony co dziś (<code>.md</code> wyrenderowany, tekst lewo–prawo, obrazki i PDF)</td></tr>
+      <tr><td>Menu commita</td><td>„Kopiuj hash”, „Kopiuj adres commita” (<code>https://github.com/…/commit/&lt;hash&gt;</code>), „Otwórz w przeglądarce”; bez operacji zmieniających repo</td></tr>
+      <tr><td>Klawiatura</td><td>strzałki po commitach, Enter albo Tab do plików commita, <kbd>⌘F</kbd> w panelu do filtra</td></tr>
+      <tr><td>Ładowanie i pamięć</td><td>500 commitów na raz, kolejne po przewinięciu do końca; rysowane tylko widoczne wiersze; odczyt przy starcie, zmianie repo i odświeżeniu (także po powrocie fokusu), nigdy cyklicznie (REQ-VCS-100, REQ-VCS-101)</td></tr>
+    </table></div>
+  </section>
+</div>
+</body>
+</html>

@@ -311,6 +311,42 @@ Chip „⎇ odłączony HEAD · <7 znaków commita>”. Pull nieaktywny, podpowi
 
 Źródło: `E-05-diff.html` (P16a, P16b, P16c) z tabelą wartości. Strona dzieli z diffem Markdown pasek, kartę, paletę jasną i ciemną (DEC-VCS-082) i motyw z menu Widok → „Motyw stron w przeglądarce”. Nowe tokeny strony: `--gutter` dla numerów linii i `--filler` dla zakreskowanej drugiej strony; wartości w makiecie i w `core/pagekit.py` (to kolory strony w przeglądarce, nie okna Tk). Kod 13 pt o stałej szerokości, wysokość linii 1,55, numery 12 pt w kolumnie 52 pt; 3 linie kontekstu; długie linie zawijane (DEC-VCS-108).
 
+## 12. Panel „Historia” E-06 (DEC-VCS-118, DEC-VCS-119)
+
+Źródło: `E-06-historia.html` (układ, okno z panelem, stany). Reguły zachowania: H-01–H-49 w `PROPOZYCJA-historia.md`.
+
+### Nowe kolory
+
+| Nazwa | Wartość | Użycie |
+|---|---|---|
+| `lane_0` | `#0a66d8` | pierwszy tor grafu (jak `accent`) |
+| `lane_1` | `#1f9e5a` | drugi tor |
+| `lane_2` | `#c56a12` | trzeci tor |
+| `lane_3` | `#8a4fd3` | czwarty tor (decyzja agenta: makieta pokazuje trzy) |
+| `lane_4` | `#0e8f99` | piąty tor (decyzja agenta) |
+| `lane_5` | `#c23d7a` | szósty tor (decyzja agenta) |
+| `lane_6` | `#6b7a1f` | siódmy tor (decyzja agenta) |
+| `lane_7` | `#5a6270` | ósmy tor (decyzja agenta); potem kolory od początku |
+| `ref_local_ink` | `#0a4fae` | etykieta gałęzi lokalnej (tło `accent_soft`, 600) |
+| `ref_tag` | `#fff3d6` | tło etykiety tagu |
+| `ref_tag_ink` | `#7a5300` | tekst etykiety tagu |
+
+Etykieta gałęzi zdalnej: tło `chip_bg`, tekst `chip_ink`.
+
+### Wymiary i teksty
+
+| Element | Wartość |
+|---|---|
+| układ | `tk.PanedWindow` pionowy: góra (pasek boczny pełnej wysokości, prawa kolumna: lista plików nad panelem commita) i historia; granica 6 pt z uchwytem 36 × 3 w `seg_thumb_edge` (pod kursorem nad granicą albo nagłówkiem `accent`; uchwyt leży na górze panelu, bo Tk nie rysuje na granicy); cały nagłówek historii poza kontrolkami też przeciąga granicę, kursor ↕ (DEC-VCS-121); historia domyślnie 240 pt, najmniej 120, góra najmniej 220; okno 1100 × 820 |
+| nagłówek | tło `panel`, padding 14 × 7, linia dolna 1 `line`; „Historia” 13 650; pole filtra 300 × 24, obrys 1 `control_border`, „⌕” i tekst zastępczy „Filtr: wiadomość, hash albo autor” w `placeholder`; etykieta „Gałęzie” 12 `dim` i przełącznik „Wszystkie / Bieżąca” jak „Widok”; z prawej „N commitów” 12 `dim` |
+| podział | lista commitów 62 % szerokości, szczegóły 38 %, linia 1 `line` |
+| wiersz commita | 24 pt; kolumna grafu 16 pt na tor (najwyżej 8), plus 20 pt; kolumny: tytuł (reszta), autor 120 pt, data 104 pt, 12 `dim`; zaznaczony `accent_soft`, pod kursorem `row_hover` |
+| graf | linia 2 pt w kolorze toru; kropka 8 pt w kolorze toru; merge: kropka pusta w środku (tło `bg`, obrys 2 pt); zaznaczony commit: kropka 10 pt; łuki jako krzywe Béziera w połowie wiersza; przycięty tor: kropka pusta w środku w ósmej kolumnie |
+| etykiety | przed tytułem, odstęp 6 pt; 11 pt, wysokość 16, padding 0 × 6, promień 4 |
+| niewypchnięty | „↑” 12 700 `accent` przed etykietami, tytuł 650 |
+| szczegóły | padding 10 × 14; tytuł 13,5 650; wiersz meta 12 `dim`: hash 12 mono `ink`, autor z e-mailem, data, „rodzic”/„rodzice” z hashami w `accent`; treść 12,5 `chip_ink`; nagłówek „PLIKI N” jak nagłówek grupy; pliki jak w liście plików (§9), podpowiedź „dwuklik porównaj” |
+| stany | na środku listy, 12,5 `dim`: „Brak commitów pasujących do „<tekst>”.” z odnośnikiem „Wyczyść filtr” w `accent`; „Repo nie ma jeszcze commitów.”; „Repo niedostępne.”; błąd: „Nie udało się wczytać historii” i komunikat gita |
+
 ## 7. Do ustalenia (rejestr w SPEC.md)
 
 - Q-VCS-030 i Q-VCS-031 rozstrzygnięte: DEC-VCS-047, DEC-VCS-048.

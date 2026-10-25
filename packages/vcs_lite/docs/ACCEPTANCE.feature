@@ -416,3 +416,112 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik uruchamia "tools/make_app.py" ponownie
     Then "vcs-lite.app" zostaje zastąpiona nową
     And obca "vcs-lite.app" w tym katalogu nie zostaje zastąpiona
+
+  @AT_VCS_048 @confirmed @UC_VCS_02 @REQ_VCS_035 @DEC_VCS_113 @DEC_VCS_115 @VER_VCS_019
+  Scenario: Prawy przycisk na repo kopiuje adres zdalnego repo
+    Given wybrane jest repo "alpha", a repo "beta" ma zdalne "upstream" i "origin" z adresem "git@github.com:m1981/beta.git"
+    When użytkownik klika prawym przyciskiem kafelek "beta"
+    Then w schowku jest "https://github.com/m1981/beta.git", menu się nie otwiera, a wybrane zostaje "alpha"
+    When użytkownik klika prawym przyciskiem kafelek repo bez zdalnego
+    Then schowek się nie zmienia i słychać sygnał systemu
+
+  # ---------- Historia (UC-VCS-09, PROPOZYCJA-historia.md, reguły H-01–H-49) ----------
+  # Kształty historii zapisane jak „A ← B” (B ma rodzica A); kolumny grafu liczone od 0.
+
+  @AT_VCS_049 @confirmed @UC_VCS_09 @REQ_VCS_036 @DEC_VCS_118 @VER_VCS_020
+  Scenario: Panel historii jest zawsze widoczny pod listą plików i panelem commita
+    Given okno vcs-lite z wybranym repo
+    Then panel „Historia” zajmuje całą szerokość nad paskiem stanu i nie ma przycisku zamknięcia
+    And panel commita leży pod listą plików, a pasek repozytoriów sięga do panelu historii
+    When użytkownik przeciąga granicę tak, że historia miałaby 60 pt
+    Then historia ma 120 pt
+    When użytkownik ustawia historię na 300 pt i uruchamia vcs-lite ponownie
+    Then historia ma 300 pt
+
+  @AT_VCS_050 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Historia liniowa to jedna prosta linia
+    Given historia A ← B ← C
+    Then wiersze to C, B, A, wszystkie w kolumnie 0, w jednym kolorze
+    And tor kończy się na kropce A
+
+  @AT_VCS_051 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Gałąź scalona przez merge
+    Given historia A ← B ← M i A ← F1 ← F2 ← M, gdzie M ma rodziców B i F2
+    Then M stoi w kolumnie 0 i ma łuk do nowego toru w kolumnie 1
+    And F2 i F1 stoją w kolumnie 1, B w kolumnie 0
+    And tor z kolumny 1 kończy się łukiem na A w kolumnie 0
+    And kolumna 1 ma inny kolor niż kolumna 0
+
+  @AT_VCS_052 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Dwie gałęzie wychodzą z jednego commita i nie są scalone
+    Given historia A ← B (main) i A ← X (feature), kolejność wierszy X, B, A
+    Then X stoi w kolumnie 0, B w kolumnie 1
+    And A stoi w kolumnie 0, a tor z kolumny 1 dochodzi do A łukiem i się kończy
+
+  @AT_VCS_053 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Merge ośmiornicy z rodzicem, na którego już czeka tor
+    Given merge O z rodzicami P1, P2, P3, P4, a nad O czubek Y z rodzicem P3
+    Then O ma łuki do toru Y (który czeka na P3) oraz do nowych torów P2 i P4
+    And żadna linia nie przechodzi przez kropkę innego commita
+
+  @AT_VCS_054 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Niezwiązane historie i płytki klon
+    Given repo z gałęzią main (A ← B) i gałęzią docs utworzoną przez --orphan (D1 ← D2)
+    Then obie historie są rysowane osobno, bez łuku między nimi, a tory kończą się na A i na D1
+    Given płytki klon, którego najstarszy commit ma etykietę grafted
+    Then ten commit jest rysowany jak korzeń, bez etykiety „grafted”
+
+  @AT_VCS_055 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Graf jest dokładany przy kolejnej stronie
+    Given historia z gałęzią, której początek leży poniżej pierwszych 500 commitów
+    When użytkownik przewija listę do końca pierwszej strony
+    Then tor gałęzi biegnie do dołu pierwszej strony, a po wczytaniu drugiej kończy się na właściwym commicie
+    And wiersze pierwszej strony nie zmieniają kolumn ani kolorów
+    And układ dla całej historii naraz jest taki sam jak po dwóch stronach
+
+  @AT_VCS_056 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
+  Scenario: Szeroki graf jest przycięty do ośmiu kolumn
+    Given dziesięć gałęzi wychodzących z jednego commita i niescalonych
+    Then graf ma szerokość ośmiu kolumn
+    And commity z kolumn 9 i 10 mają puste w środku kropki w ósmej kolumnie, bez swoich linii
+
+  @AT_VCS_057 @confirmed @UC_VCS_09 @REQ_VCS_037 @VER_VCS_020
+  Scenario: Etykiety, zakres i niewypchnięte commity
+    Given repo z gałęzią main śledzącą origin/main, dwoma commitami nad origin/main, tagiem v1, schowkiem (stash) i notatką
+    Then lista nie zawiera commitów schowka ani notatki
+    And dwa najnowsze commity mają znacznik ↑ i pogrubiony tytuł
+    And etykieta main jest oznaczona jako bieżąca, origin/main jako zdalna, v1 jako tag, bez origin/HEAD
+    Given lokalna gałąź o nazwie "origin/fake"
+    Then jej etykieta jest gałęzią lokalną
+
+  @AT_VCS_058 @confirmed @UC_VCS_09 @REQ_VCS_037 @VER_VCS_020
+  Scenario: Puste repo, błąd i odświeżenie z zachowaniem zaznaczenia
+    Given świeże repo bez commitów
+    Then panel pokazuje „Repo nie ma jeszcze commitów”, a git nie dostaje argumentu HEAD
+    Given repo z historią i zaznaczonym commitem C
+    When użytkownik robi nowy commit
+    Then historia jest czytana na nowo, nowy commit jest na górze, a C nadal jest zaznaczony
+    When użytkownik robi amend zaznaczonego commita
+    Then zaznaczony jest pierwszy wiersz
+    And przez cały czas Commit i Pull nie czekają na odczyt historii
+
+  @AT_VCS_059 @confirmed @UC_VCS_09 @REQ_VCS_039 @VER_VCS_020
+  Scenario: Filtr szuka w wiadomości, autorze i hashu i pokazuje listę bez linii grafu
+    Given commity „fix parser” autora Ola, „docs” autora Ola i „fix ui” autora Michal
+    When użytkownik wpisuje "ola"
+    Then po 250 ms lista ma „fix parser” i „docs”
+    When użytkownik wpisuje "fix"
+    Then lista ma „fix parser” i „fix ui”, a graf ma tylko kropki w jednej kolumnie
+    When użytkownik wpisuje pierwsze 7 znaków hasha „docs”
+    Then lista ma tylko „docs”
+
+  @AT_VCS_060 @confirmed @UC_VCS_09 @REQ_VCS_040 @VER_VCS_020
+  Scenario: Pliki commita, diff i menu commita
+    Given zaznaczony merge M z rodzicami B i F2, zdalny origin "git@github.com:m1981/app.git"
+    Then pliki M to zmiany względem B
+    When użytkownik klika dwukrotnie plik "a.py" z listy plików M
+    Then w przeglądarce otwiera się diff "a.py" z B po lewej i z M po prawej
+    When użytkownik wybiera z menu M „Kopiuj adres commita”
+    Then w schowku jest "https://github.com/m1981/app/commit/<pełny hash M>"
+    Given zaznaczony pierwszy commit repo
+    Then jego pliki są wszystkie dodane
