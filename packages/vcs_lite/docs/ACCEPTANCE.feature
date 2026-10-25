@@ -137,6 +137,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
   Scenario: Zużycie pamięci mieści się w progu
     Given 3 repozytoria są obserwowane, a jedno ma 300 zmienionych plików
     And otwarte jest porównanie pliku o długości 2000 linii w zewnętrznym narzędziu
+    And repo z 300 zmianami ma 4000 commitów z gałęziami, a panel „Historia” pokazuje jego historię
     When narzędzie pozostaje bezczynne przez 5 sekund
     Then "footprint" procesu vcs-lite wynosi najwyżej 60 MB
 

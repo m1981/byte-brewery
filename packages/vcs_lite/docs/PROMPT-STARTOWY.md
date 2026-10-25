@@ -7,7 +7,7 @@ Zanim cokolwiek zrobisz, przeczytaj:
 4. docs/ui-reference/UI-REFERENCE.md oraz E-01*.html, E-01.png, E-03*.html, E-04-szukaj.html, E-05-diff.html: wiążący wzorzec wyglądu (E-03 strona diffu Markdown, E-04 okno „Szukaj w plikach”, E-05 diff lewo–prawo w przeglądarce).
 5. docs/PROPOZYCJA-szukaj.md: analiza „Szukaj w plikach” (wykonane, REQ-VCS-033).
 6. docs/RETROSPEKTYWA.md: jak pracowaliśmy i czego unikać.
-7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17 i 20–22 potwierdzone, 18, 19 i 23 czekają).
+7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17 i 20–23 potwierdzone, 18 i 19 czekają).
 
 Zasady pracy:
 - Po polsku, według docs/WSPOLPRACA.md.
