@@ -6,7 +6,7 @@ its refreshes finishes (H-41), so it reads exactly when the status is read and n
 read carries a number; a result with an older number is dropped (H-43). Jobs run under their own keys, so
 the repository stays free for commit, pull and stage.
 
-Trace: DES-VCS-067, DEC-VCS-123, REQ-VCS-037, REQ-VCS-039, REQ-VCS-101, DEC-VCS-116, DEC-VCS-120
+Trace: DES-VCS-067, DES-VCS-071, REQ-VCS-041, DEC-VCS-123, REQ-VCS-037, REQ-VCS-039, REQ-VCS-101, DEC-VCS-116, DEC-VCS-120
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 
 from vcs_lite.app.worker import Executor, Outcome
 from vcs_lite.core.graph import Edge, GraphLayout, GraphRow
-from vcs_lite.core.log import Commit, CommitDetails, HistoryReader, LogQuery, Scope
+from vcs_lite.core.log import Commit, CommitDetails, CommitFile, HistoryReader, LogQuery, Scope
 from vcs_lite.core.repo import GitError
 
 DEBOUNCE_MS = 250   # the filter reads after a pause this long in typing (H-44)
@@ -81,6 +81,7 @@ class HistorySession:
         self.more = False
         self.count = 0
         self.unpushed: set[str] = set()
+        self.paths: dict[str, CommitFile] = {}  # a file's history: its change in each commit (H-55)
         self.selected = -1
         self.details: CommitDetails | None = None
         self.loading = False
@@ -130,6 +131,8 @@ class HistorySession:
             return None
         if self.query.filtered:
             return f"Brak commitów pasujących do „{self.query.phrase}”."
+        if self.query.path:
+            return f"Brak commitów dla {self.query.path}."
         return "Repo nie ma jeszcze commitów."
 
     # ---------- what the panel asks for ----------
@@ -138,10 +141,23 @@ class HistorySession:
         """The filter: read once typing pauses (H-44)."""
         if self._cancel_timer:
             self._cancel_timer()
-        self._cancel_timer = self._later(DEBOUNCE_MS, lambda: self._set_query(LogQuery(self.query.scope, text)))
+        self._cancel_timer = self._later(DEBOUNCE_MS, lambda: self._set_query(
+            LogQuery(self.query.scope, text, self.query.path, self.query.folder)))
 
     def set_scope(self, scope: Scope) -> None:
-        self._set_query(LogQuery(scope, self.query.text))
+        self._set_query(LogQuery(scope, self.query.text, self.query.path, self.query.folder))
+
+    def show_path(self, path: str, *, folder: bool) -> None:
+        """„Pokaż historię” on a file or folder (H-50, H-51)."""
+        self._set_query(LogQuery(self.query.scope, self.query.text, path, folder))
+
+    def clear_path(self) -> None:
+        """The mark in the header: back to the whole history (H-52)."""
+        self._set_query(LogQuery(self.query.scope, self.query.text))
+
+    def path_change(self, commit: Commit) -> CommitFile | None:
+        """The file of a file history as it was in this commit, to open its diff (H-55); None for a folder."""
+        return None if self.query.folder else self.paths.get(commit.hash)
 
     def select(self, index: int) -> None:
         if not 0 <= index < len(self.commits) or index == self.selected and self.details:
@@ -171,6 +187,8 @@ class HistorySession:
     def _model_changed(self) -> None:
         name = self._model.selected
         seen = (name, self._model.view(name).refreshes if name else 0)
+        if self._seen and name != self._seen[0] and self.query.path:
+            self.query = LogQuery(self.query.scope, self.query.text)   # a path belongs to its repository (H-52)
         if seen != self._seen:
             self._seen = seen
             self._read()
@@ -197,7 +215,7 @@ class HistorySession:
 
     def _read_all(self, repo: Path, query: LogQuery):
         page = self._reader.page(repo, query, 0)
-        count = len(page.commits) if query.filtered else self._reader.count(repo, query)
+        count = len(page.commits) if query.flat else self._reader.count(repo, query)
         return page, count, self._reader.unpushed(repo), self._reader.remote_url(repo)
 
     def _read_done(self, generation: int, outcome: Outcome) -> None:
@@ -212,9 +230,9 @@ class HistorySession:
             raise outcome.error
         else:
             page, self.count, self.unpushed, self._remote = outcome.value
-            self.commits, self.more = list(page.commits), page.more
+            self.commits, self.more, self.paths = list(page.commits), page.more, dict(page.paths)
             self._layout = GraphLayout()
-            self.rows = [] if self.query.filtered else self._layout.extend(self.commits)
+            self.rows = [] if self.query.flat else self._layout.extend(self.commits)
             index = next((i for i, c in enumerate(self.commits) if c.hash == keep), 0 if self.commits else -1)
             self.selected, self.details = -1, None
             if index >= 0:
@@ -233,7 +251,7 @@ class HistorySession:
             page = outcome.value
             self.commits.extend(page.commits)
             self.more = page.more
-            if not self.query.filtered:
+            if not self.query.flat:
                 self.rows.extend(self._layout.extend(page.commits))
         self._changed()
 

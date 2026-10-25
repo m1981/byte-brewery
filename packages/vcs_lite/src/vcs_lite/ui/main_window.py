@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-069, REQ-VCS-036, DEC-VCS-118, DES-VCS-063, REQ-VCS-035, DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
+Trace: DES-VCS-071, REQ-VCS-041, DES-VCS-069, REQ-VCS-036, DEC-VCS-118, DES-VCS-063, REQ-VCS-035, DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
@@ -103,6 +103,10 @@ class MainWindow(tk.Frame):
             handle.bind("<Enter>", lambda _e: self.history.highlight(True))
             handle.bind("<Leave>", lambda _e: self.history.highlight(self._drag is not None))
 
+    def _show_history(self, path: str, folder: bool) -> None:
+        """„Pokaż historię” in the file list (DEC-VCS-124)."""
+        self._history_session.show_path(path, folder=folder)
+
     def history_drag_start(self, y_root: int, height: int) -> None:
         self._drag, self._drag_height = (y_root, height), height
 
@@ -172,7 +176,8 @@ class MainWindow(tk.Frame):
                                   on_compare_external=(lambda change: self.model.activate(change, external=True))
                                   if self.model.has_external_tool else None,
                                   on_open=self.model.open_file, on_open_in_app=self.model.open_in_app,
-                                  on_reveal=self.model.reveal)
+                                  on_reveal=self.model.reveal,
+                                  on_show_history=self._show_history if self._history_session else None)
         self.file_list.pack(fill=tk.BOTH, expand=True)
         return middle
 

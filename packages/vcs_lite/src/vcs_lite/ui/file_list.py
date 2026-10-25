@@ -4,7 +4,7 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
+Trace: DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
 """
 
 from __future__ import annotations
@@ -137,14 +137,17 @@ class FileList(tk.Frame):
                  on_compare_external: Callable[[FileChange], None] | None = None,
                  on_open: Callable[[str], None] = lambda path: None,
                  on_open_in_app: Callable[[str], None] = lambda path: None,
-                 on_reveal: Callable[[str], None] = lambda path: None):
-        """`on_compare_external` is set only when the diff tool plugin is (DEC-VCS-106)."""
+                 on_reveal: Callable[[str], None] = lambda path: None,
+                 on_show_history: Callable[[str, bool], None] | None = None):
+        """`on_compare_external` is set only when the diff tool plugin is (DEC-VCS-106); `on_show_history`
+        only when the window has a history panel (DEC-VCS-124)."""
         super().__init__(master, bg=C["bg"])
         self._on_toggle, self._on_activate = on_toggle, on_activate
         self._on_toggle_folder, self._on_empty_action = on_toggle_folder, on_empty_action
         self._on_toggle_many, self._on_ignore = on_toggle_many, on_ignore
         self._on_compare_external = on_compare_external
         self._on_open, self._on_open_in_app, self._on_reveal = on_open, on_open_in_app, on_reveal
+        self._on_show_history = on_show_history
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self._rows: list[ListRow] = []
@@ -419,6 +422,7 @@ class FileList(tk.Frame):
             *self._external_entry(rows[0].change, compare_ok),
             ("Otwórz w aplikacji", single_file and self._on_disk(rows[0].path),
              lambda: self._on_open_in_app(rows[0].path)),
+            *self._history_entry(rows, len(rows) == 1 and group is not Group.UNVERSIONED),
         ]
         entries.append((f"Dodaj do .gitignore{self._ignore_count(rows)}", free and group is Group.UNVERSIONED,
                         lambda: self._ignore_selection(rows)))
@@ -434,7 +438,16 @@ class FileList(tk.Frame):
         if single and change is not None and change.group is not Group.CONFLICTS:
             entries.append(("Porównaj", True, lambda: self._on_activate(change)))
             entries += self._external_entry(change, True)
+        entries += self._history_entry([row], single and (change is None or change.group is not Group.UNVERSIONED))
         return entries
+
+    def _history_entry(self, rows: list[ListRow], enabled: bool) -> list[tuple[str, bool, Callable[[], None]]]:
+        """„Pokaż historię”: the history panel narrowed to the file or folder (DEC-VCS-124); an unversioned
+        file has no history (H-56)."""
+        if self._on_show_history is None:
+            return []
+        row, show = rows[0], self._on_show_history
+        return [("Pokaż historię", enabled, lambda: show(row.path, row.kind in ("folder", "pdir")))]
 
     def _external_entry(self, change: FileChange | None, enabled: bool) -> list[tuple[str, bool, Callable[[], None]]]:
         """„Porównaj w narzędziu zewnętrznym”, only while the plugin is set (DEC-VCS-106)."""

@@ -4,7 +4,7 @@
 named only when it exists, because a fresh repository makes git fail on it (H-04). `--grep` and `--author`
 together keep only commits matching both, so the filter runs them apart and joins the results (H-44).
 
-Trace: DES-VCS-065, REQ-VCS-037, REQ-VCS-039, REQ-VCS-040, OBS-VCS-015, DEC-VCS-120
+Trace: DES-VCS-065, DES-VCS-071, REQ-VCS-041, REQ-VCS-037, REQ-VCS-039, REQ-VCS-040, OBS-VCS-015, DEC-VCS-120
 """
 
 from __future__ import annotations
@@ -18,6 +18,8 @@ from vcs_lite.core.log import (FORMAT, Commit, CommitDetails, LogPage, LogQuery,
 from vcs_lite.core.repo import GitError, GitRepo
 
 PAGE = 500                                  # commits read at once (H-06), also the filter's limit (H-44)
+PATH_LIMIT = 5000                           # a path's history is read at once, no pages (H-54)
+RECORD = "\x1e"                             # starts each commit when names of files follow it
 HASH_PREFIX = re.compile(r"[0-9a-fA-F]{4,40}")
 LOG = ("log", "--topo-order", "-z", "--decorate=full", f"--format={FORMAT}")
 
@@ -44,6 +46,8 @@ class GitLog:
         revisions = self._revisions(repo, query.scope)
         if not revisions:
             return LogPage((), False)
+        if query.path:
+            return self._path_page(repo, query, revisions)
         if query.filtered:
             return self._filtered(repo, query.phrase, revisions)
         commits = parse_log(self._read(repo, *LOG, f"--max-count={PAGE + 1}", f"--skip={skip}", *revisions, "--"))
@@ -62,6 +66,39 @@ class GitLog:
                     found.setdefault(commit.hash, commit)
         commits = sorted(found.values(), key=lambda c: c.time, reverse=True)
         return LogPage(tuple(commits[:PAGE]), len(commits) > PAGE)
+
+    def _path_page(self, repo: Path, query: LogQuery, revisions: list[str]) -> LogPage:
+        """A file with its earlier names and its change in each commit, or a folder (H-50, H-51); with
+        text, only commits that also match it (H-53)."""
+        if query.folder:
+            spec, follow = [f":(literal){query.path.rstrip('/')}/"], []
+        else:
+            spec, follow = [f":(literal){query.path}"], ["--follow", "--name-status"]
+        raw = self._read(repo, *LOG[:-1], f"--format={RECORD}{FORMAT}", *follow, f"--max-count={PATH_LIMIT + 1}",
+                         *revisions, "--", *spec)
+        commits, paths = [], {}
+        for record in filter(None, raw.split(RECORD.encode())):
+            header, _, names = record.partition(b"\0")
+            commit = parse_log(header)[0]
+            commits.append(commit)
+            changes = parse_name_status(names.lstrip(b"\n"))
+            if changes:
+                paths[commit.hash] = changes[0]
+        if query.filtered:
+            # over the whole repository: with --grep git skips the commit of a rename and stops following
+            matching = self._matching(repo, query.phrase, revisions)
+            commits = [c for c in commits if c.hash in matching or self._hash_matches(c, query.phrase)]
+        return LogPage(tuple(commits[:PATH_LIMIT]), False, paths)
+
+    def _matching(self, repo: Path, phrase: str, revisions: list[str]) -> set[str]:
+        found = set()
+        for pattern in (f"--grep={phrase}", f"--author={phrase}"):
+            found |= set(self._read(repo, "log", "--format=%H", "-i", "-F", pattern, *revisions, "--").decode().split())
+        return found
+
+    @staticmethod
+    def _hash_matches(commit: Commit, phrase: str) -> bool:
+        return bool(HASH_PREFIX.fullmatch(phrase)) and commit.hash.startswith(phrase.lower())
 
     def count(self, repo: Path, query: LogQuery) -> int:
         revisions = self._revisions(repo, query.scope)

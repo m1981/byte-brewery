@@ -190,3 +190,45 @@ def test_des_vcs_070_a_change_of_column_is_one_curve_over_a_whole_row():
     assert edge_paths(Edge(1, 1, 0, 2, 0, 0), bottom=1000) == [([x1, 36, x1, 48, x0, 48, x0, 60], True)]
     assert edge_paths(Edge(5, 0, 0, None, None, 0), bottom=200) == [([x0, 132, x0, 200], False)]
     assert edge_paths(Edge(0, 0, 8, 3, 8, 0), bottom=1000) == []      # a clipped lane is not drawn (H-33)
+
+
+# ---------- „Pokaż historię” (H-50–H-56) ----------
+
+def test_at_vcs_061_show_history_from_the_file_list_and_open_a_commit_of_the_file(root, world):
+    alpha = world.repo("alpha")
+    alpha.write("a.txt", "1\n"); alpha.commit("pierwszy")
+    alpha.git("mv", "a.txt", "b.txt"); alpha.commit("nazwa")
+    alpha.write("b.txt", "2\n")                                     # b.txt in Changes
+    world.start("alpha"); world.select("alpha")
+    window = window_with_history(root, world)
+    from vcs_lite.core.status import Group
+    fl = window.file_list
+    row = next(r for r in fl.rows() if r.path == "b.txt" and r.group is Group.CHANGES)
+    menu = {label: (enabled, command) for label, enabled, command in fl.prepare_menu(row.top + 5)}
+    assert menu["Pokaż historię"][0]
+    menu["Pokaż historię"][1](); world.worker.settle()
+    panel, session = window.history, window.history.session
+    assert [c.subject for c in session.commits] == ["nazwa", "pierwszy"] and panel.path_text == "Plik: b.txt ✕"
+    panel.commit_list.double_click(24 + 5); world.worker.settle()         # the oldest commit
+    call = world.tool.calls[-1]
+    assert call["right_title"].startswith("a.txt (") and call["left_title"] == "a.txt (pusty)"
+    panel.clear_path(); world.worker.settle()
+    assert panel.path_text == "" and len(session.rows) == 3
+
+
+def test_at_vcs_063_unversioned_has_no_history_and_files_of_a_commit_have_it(root, world):
+    alpha = world.repo("alpha")
+    alpha.write("a.py", "a\n"); alpha.commit("z a.py")
+    alpha.write("nowy.txt", "n\n")
+    world.start("alpha"); world.select("alpha")
+    window = window_with_history(root, world)
+    from vcs_lite.core.status import Group
+    fl = window.file_list
+    row = next(r for r in fl.rows() if r.group is Group.UNVERSIONED)
+    assert not {label: enabled for label, enabled, _ in fl.prepare_menu(row.top + 5)}["Pokaż historię"]
+    details = window.history.details
+    _, top = details.file_rows()[0]
+    menu = {label: (enabled, command) for label, enabled, command in details.prepare_file_menu(top + 5)}
+    assert set(menu) == {"Porównaj", "Pokaż historię"}
+    menu["Pokaż historię"][1](); world.worker.settle()
+    assert window.history.session.query.path == "a.py" and window.history.path_text == "Plik: a.py ✕"

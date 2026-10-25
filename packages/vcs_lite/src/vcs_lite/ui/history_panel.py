@@ -5,7 +5,7 @@ view, with their piece of the graph (P. Vigier: drawing only the visible part is
 fast). Lanes beyond the eighth are not drawn and their commits get a hollow dot in the eighth column (H-33);
 a filtered list has dots only (H-34). The details show the selected commit and its files.
 
-Trace: DES-VCS-070, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
+Trace: DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
 """
 
 from __future__ import annotations
@@ -132,9 +132,10 @@ class HistoryPanel(tk.Frame):
         body.columnconfigure(0, weight=62, uniform="split")
         body.columnconfigure(1, weight=38, uniform="split")
         body.rowconfigure(0, weight=1)
-        self.commit_list = CommitList(body, session, clipboard=clipboard, open_url=open_url)
+        self.commit_list = CommitList(body, session, clipboard=clipboard, open_url=open_url, on_open_file=on_open_file)
         self.commit_list.grid(row=0, column=0, sticky=tk.NSEW, padx=(0, S["line"]))
-        self.details = CommitView(body, session, on_open_file=on_open_file)
+        self.details = CommitView(body, session, on_open_file=on_open_file,
+                                  on_show_history=lambda path: session.show_path(path, folder=False))
         self.details.grid(row=0, column=1, sticky=tk.NSEW)
         if session:
             session.subscribe(self.render)
@@ -148,7 +149,7 @@ class HistoryPanel(tk.Frame):
         for handle in self.handles():
             handle.configure(cursor=RESIZE_CURSOR)
         if self.session is None:
-            self.filter, self.scope, self._count = tk.StringVar(self), None, None
+            self.filter, self.scope, self._count, self._path = tk.StringVar(self), None, None, None
             return
         field = tk.Frame(header, bg=C["bg"], highlightthickness=1, highlightbackground=C["control_border"])
         field.pack(side=tk.LEFT, padx=(10, 0))
@@ -163,6 +164,9 @@ class HistoryPanel(tk.Frame):
         self.scope = SegmentedControl(header, SCOPES, self.session.query.scope.value,
                                       lambda value: self.session.set_scope(Scope(value)), parent_bg=C["panel"])
         self.scope.pack(side=tk.LEFT)
+        self._path = tk.Label(header, text="", font=theme.font("history_meta"), bg=C["accent_soft"],
+                              fg=C["ref_local_ink"], padx=8, pady=1, cursor="hand2")   # „Plik: … ✕” (DEC-VCS-124)
+        self._path.bind("<Button-1>", lambda _e: self.clear_path())
         self._count = theme.label(header, "history_meta", "", bg=C["panel"])
         self._count.pack(side=tk.RIGHT)
 
@@ -186,6 +190,13 @@ class HistoryPanel(tk.Frame):
         canvas.create_rectangle(left, 1, left + w, 1 + h, fill=self.grip_color, outline=self.grip_color)
 
     @property
+    def path_text(self) -> str:
+        return self._path.cget("text") if self._path and self._path.winfo_manager() else ""
+
+    def clear_path(self) -> None:
+        self.session.clear_path()
+
+    @property
     def count_text(self) -> str:
         return self._count.cget("text") if self._count else ""
 
@@ -193,15 +204,22 @@ class HistoryPanel(tk.Frame):
         session = self.session
         if session and self._count:
             self._count.configure(text=commits_label(session.count) if session.commits else "")
+            query = session.query
+            if query.path:
+                self._path.configure(text=f"{'Folder' if query.folder else 'Plik'}: {query.path} ✕")
+                self._path.pack(side=tk.LEFT, padx=(10, 0))
+            else:
+                self._path.pack_forget()
         self.commit_list.render()
         self.details.render()
 
 
 class CommitList(tk.Frame):
     def __init__(self, master: tk.Misc, session: HistorySession | None, *, clipboard: Callable[[str], None],
-                 open_url: Callable[[str], None]):
+                 open_url: Callable[[str], None], on_open_file: Callable[[Commit, CommitFile], None]):
         super().__init__(master, bg=C["bg"])
         self.session, self._clipboard, self._open_url = session, clipboard, open_url
+        self._on_open_file = on_open_file
         self.canvas = c = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, takefocus=True)
         c.pack(fill=tk.BOTH, expand=True)
         self.drawn: list[int] = []
@@ -212,6 +230,8 @@ class CommitList(tk.Frame):
         c.bind("<Button-1>", lambda e: (c.focus_set(), self.click(e.y)))
         c.bind("<Motion>", lambda e: self._set_hover(self.index_at(e.y)))
         c.bind("<Leave>", lambda _e: self._set_hover(-1))
+        c.bind("<Double-Button-1>", lambda e: self.double_click(e.y))
+        c.bind("<Return>", lambda _e: self.open_selected())
         c.bind("<Up>", lambda _e: self.press_up())
         c.bind("<Down>", lambda _e: self.press_down())
         for sequence in ("<Button-2>", "<Button-3>"):  # right button and two-finger click
@@ -238,6 +258,19 @@ class CommitList(tk.Frame):
         index = self.index_at(y)
         if index >= 0:
             self.session.select(index)
+
+    def double_click(self, y: int) -> None:
+        index = self.index_at(y)
+        if index >= 0:
+            self.session.select(index)
+            self.open_selected()
+
+    def open_selected(self) -> None:
+        """In a file's history: the file's diff in the selected commit, under its name there (H-55)."""
+        commit = self.session.selected_commit if self.session else None
+        change = self.session.path_change(commit) if commit else None
+        if change:
+            self._on_open_file(commit, change)
 
     def press_up(self) -> None:
         if self.session:
@@ -386,9 +419,9 @@ class CommitView(tk.Frame):
     PAD_X, PAD_Y = 14, 10
 
     def __init__(self, master: tk.Misc, session: HistorySession | None, *,
-                 on_open_file: Callable[[Commit, CommitFile], None]):
+                 on_open_file: Callable[[Commit, CommitFile], None], on_show_history: Callable[[str], None]):
         super().__init__(master, bg=C["bg"])
-        self.session, self._on_open_file = session, on_open_file
+        self.session, self._on_open_file, self._on_show_history = session, on_open_file, on_show_history
         self.canvas = c = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0)
         c.pack(fill=tk.BOTH, expand=True)
         self.title_text = ""
@@ -401,6 +434,27 @@ class CommitView(tk.Frame):
         c.bind("<Button-1>", lambda e: self.click(e.x, e.y))
         c.bind("<Motion>", lambda e: self._set_hover(self.file_index_at(e.y)))
         c.bind("<Leave>", lambda _e: self._set_hover(-1))
+        for sequence in ("<Button-2>", "<Button-3>"):  # right button and two-finger click
+            c.bind(sequence, lambda e: self.open_file_menu(e.y, e.x_root, e.y_root))
+
+    def prepare_file_menu(self, y: int) -> list[tuple[str, bool, Callable[[], None]]]:
+        """A file of the commit: its diff, or its own history (DEC-VCS-124)."""
+        index = self.file_index_at(y)
+        commit = self.session.selected_commit if self.session else None
+        if index < 0 or commit is None:
+            return []
+        file = self._files[index][0]
+        return [("Porównaj", True, lambda: self._on_open_file(commit, file)),
+                ("Pokaż historię", True, lambda: self._on_show_history(file.path))]
+
+    def open_file_menu(self, y: int, x_root: int, y_root: int) -> None:
+        entries = self.prepare_file_menu(y)
+        if not entries:
+            return
+        menu = tk.Menu(self, tearoff=0)
+        for label, enabled, command in entries:
+            menu.add_command(label=label, command=command, state=tk.NORMAL if enabled else tk.DISABLED)
+        menu.tk_popup(x_root, y_root)
 
     def file_rows(self) -> list[tuple[CommitFile, int]]:
         return list(self._files)

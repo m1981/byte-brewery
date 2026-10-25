@@ -163,3 +163,40 @@ def test_at_vcs_060_files_of_a_commit_a_merge_and_the_root(repo, log):
     first = log.details(repo.path, page[root])
     assert {f.status for f in first.files} == {"A"} and len(first.files) == 3
     assert log.details(repo.path, page[feature]).files == (CommitFile("A", "f.txt"),)
+
+
+# ---------- the history of a path (H-50–H-56, DES-VCS-071) ----------
+
+def renamed_file(repo: Repo) -> dict[str, str]:
+    """a.txt in two commits, renamed to b.txt, changed once more; other files in between."""
+    hashes = {}
+    repo.write("a.txt", "1\n2\n3\n4\n5\n"); hashes["pierwszy"] = commit(repo, "pierwszy", file="a.txt")
+    commit(repo, "inny plik", file="inny.txt")
+    repo.write("a.txt", "1\n2\n3\n4\n5\n6\n"); hashes["drugi"] = commit(repo, "drugi", file="a.txt")
+    repo.git("mv", "a.txt", "b.txt"); repo.git("commit", "-q", "-m", "zmiana nazwy"); hashes["nazwa"] = head(repo)
+    repo.write("docs/plan.md", "plan\n"); commit(repo, "plan", file="docs/plan.md")
+    repo.write("b.txt", "1\n2\n3\n4\n5\n6\n7\n"); hashes["czwarty"] = commit(repo, "czwarty", file="b.txt")
+    return hashes
+
+
+def test_at_vcs_061_a_file_history_follows_renames_and_knows_the_name_in_each_commit(repo, log):
+    hashes = renamed_file(repo)
+    page = log.page(repo.path, LogQuery(path="b.txt"), skip=0)
+    assert subjects(page) == ["czwarty", "zmiana nazwy", "drugi", "pierwszy"] and not page.more
+    assert page.paths[hashes["pierwszy"]] == CommitFile("A", "a.txt")
+    assert page.paths[hashes["nazwa"]] == CommitFile("R", "b.txt", "a.txt")
+    assert page.paths[hashes["czwarty"]] == CommitFile("M", "b.txt")
+
+
+def test_at_vcs_062_a_folder_history_and_a_path_with_the_text_filter(repo, log):
+    renamed_file(repo)
+    repo.write("docs/inne.md", "x\n"); commit(repo, "inne docs", file="docs/inne.md")
+    assert subjects(log.page(repo.path, LogQuery(path="docs", folder=True), skip=0)) == ["inne docs", "plan"]
+    assert subjects(log.page(repo.path, LogQuery(text="drugi", path="b.txt"), skip=0)) == ["drugi"]
+    assert subjects(log.page(repo.path, LogQuery(text="plan", path="b.txt"), skip=0)) == []
+
+
+def test_des_vcs_071_special_characters_in_a_path_are_literal(repo, log):
+    repo.write("d/[x].txt", "1\n"); commit(repo, "nawiasy", file="d/[x].txt")
+    repo.write("d/x.txt", "1\n"); commit(repo, "bez nawiasów", file="d/x.txt")
+    assert subjects(log.page(repo.path, LogQuery(path="d/[x].txt"), skip=0)) == ["nawiasy"]

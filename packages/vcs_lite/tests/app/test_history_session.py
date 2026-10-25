@@ -180,3 +180,29 @@ def test_at_vcs_060_the_session_knows_the_commit_address_from_the_remote(world):
     session = started(world, "alpha", select="alpha")
     commit_ = session.selected_commit
     assert session.commit_url(commit_) == f"https://github.com/m1981/app/commit/{commit_.hash}"
+
+
+# ---------- the history of a path (H-50–H-56) ----------
+
+def test_at_vcs_061_show_path_narrows_the_list_and_clearing_brings_the_graph_back(world):
+    alpha = world.repo("alpha")
+    commit(alpha, "jeden"); commit(alpha, "dwa")
+    session = started(world, "alpha", select="alpha")
+    session.show_path("jeden.txt", folder=False); world.worker.settle()
+    assert subjects(session) == ["jeden"] and session.rows == [] and session.query.path == "jeden.txt"
+    assert session.path_change(session.commits[0]).path == "jeden.txt"
+    session.show_path("brak.txt", folder=False); world.worker.settle()
+    assert session.placeholder == "Brak commitów dla brak.txt."
+    session.clear_path(); world.worker.settle()
+    assert len(session.commits) == 3 and len(session.rows) == 3
+
+
+def test_at_vcs_062_another_repository_drops_the_path_and_a_folder_opens_no_diff(world):
+    alpha = world.repo("alpha")
+    alpha.write("docs/a.md", "a\n"); alpha.commit("docs")
+    world.repo("beta")
+    session = started(world, "alpha", "beta", select="alpha")
+    session.show_path("docs", folder=True); world.worker.settle()
+    assert subjects(session) == ["docs"] and session.path_change(session.commits[0]) is None
+    world.select("beta"); world.worker.settle()
+    assert session.query.path == "" and subjects(session) == ["init"]

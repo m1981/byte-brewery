@@ -4,12 +4,12 @@ The reader is a port, like TextSearcher for the search window, so the session an
 on git directly. Records of `git log -z` are separated by NUL and their fields by US (0x1f), which no
 name, label or subject contains.
 
-Trace: DES-VCS-064, REQ-VCS-037, REQ-VCS-040, DEC-VCS-116, DEC-VCS-120
+Trace: DES-VCS-064, DES-VCS-071, REQ-VCS-041, REQ-VCS-037, REQ-VCS-040, DEC-VCS-116, DEC-VCS-120
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Protocol
@@ -74,6 +74,8 @@ class Scope(Enum):
 class LogQuery:
     scope: Scope = Scope.ALL
     text: str = ""
+    path: str = ""          # „Pokaż historię”: one file or folder (DEC-VCS-124)
+    folder: bool = False
 
     @property
     def phrase(self) -> str:
@@ -83,11 +85,17 @@ class LogQuery:
     def filtered(self) -> bool:
         return bool(self.phrase)
 
+    @property
+    def flat(self) -> bool:
+        """Commits are left out, so the graph has no lines (H-34, H-53)."""
+        return self.filtered or bool(self.path)
+
 
 @dataclass(frozen=True)
 class LogPage:
     commits: tuple[Commit, ...]
     more: bool             # git has more commits after these
+    paths: dict[str, CommitFile] = field(default_factory=dict)   # a file's history: its change in each commit
 
 
 class HistoryReader(Protocol):
