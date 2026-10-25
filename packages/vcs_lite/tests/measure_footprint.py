@@ -2,7 +2,8 @@
 
 Usage: python tests/measure_footprint.py [--idle SECONDS]
 
-Builds 3 repositories in a temporary folder (one with 300 changed files, among them one of 2000 lines),
+Builds 3 repositories in a temporary folder (one with 300 changed files, among them one of 2000 lines,
+and a history of HISTORY commits with a branch merged every MERGE_EVERY, shown in the history panel),
 starts vcs-lite in its own process group, refreshes the big repository 1 + 5 times, opens the long file
 in the diff tool plugin (a stand-in that waits, so the compare stays open; a browser page would end at once
 and would open a tab) and announces "ready". From then on the app is idle: `footprint -j` samples only the
@@ -37,6 +38,7 @@ BIG, OTHERS = "duzy", ("drugi", "trzeci")
 CHANGES = 300
 LONG_FILE, LONG_LINES = "dlugi.py", 2000
 REFRESHES = 5
+HISTORY, MERGE_EVERY = 4000, 40   # like the user's largest repository, pi-mono (OBS-VCS-016)
 READY_TIMEOUT, TOOL_TIMEOUT, SETTLE_TIMEOUT, TERM_GRACE = 90.0, 60.0, 30.0, 3.0
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
            "GIT_AUTHOR_NAME": "Pomiar", "GIT_AUTHOR_EMAIL": "pomiar@example.invalid",
@@ -50,11 +52,45 @@ def git(repo: Path, *args: str) -> str:
                           capture_output=True, text=True, check=True).stdout
 
 
+def history_stream(commits: int, merge_every: int) -> bytes:
+    """`git fast-import` input: a main line with a two-commit side branch merged every `merge_every`."""
+    out, mark, time_ = [], 0, 1_700_000_000
+
+    def blob_commit(ref: str, message: str, parents: list[int], path: str) -> int:
+        nonlocal mark, time_
+        mark, time_ = mark + 1, time_ + 60
+        data, content = message.encode(), f"{message}\n".encode()
+        out.append(f"commit {ref}\nmark :{mark}\nauthor Pomiar <p@x> {time_} +0000\n"
+                   f"committer Pomiar <p@x> {time_} +0000\ndata {len(data)}\n".encode() + data + b"\n")
+        if parents:
+            out.append(f"from :{parents[0]}\n".encode())
+        out.extend(f"merge :{p}\n".encode() for p in parents[1:])
+        out.append(f"M 644 inline {path}\ndata {len(content)}\n".encode() + content + b"\n")
+        return mark
+
+    head = blob_commit("refs/heads/main", "commit 0", [], "historia.txt")
+    made = 1
+    while made < commits:
+        if made % merge_every == 0 and made + 3 <= commits:
+            side = blob_commit("refs/heads/side", f"side {made}", [head], "side.txt")
+            side = blob_commit("refs/heads/side", f"side {made} b", [side], "side.txt")
+            main = blob_commit("refs/heads/main", f"main {made}", [head], "historia.txt")
+            head = blob_commit("refs/heads/main", f"merge {made}", [main, side], "historia.txt")
+            made += 4
+        else:
+            head = blob_commit("refs/heads/main", f"commit {made}", [head], "historia.txt")
+            made += 1
+    return b"".join(out)
+
+
 def build_environment(base: Path) -> Path:
     rootdir = base / "root"
     big = rootdir / BIG
     big.mkdir(parents=True)
     git(big, "init", "-q", "-b", "main")
+    subprocess.run(["git", "-C", str(big), "fast-import", "--quiet"], input=history_stream(HISTORY - 1, MERGE_EVERY),
+                   env={**os.environ, **GIT_ENV}, check=True, capture_output=True)
+    git(big, "reset", "-q", "--hard", "main")
     small = [big / f"plik_{i:03}.txt" for i in range(CHANGES - 1)]
     (big / LONG_FILE).write_text("".join(f"line_{i} = {i}\n" for i in range(LONG_LINES)))
     for i, path in enumerate(small):
@@ -81,6 +117,7 @@ def build_environment(base: Path) -> Path:
 def run_child(settings: Path) -> None:
     from vcs_lite.core.status import Group
     from vcs_lite.ui.main import build
+    from vcs_lite.ui.main_window import MainWindow
 
     root, model, pump = build(settings)
     root.update()
@@ -90,10 +127,12 @@ def run_child(settings: Path) -> None:
     settle(root, pump)
     times = [timed_refresh(root, model, pump) for _ in range(REFRESHES + 1)][1:]  # the first one is cold
     changes = sum(len(model.files(group)) for group in Group)
+    history = next(w for w in root.winfo_children() if isinstance(w, MainWindow)).history.session
     model.activate(next(c for c in model.files(Group.CHANGES) if c.path == LONG_FILE), external=True)
     wait_for_diff_tool(root)
     append_log(os.environ[GIT_LOG_ENV], {"t": time.monotonic(), "pid": os.getpid(), "event": "ready"})
     print(json.dumps({"ready": True, "pid": os.getpid(), "refresh_s": times, "changes": changes,
+                      "history_loaded": len(history.commits), "history_total": history.count,
                       "tk": str(root.tk.call("info", "patchlevel"))}), flush=True)
     root.mainloop()
 
@@ -161,6 +200,7 @@ def measure(*, idle: int = 5) -> dict:
         "git": git(HERE, "--version").strip(), "commit": source_version(),
         "diff_tool": "wtyczka external_diff_tool z atrapą (tests/waiting_difftool.py)",
         "changes": ready["changes"], "idle_s": idle,
+        "history_loaded": ready["history_loaded"], "history_total": ready["history_total"],
         "footprint_mib": [round(s, 1) for s in samples], "footprint_mib_max": round(max(samples), 1),
         "refresh_s": [round(t, 3) for t in ready["refresh_s"]],
         "refresh_s_median": round(statistics.median(ready["refresh_s"]), 3),
