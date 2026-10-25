@@ -174,3 +174,19 @@ def test_des_vcs_070_without_a_known_host_the_address_items_are_inactive(root, w
 
 def test_des_vcs_070_new_colours_are_in_the_theme():
     assert [theme.COLORS[f"lane_{i}"] for i in range(3)] == ["#0a66d8", "#1f9e5a", "#c56a12"]
+
+
+# ---------- smooth edges (DEC-VCS-123) ----------
+
+def test_des_vcs_070_a_change_of_column_is_one_curve_over_a_whole_row():
+    from vcs_lite.core.graph import Edge
+    from vcs_lite.ui.history_panel import edge_paths
+    x0, x1 = 12, 28
+    fork = edge_paths(Edge(0, 0, 1, 3, 1, 1), bottom=1000)
+    assert fork == [([x0, 12, x0, 24, x1, 24, x1, 36], True), ([x1, 36, x1, 84], False)]
+    join = edge_paths(Edge(2, 1, 1, 4, 0, 1), bottom=1000)
+    assert join == [([x1, 60, x1, 84], False), ([x1, 84, x1, 96, x0, 96, x0, 108], True)]
+    assert edge_paths(Edge(0, 0, 0, 3, 0, 0), bottom=1000) == [([x0, 12, x0, 84], False)]
+    assert edge_paths(Edge(1, 1, 0, 2, 0, 0), bottom=1000) == [([x1, 36, x1, 48, x0, 48, x0, 60], True)]
+    assert edge_paths(Edge(5, 0, 0, None, None, 0), bottom=200) == [([x0, 132, x0, 200], False)]
+    assert edge_paths(Edge(0, 0, 8, 3, 8, 0), bottom=1000) == []      # a clipped lane is not drawn (H-33)

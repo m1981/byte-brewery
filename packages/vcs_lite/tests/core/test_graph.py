@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from vcs_lite.core.graph import PALETTE, GraphLayout, GraphRow
+from vcs_lite.core.graph import PALETTE, Edge, GraphLayout, GraphRow
 from vcs_lite.core.log import Commit
 
 
@@ -132,3 +132,35 @@ def test_at_vcs_055_pages_extend_the_graph_without_changing_drawn_rows():
 def test_des_vcs_066_the_same_log_gives_the_same_graph(seed):
     rows = [("M", "B F2"), ("F2", "F1"), ("F1", "A"), ("B", "A"), ("A", "")]
     assert GraphLayout().extend(history(*rows)) == GraphLayout().extend(history(*rows))
+
+
+# ---------- whole edges (DEC-VCS-123) ----------
+
+def edges_of(*rows: tuple[str, str]) -> set[Edge]:
+    layout = GraphLayout()
+    layout.extend(history(*rows))
+    return set(layout.edges)
+
+
+def test_des_vcs_066_edges_run_from_a_commit_to_its_parent_through_one_lane():
+    edges = edges_of(("M", "B F2"), ("F2", "F1"), ("F1", "A"), ("B", "A"), ("A", ""))
+    assert edges == {Edge(0, 0, 1, 1, 1, 1),     # M to F2: a fork into lane 1
+                     Edge(1, 1, 1, 2, 1, 1),     # F2 to F1
+                     Edge(0, 0, 0, 3, 0, 0),     # M to B, straight down
+                     Edge(3, 0, 0, 4, 0, 0),     # B to A
+                     Edge(2, 1, 1, 4, 0, 1)}     # F1 to A: down lane 1, then over to A
+
+
+def test_des_vcs_066_a_merge_into_a_lane_that_already_waits_gets_its_own_edge():
+    edges = edges_of(("Y", "P"), ("O", "Q P"), ("Q", "P"), ("P", ""))
+    assert Edge(0, 0, 0, 3, 0, 0) in edges                         # Y down to P
+    assert Edge(1, 1, 0, 3, 0, 0) in edges                         # O over to Y's lane, then down to P
+
+
+def test_at_vcs_055_open_edges_run_to_the_bottom_until_the_parent_comes():
+    layout = GraphLayout()
+    commits = history(("M", "B F"), ("F", "D"), ("B", "D"), ("D", ""))
+    layout.extend(commits[:2])
+    assert set(layout.open_edges()) == {Edge(0, 0, 0, None, None, 0), Edge(1, 1, 1, None, None, 1)}
+    layout.extend(commits[2:])
+    assert layout.open_edges() == [] and Edge(1, 1, 1, 3, 0, 1) in layout.edges

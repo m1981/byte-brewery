@@ -6,7 +6,7 @@ its refreshes finishes (H-41), so it reads exactly when the status is read and n
 read carries a number; a result with an older number is dropped (H-43). Jobs run under their own keys, so
 the repository stays free for commit, pull and stage.
 
-Trace: DES-VCS-067, REQ-VCS-037, REQ-VCS-039, REQ-VCS-101, DEC-VCS-116, DEC-VCS-120
+Trace: DES-VCS-067, DEC-VCS-123, REQ-VCS-037, REQ-VCS-039, REQ-VCS-101, DEC-VCS-116, DEC-VCS-120
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Protocol
 from urllib.parse import urlsplit
 
 from vcs_lite.app.worker import Executor, Outcome
-from vcs_lite.core.graph import GraphLayout, GraphRow
+from vcs_lite.core.graph import Edge, GraphLayout, GraphRow
 from vcs_lite.core.log import Commit, CommitDetails, HistoryReader, LogQuery, Scope
 from vcs_lite.core.repo import GitError
 
@@ -108,6 +108,11 @@ class HistorySession:
     @property
     def selected_commit(self) -> Commit | None:
         return self.commits[self.selected] if 0 <= self.selected < len(self.commits) else None
+
+    @property
+    def edges(self) -> list[Edge]:
+        """The graph's lines: finished ones and those still waiting for a parent below (DEC-VCS-123)."""
+        return [*self._layout.edges, *self._layout.open_edges()] if self.rows else []
 
     def commit_url(self, commit: Commit) -> str | None:
         return commit_web_url(self._remote, commit.hash)

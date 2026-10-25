@@ -5,7 +5,7 @@ view, with their piece of the graph (P. Vigier: drawing only the visible part is
 fast). Lanes beyond the eighth are not drawn and their commits get a hollow dot in the eighth column (H-33);
 a filtered list has dots only (H-34). The details show the selected commit and its files.
 
-Trace: DES-VCS-070, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
+Trace: DES-VCS-070, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from vcs_lite.app.history import HistorySession, commits_label, date_label
-from vcs_lite.core.graph import GraphRow
+from vcs_lite.core.graph import Edge, GraphRow
 from vcs_lite.core.log import Commit, CommitFile, RefKind, Scope
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import SegmentedControl, elide, elide_middle, hint_over, rounded_rect
@@ -70,6 +70,43 @@ def title_pieces(commit: Commit, *, unpushed: bool) -> list[tuple[str, str]]:
         pieces.append(("(bez opisu)", "subject_empty"))
     else:
         pieces.append((commit.subject, "subject_out" if unpushed else "subject"))
+    return pieces
+
+
+def edge_paths(edge: Edge, *, bottom: float) -> list[tuple[list[float], bool]]:
+    """Points of an edge in the canvas, each piece with whether it is a Bézier curve (DEC-VCS-123): a change
+    of column takes one whole row and leaves and enters vertically; the rest is straight down the lane. An
+    open edge runs to `bottom`. A lane beyond the last drawn column is not drawn (H-33)."""
+    if edge.lane >= LANES:
+        return []
+
+    def x(column: int) -> float:
+        return FIRST_LANE + min(column, LANES - 1) * LANE
+
+    def y(row: int) -> float:
+        return row * ROW + ROW / 2
+
+    def curve(x1: float, y1: float, x2: float, y2: float) -> tuple[list[float], bool]:
+        middle = (y1 + y2) / 2
+        return [x1, y1, x1, middle, x2, middle, x2, y2], True
+
+    start_x, lane_x, top = x(edge.from_col), x(edge.lane), y(edge.from_row)
+    if edge.to_row is None:
+        end_x, end = lane_x, bottom
+    else:
+        end_x, end = x(edge.to_col), y(edge.to_row)
+    leaves, enters = start_x != lane_x, end_x != lane_x
+    if leaves and enters and edge.to_row == edge.from_row + 1:
+        return [curve(start_x, top, end_x, end)]
+    pieces = []
+    if leaves:
+        pieces.append(curve(start_x, top, lane_x, top + ROW))
+        top += ROW
+    bend = end - ROW if enters else end
+    if bend > top:
+        pieces.append(([lane_x, top, lane_x, bend], False))
+    if enters:
+        pieces.append(curve(lane_x, bend, end_x, end))
     return pieces
 
 
@@ -276,22 +313,34 @@ class CommitList(tk.Frame):
         first, last = max(0, top // ROW), min(len(session.commits), (top + height) // ROW + 1)
         text_x = graph_width(session.rows)
         for index in range(first, last):
+            self._draw_background(index, width)
+        self._draw_edges(first, last, max(total, height))
+        for index in range(first, last):
             self._draw_row(index, width, text_x)
             self.drawn.append(index)
         if last >= len(session.commits) - MORE_AHEAD:
             session.load_more()
 
+    def _draw_background(self, index: int, width: int) -> None:
+        top, bottom = index * ROW, (index + 1) * ROW
+        if index == self.session.selected:
+            self.canvas.create_rectangle(0, top, width, bottom, fill=C["accent_soft"], outline="")
+        elif index == self._hover:
+            self.canvas.create_rectangle(0, top, width, bottom, fill=C["row_hover"], outline="")
+
+    def _draw_edges(self, first: int, last: int, bottom: float) -> None:
+        """Every edge crossing the view, whole, so lines run smooth across rows (DEC-VCS-123)."""
+        for edge in self.session.edges:
+            if edge.from_row <= last and (edge.to_row is None or edge.to_row >= first):
+                for points, curved in edge_paths(edge, bottom=bottom):
+                    self.canvas.create_line(*points, fill=lane_color(edge.color), width=2, capstyle=tk.ROUND,
+                                            smooth="raw" if curved else False, splinesteps=24)
+
     def _draw_row(self, index: int, width: int, text_x: int) -> None:
         c, session = self.canvas, self.session
         commit = session.commits[index]
         row = session.rows[index] if session.rows else None
-        top, middle, bottom = index * ROW, index * ROW + ROW / 2, (index + 1) * ROW
-        if index == session.selected:
-            c.create_rectangle(0, top, width, bottom, fill=C["accent_soft"], outline="")
-        elif index == self._hover:
-            c.create_rectangle(0, top, width, bottom, fill=C["row_hover"], outline="")
-        if row:
-            self._draw_lines(row, top, middle, bottom)
+        middle = index * ROW + ROW / 2
         self._draw_dot(row, commit, middle, selected=index == session.selected)
         right = width - RIGHT_PAD - DATE_WIDTH - AUTHOR_WIDTH
         self._draw_title(commit, text_x, middle, right - 12, unpushed=commit.hash in session.unpushed)
@@ -300,30 +349,6 @@ class CommitList(tk.Frame):
                       font=author_font, fill=C["dim"])
         c.create_text(width - RIGHT_PAD - DATE_WIDTH, middle, anchor=tk.W, font=author_font, fill=C["dim"],
                       text=date_label(commit.time, datetime.now()))
-
-    def _draw_lines(self, row: GraphRow, top: float, middle: float, bottom: float) -> None:
-        c = self.canvas
-
-        def x(column: int) -> float:
-            return FIRST_LANE + column * LANE
-
-        def line(points: list[float], color: int, smooth: bool = False) -> None:
-            c.create_line(*points, fill=lane_color(color), width=2, smooth=smooth, capstyle=tk.ROUND)
-
-        visible = row.column < LANES
-        for column, color in row.through:
-            if column < LANES:
-                line([x(column), top, x(column), bottom], color)
-        if visible and row.up is not None:
-            line([x(row.column), top, x(row.column), middle], row.up)
-        if visible and row.down is not None:
-            line([x(row.column), middle, x(row.column), bottom], row.down)
-        for column, color in row.joins:     # a lane ending on the commit: from the top of its column
-            if visible and column < LANES:
-                line([x(column), top, x(column), top + 5, x(row.column), middle - 4, x(row.column), middle], color, True)
-        for column, color in row.forks:     # a lane of a further parent: to the bottom of its column
-            if visible and column < LANES:
-                line([x(row.column), middle, x(row.column), middle + 4, x(column), bottom - 5, x(column), bottom], color, True)
 
     def _draw_dot(self, row: GraphRow | None, commit: Commit, middle: float, *, selected: bool) -> None:
         column, style = dot_style(row, commit)
