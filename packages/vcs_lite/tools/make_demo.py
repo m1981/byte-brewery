@@ -7,6 +7,8 @@ Layout:
                          images, a PDF, a text file and a zip (step 17)
   <folder>/root/beta     clean, tracking <folder>/remotes/beta.git
   <folder>/root/gamma    a merge conflict
+  <folder>/root/delta    a history for the history panel: 40 early commits, a merged branch, an unmerged one,
+                         an octopus merge, a tag, two unpushed commits, another author (step 22)
   <folder>/root/zdjecia  a plain folder (must not appear in Settings)
   <folder>/root/.ukryte  a hidden repository (must not appear in Settings)
   <folder>/settings.json rootdir = <folder>/root, no repositories chosen yet
@@ -144,6 +146,50 @@ def make_gamma(root: Path) -> None:
     git(g, "merge", "-q", "other")
 
 
+def make_delta(root: Path, remotes: Path) -> None:
+    d = new_repo(root / "delta")
+    for i in range(40):
+        write(d, "log.txt", f"wpis {i}\n")
+        commit(d, f"Wpis {i} w dzienniku")
+    write(d, "app.py", "print('start')\n")
+    commit(d, "Add the app")
+    git(d, "branch", "eksperyment")
+    write(d, "app.py", "print('start')\nprint('dalej')\n")
+    commit(d, "Extend the app")
+    git(d, "checkout", "-q", "-b", "feature/log")
+    write(d, "log.py", "def read():\n    pass\n")
+    commit(d, "Read git log into commit values")
+    write(d, "graph.py", "def lay_out():\n    pass\n")
+    commit(d, "Draw the commit graph")
+    git(d, "checkout", "-q", "main")
+    write(d, "README.md", "# delta\n")
+    git(d, "add", "-A")
+    git(d, "commit", "-q", "-m", "Fix sidebar scrolling on short lists", "--author=Ola Nowak <ola@example.invalid>")
+    git(d, "merge", "-q", "--no-ff", "-m", "Merge branch 'feature/log'", "feature/log")
+    git(d, "tag", "-a", "v0.3", "-m", "v0.3")
+    for name in ("o1", "o2"):
+        git(d, "checkout", "-q", "-b", name, "main")
+        write(d, f"{name}.txt", name + "\n")
+        commit(d, f"Add {name}")
+    git(d, "checkout", "-q", "main")
+    git(d, "merge", "-q", "--no-ff", "-m", "Merge o1 and o2", "o1", "o2")
+    git(d, "checkout", "-q", "eksperyment")
+    write(d, "eksperyment.txt", "1\n")
+    commit(d, "Try another layout")
+    write(d, "eksperyment.txt", "2\n")
+    commit(d, "Try it again")
+    git(d, "checkout", "-q", "main")
+    bare = remotes / "delta.git"
+    bare.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], env=ENV, check=True, capture_output=True)
+    git(d, "remote", "add", "origin", str(bare))
+    git(d, "push", "-q", "-u", "origin", "main")
+    write(d, "app.py", "print('start')\nprint('dalej')\nprint('koniec')\n")
+    commit(d, "Specify search in files")
+    write(d, "search.py", "def search():\n    pass\n")
+    commit(d, "Add search in files")
+
+
 def main(target: Path) -> None:
     if target.exists() and any(target.iterdir()):
         sys.exit(f"{target} nie jest pusty; podaj pusty folder.")
@@ -151,6 +197,7 @@ def main(target: Path) -> None:
     make_alpha(root)
     make_beta(root, target / "remotes")
     make_gamma(root)
+    make_delta(root, target / "remotes")
     (root / "zdjecia").mkdir()
     write(root / "zdjecia", "wakacje.txt", "nie repo\n")
     hidden = new_repo(root / ".ukryte")

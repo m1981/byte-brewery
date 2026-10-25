@@ -7,10 +7,12 @@ from pathlib import Path
 from conftest import GIT_ENV, Repo
 from fakes import FakeDiffTool, FakeTimers, ManualWorker
 
+from vcs_lite.app.history import HistorySession
 from vcs_lite.app.model import AppModel
 from vcs_lite.app.search import SearchSession
 from vcs_lite.core.gitcli import GitCli
 from vcs_lite.core.gitgrep import GitGrepSearcher
+from vcs_lite.core.gitlog import GitLog
 from vcs_lite.core import pagekit
 from vcs_lite.core.settings import Settings
 
@@ -73,3 +75,7 @@ class World:
         """The search window's state on the selected repository, with git grep unless another searcher is given."""
         return SearchSession(searcher or GitGrepSearcher(self.git), self.worker, later=self.timers.later,
                              repo=lambda: self.model.selected_path, open_match=self.model.open_match)
+
+    def history_session(self) -> HistorySession:
+        """The history panel's state on the model, reading with git log (DES-VCS-067)."""
+        return HistorySession(GitLog(self.git), self.worker, later=self.timers.later, model=self.model)

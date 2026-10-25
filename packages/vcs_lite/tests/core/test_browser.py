@@ -49,3 +49,14 @@ def test_des_vcs_060_without_a_browser_the_default_application_opens_it():
 def test_des_vcs_060_a_refusal_is_an_error_with_the_message():
     with pytest.raises(OSError, match="nie istnieje"):
         show(Path("/r/x.png"), browser=lambda: None, run=Runner("", 1, "plik nie istnieje"))
+
+
+def test_des_vcs_070_a_web_address_opens_with_open():
+    from vcs_lite.core.browser import open_url
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    open_url("https://github.com/m1981/app/commit/abc", run=run)
+    assert calls == [["open", "https://github.com/m1981/app/commit/abc"]]

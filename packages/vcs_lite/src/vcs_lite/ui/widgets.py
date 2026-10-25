@@ -236,3 +236,18 @@ class Tooltip:
         if self._tip:
             self._tip.destroy()
             self._tip = None
+
+
+def hint_over(entry: tk.Entry, var: tk.StringVar, text: str) -> tk.Label:
+    """Grey text over an empty field, also while it has the focus (Tk entries have no placeholder)."""
+    hint = theme.label(entry.master, "placeholder", text, bg=str(entry.cget("bg")))
+    hint.bind("<Button-1>", lambda e: entry.focus_set())
+
+    def update(*_args) -> None:
+        if var.get():
+            hint.place_forget()
+        else:
+            hint.place(in_=entry, x=1, rely=0.5, anchor=tk.W)
+    var.trace_add("write", update)
+    update()
+    return hint

@@ -1,6 +1,6 @@
 """Which repositories are watched: scanning rootdir and persisting the choice.
 
-Trace: DES-VCS-019, DES-VCS-049, DEC-VCS-106, REQ-VCS-031, DEC-VCS-091, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
+Trace: DES-VCS-069, REQ-VCS-036, DES-VCS-019, DES-VCS-049, DEC-VCS-106, REQ-VCS-031, DEC-VCS-091, DES-VCS-020, DES-VCS-037, DES-VCS-045, REQ-VCS-001, REQ-VCS-025, REQ-VCS-017, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027
 """
 
 from __future__ import annotations
@@ -38,6 +38,7 @@ class Settings:
     external_diff_tool: tuple[str, ...] = ()   # the diff tool plugin, off by default (DEC-VCS-106)
     list_view: str = "changes"
     markdown_theme: str = "system"
+    history_height: int = 240                  # the history panel, in points (DES-VCS-069)
 
     @property
     def root_path(self) -> Path:
@@ -48,7 +49,7 @@ class Settings:
 
     def to_dict(self) -> dict[str, Any]:
         data = {"rootdir": self.rootdir, "repos": list(self.repos), "list_view": self.list_view,
-                "markdown_theme": self.markdown_theme}
+                "markdown_theme": self.markdown_theme, "history_height": self.history_height}
         if self.external_diff_tool:
             data["external_diff_tool"] = list(self.external_diff_tool)
         return data
@@ -72,12 +73,16 @@ class Settings:
         markdown_theme = data.get("markdown_theme", defaults.markdown_theme)
         if markdown_theme not in MARKDOWN_THEMES:
             raise ValueError(f"„markdown_theme” musi być jedną z wartości: {', '.join(MARKDOWN_THEMES)}")
+        history_height = data.get("history_height", defaults.history_height)
+        if not isinstance(history_height, int) or isinstance(history_height, bool):
+            raise ValueError("„history_height” musi być liczbą całkowitą")
         return cls(
             rootdir=rootdir,
             repos=_strings(data, "repos", defaults.repos),
             external_diff_tool=_strings(data, "external_diff_tool", defaults.external_diff_tool),
             list_view=list_view,
             markdown_theme=markdown_theme,
+            history_height=history_height,
         )
 
 

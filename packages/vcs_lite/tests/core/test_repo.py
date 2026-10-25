@@ -9,7 +9,7 @@ import pytest
 from conftest import GIT_ENV, Repo
 
 from vcs_lite.core.gitcli import GitCli
-from vcs_lite.core.repo import GitRepo, UnresolvedConflict
+from vcs_lite.core.repo import GitRepo, UnresolvedConflict, absolute_url, https_url
 from vcs_lite.core.status import Group
 
 
@@ -299,3 +299,81 @@ def test_des_vcs_050_tracked_files_come_from_the_index(repo, gr):
     repo.write("new.txt", "n\n"); repo.git("add", "new.txt")
     repo.write("untracked.txt", "u\n")
     assert gr.tracked_files() == ["README.md", "docs/plan.md", "new.txt", "src/zażółć gęślą.py"]
+
+
+# ---------- the remote address for the clipboard (DES-VCS-063) ----------
+
+def test_des_vcs_063_remote_url_is_origin_before_other_remotes(repo, gr):
+    repo.git("remote", "add", "upstream", "https://example.com/up.git")
+    repo.git("remote", "add", "origin", "git@github.com:m1981/byte-brewery.git")
+    repo.git("remote", "set-url", "--push", "origin", "https://push.example.com/other.git")
+    assert gr.remote_url() == "https://github.com/m1981/byte-brewery.git"  # the fetch address, as https
+
+
+def test_des_vcs_063_without_origin_the_first_remote_git_lists(repo, gr):
+    repo.git("remote", "add", "upstream", "https://example.com/up.git")
+    repo.git("remote", "add", "fork", "https://example.com/fork.git")
+    first = repo.git("remote").decode().split()[0]
+    assert gr.remote_url() == repo.git("remote", "get-url", first).decode().strip()
+
+
+def test_des_vcs_063_a_relative_path_on_disk_becomes_absolute(repo, gr):
+    repo.git("remote", "add", "origin", "../remotes/beta.git")
+    assert gr.remote_url() == str(repo.path.parent / "remotes" / "beta.git")
+
+
+def test_des_vcs_063_no_remote_gives_none(gr):
+    assert gr.remote_url() is None
+
+
+def test_des_vcs_063_only_relative_paths_change():
+    base = Path("/Users/x/repo")
+    assert absolute_url("https://github.com/a/b.git", base) == "https://github.com/a/b.git"
+    assert absolute_url("file:///srv/b.git", base) == "file:///srv/b.git"
+    assert absolute_url("git@github.com:a/b.git", base) == "git@github.com:a/b.git"
+    assert absolute_url("/srv/b.git", base) == "/srv/b.git"
+    assert absolute_url("../b.git", base) == "/Users/x/b.git"
+    assert absolute_url("sub/dir:b.git", base) == "/Users/x/repo/sub/dir:b.git"   # "/" before ":" is a path
+
+
+def test_des_vcs_063_addresses_become_https_without_user_and_port():
+    assert [https_url(url) for url in (
+        "git@github.com:m1981/byte-brewery.git",
+        "github.com:m1981/byte-brewery.git",
+        "ssh://git@github.com/m1981/byte-brewery.git",
+        "ssh://git@gitlab.example.com:2222/team/app.git",
+        "git+ssh://git@github.com/a/b.git",
+        "git://github.com/a/b.git",
+        "https://github.com/a/b.git",
+        "https://m1981:ghp_secret@github.com/a/b.git",
+        "https://git.example.com:8443/a/b.git",
+        "http://user@intranet.local/a/b.git",
+    )] == [
+        "https://github.com/m1981/byte-brewery.git",
+        "https://github.com/m1981/byte-brewery.git",
+        "https://github.com/m1981/byte-brewery.git",
+        "https://gitlab.example.com/team/app.git",
+        "https://github.com/a/b.git",
+        "https://github.com/a/b.git",
+        "https://github.com/a/b.git",
+        "https://github.com/a/b.git",                      # no token in the clipboard
+        "https://git.example.com:8443/a/b.git",            # an https port stays
+        "http://intranet.local/a/b.git",                   # http stays http
+    ]
+
+
+def test_des_vcs_063_paths_on_disk_stay_paths():
+    assert https_url("/Users/x/remotes/beta.git") == "/Users/x/remotes/beta.git"
+    assert https_url("file:///srv/b.git") == "file:///srv/b.git"
+
+
+# ---------- a file from any commit (DES-VCS-068) ----------
+
+def test_des_vcs_068_blob_reads_a_file_from_any_commit_and_from_the_index(repo, gr):
+    repo.write("a.txt", "one\n"); repo.commit()
+    first = repo.git("rev-parse", "HEAD").decode().strip()
+    repo.write("a.txt", "two\n"); repo.commit()
+    repo.write("a.txt", "staged\n"); repo.git("add", "a.txt")
+    assert gr.blob(first, "a.txt") == b"one\n"
+    assert gr.blob("HEAD", "a.txt") == b"two\n"
+    assert gr.blob("", "a.txt") == b"staged\n"           # an empty revision is the index

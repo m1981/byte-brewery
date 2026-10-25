@@ -1,17 +1,21 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
+Trace: DES-VCS-069, REQ-VCS-036, DEC-VCS-118, DES-VCS-063, REQ-VCS-035, DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import ttk
 
 from vcs_lite.app.model import AppModel
+from vcs_lite.app.history import HistorySession
 from vcs_lite.app.search import SearchSession
+from vcs_lite.core.browser import open_url
 from vcs_lite.ui import theme
 from vcs_lite.ui.file_list import FileList, file_color
+from vcs_lite.ui.history_panel import HistoryPanel
 from vcs_lite.ui.keys import DoubleShift
 from vcs_lite.ui.search_dialog import SearchDialog
 from vcs_lite.ui.settings_dialog import RepoDialog
@@ -25,6 +29,12 @@ LIST_VIEWS = (("changes", "Zmiany"), ("folders", "Foldery"), ("project", "Projek
 VIEW_TIPS = {"changes": "Tylko zmienione pliki", "folders": "Zmienione pliki pogrupowane w folderach",
              "project": "Zmiany i wszystkie pliki projektu"}
 FOCUS_REFRESH_MS = 300  # several focus events on the way back give one refresh (DES-VCS-018)
+TOP_MIN, HISTORY_MIN, SASH = 220, 120, 6  # the two parts of the window and the border between them (DES-VCS-069)
+
+
+def clamp_history(height: int, *, total: int) -> int:
+    """The history's height after a drag: the top keeps TOP_MIN unless that leaves less than HISTORY_MIN."""
+    return max(HISTORY_MIN, min(height, total - TOP_MIN - SASH))
 
 
 def hline(parent: tk.Misc) -> tk.Frame:
@@ -39,9 +49,12 @@ def button(parent: tk.Misc, text: str, parent_bg: str, **options) -> tk.Button:
 
 class MainWindow(tk.Frame):
     def __init__(self, master: tk.Misc, model: AppModel, *, reduce_motion: bool = False,
-                 search: SearchSession | None = None):
+                 search: SearchSession | None = None, history: HistorySession | None = None,
+                 clipboard: Callable[[str], None] | None = None, open_url: Callable[[str], None] = open_url):
         super().__init__(master, bg=C["bg"])
         self.model = model
+        self._clipboard = clipboard or self._to_clipboard  # tests pass a fake, so the user's clipboard stays
+        self._history_session, self._open_url = history, open_url   # None: the panel stays empty (DES-VCS-070)
         self._search = search                  # None: no search window (REQ-VCS-033)
         self.search_dialog: SearchDialog | None = None
         self.double_shift = DoubleShift(self.open_search)
@@ -65,13 +78,57 @@ class MainWindow(tk.Frame):
     # ---------- layout ----------
 
     def _build(self) -> None:
+        """E-06: the top part (full-height sidebar; files over the commit panel) and the history below it,
+        split by a border that can be dragged; the status bar stays at the very bottom (DEC-VCS-118)."""
         self._build_toolbar().pack(fill=tk.X)
         hline(self).pack(fill=tk.X)
         self._build_status_bar().pack(side=tk.BOTTOM, fill=tk.X)
         hline(self).pack(side=tk.BOTTOM, fill=tk.X)
-        self._build_commit_panel().pack(side=tk.BOTTOM, fill=tk.X)
-        hline(self).pack(side=tk.BOTTOM, fill=tk.X)
-        self._build_middle().pack(fill=tk.BOTH, expand=True)
+        self.split = tk.PanedWindow(self, orient=tk.VERTICAL, sashwidth=SASH, sashrelief=tk.FLAT, bd=0,
+                                    bg=C["panel"], sashcursor="sb_v_double_arrow", opaqueresize=True)
+        self.split.pack(fill=tk.BOTH, expand=True)
+        self.split.add(self._build_middle(self.split), minsize=TOP_MIN, stretch="always")
+        self.history = HistoryPanel(self.split, self._history_session, on_open_file=self.model.open_commit_file,
+                                    clipboard=self._clipboard, open_url=self._open_url)
+        self.split.add(self.history, minsize=HISTORY_MIN, stretch="never", height=self.model.history_height)
+        self.split.bind("<ButtonRelease-1>", lambda _e: self.history_dragged(self.history.winfo_height()))
+        self.split.bind("<Motion>", lambda e: self.history.highlight(bool(self.split.identify(e.x, e.y))))
+        self.split.bind("<Leave>", lambda _e: self.history.highlight(False))
+        self._drag: tuple[int, int] | None = None   # (pointer y, history height) when a header drag began
+        self._drag_height = 0                        # where the header drag has taken the history so far
+        for handle in self.history.handles():   # the whole header drags the border too (DEC-VCS-121)
+            handle.bind("<ButtonPress-1>", lambda e: self.history_drag_start(e.y_root, self.history.winfo_height()))
+            handle.bind("<B1-Motion>", lambda e: self.history_drag_to(e.y_root))
+            handle.bind("<ButtonRelease-1>", lambda _e: self.history_drag_end())
+            handle.bind("<Enter>", lambda _e: self.history.highlight(True))
+            handle.bind("<Leave>", lambda _e: self.history.highlight(self._drag is not None))
+
+    def history_drag_start(self, y_root: int, height: int) -> None:
+        self._drag, self._drag_height = (y_root, height), height
+
+    def history_drag_to(self, y_root: int, total: int | None = None) -> int:
+        """Moving up makes the history taller; the border follows at once."""
+        if self._drag is None:
+            return self.model.history_height
+        start_y, start_height = self._drag
+        total = total or self.split.winfo_height()
+        height = clamp_history(start_height + start_y - y_root, total=total)
+        self._drag_height = height
+        if self.split.winfo_ismapped():
+            self.split.sash_place(0, 0, total - height - SASH)
+        return height
+
+    def history_drag_end(self, total: int | None = None) -> None:
+        if self._drag is not None:
+            self._drag = None
+            self.history.highlight(False)
+            self.history_dragged(self._drag_height, total)
+
+    def history_dragged(self, height: int, total: int | None = None) -> None:
+        """The border was let go: keep the history's height for the next start."""
+        height = clamp_history(height, total=total or self.split.winfo_height())
+        if height != self.model.history_height:
+            self.model.history_height = height
 
     def _build_toolbar(self) -> tk.Frame:
         px, py = S["toolbar_pad"]
@@ -97,15 +154,17 @@ class MainWindow(tk.Frame):
         Tooltip(self.pull_button, lambda: self.model.pull_disabled_reason)
         return bar
 
-    def _build_middle(self) -> tk.Frame:
-        middle = tk.Frame(self, bg=C["bg"])
+    def _build_middle(self, parent: tk.Misc) -> tk.Frame:
+        middle = tk.Frame(parent, bg=C["bg"])
         sidebar = tk.Frame(middle, bg=C["sidebar"], width=S["sidebar_width"])
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
         sidebar.pack_propagate(False)
         tk.Frame(middle, width=S["line"], bg=C["line"]).pack(side=tk.LEFT, fill=tk.Y)
         self._build_repo_list(sidebar)
-        files = tk.Frame(middle, bg=C["bg"])
+        files = self.file_column = tk.Frame(middle, bg=C["bg"])
         files.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._build_commit_panel(files).pack(side=tk.BOTTOM, fill=tk.X)
+        hline(files).pack(side=tk.BOTTOM, fill=tk.X)
         self._build_banner(files)
         self.file_list = FileList(files, on_toggle=self.model.toggle, on_activate=self.model.activate,
                                   on_toggle_folder=self.model.toggle_folder, on_empty_action=self._empty_action,
@@ -158,13 +217,21 @@ class MainWindow(tk.Frame):
         foot.pack(side=tk.BOTTOM, fill=tk.X)
         self.settings_button = button(foot, "⚙ Repozytoria…", C["sidebar"], command=self.open_settings)
         self.settings_button.pack(side=tk.LEFT)
-        self.sidebar = RepoSidebar(sidebar, on_select=self.model.select)
+        self.sidebar = RepoSidebar(sidebar, on_select=self.model.select, on_copy=self.copy_remote_url)
         self.sidebar.pack(fill=tk.BOTH, expand=True)
 
-    def _build_commit_panel(self) -> tk.Frame:
+    def copy_remote_url(self, name: str) -> None:
+        """Right button on a repository tile; no remote gives the system sound (REQ-VCS-035)."""
+        self.model.copy_remote_url(name, copy=self._clipboard, missing=self.bell)
+
+    def _to_clipboard(self, text: str) -> None:
+        self.clipboard_clear()
+        self.clipboard_append(text)
+
+    def _build_commit_panel(self, parent: tk.Misc) -> tk.Frame:
         px, py = S["commit_pad"]
         gap_x, gap_y = S["commit_gap"]
-        panel = tk.Frame(self, bg=C["panel"], padx=px, pady=py)
+        panel = tk.Frame(parent, bg=C["panel"], padx=px, pady=py)
         box = tk.Frame(panel, bg=C["bg"], highlightthickness=S["line"], highlightbackground=C["control_border"],
                        highlightcolor=C["accent"])
         box.grid(row=0, column=0, sticky=tk.NSEW, padx=(0, gap_x))

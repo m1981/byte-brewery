@@ -1,12 +1,14 @@
-"""Operations on one repository: status, diff sides, stage, unstage, commit, push, pull.
+"""Operations on one repository: status, diff sides, stage, unstage, commit, push, pull, the remote address.
 
-Trace: DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-048, REQ-VCS-030, DES-VCS-050, REQ-VCS-032, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
+Trace: DES-VCS-068, DES-VCS-063, REQ-VCS-035, DEC-VCS-115, DES-VCS-007, DES-VCS-046, REQ-VCS-027, DES-VCS-048, REQ-VCS-030, DES-VCS-050, REQ-VCS-032, DES-VCS-011, DES-VCS-012, DES-VCS-013, DES-VCS-014, DES-VCS-015, DES-VCS-044, DES-VCS-045, REQ-VCS-005, REQ-VCS-024, REQ-VCS-026, REQ-VCS-009, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-017, REQ-VCS-020
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 from vcs_lite.core.difftool import Content
 from vcs_lite.core.gitcli import GitCli, GitResult
@@ -24,6 +26,42 @@ def ignore_pattern(path: str, *, folder: bool = False) -> str:
     escaped = "".join("\\" + ch if ch in "\\*?[]" else ch for ch in path)
     kept = escaped.rstrip(" ")
     return "/" + kept + "\\ " * (len(escaped) - len(kept)) + ("/" if folder else "")
+
+
+SSH_SCHEMES = ("ssh", "git+ssh", "ssh+git", "git")
+
+
+def _scp(url: str) -> tuple[str, str] | None:
+    """Host and path of git's scp-like `[user@]host:path`: no "://" and a colon before the first "/"."""
+    head, colon, path = url.partition(":")
+    if "://" in url or not colon or "/" in head:
+        return None
+    return head.rpartition("@")[2], path
+
+
+def absolute_url(url: str, repo: Path) -> str:
+    """A relative path on disk counted from the repository; a URL, an absolute path and the scp-like
+    form stay as they are (DES-VCS-063)."""
+    if "://" in url or os.path.isabs(url) or _scp(url):
+        return url
+    return os.path.normpath(repo / url)
+
+
+def https_url(url: str) -> str:
+    """ssh, git and scp-like addresses as `https://host/path` without user and port; http(s) only loses
+    the user and the password or token; paths on disk and file:// stay (DEC-VCS-115)."""
+    if scp := _scp(url):
+        host, path = scp
+        return f"https://{host}/{path.lstrip('/')}"
+    parts = urlsplit(url)
+    if not parts.hostname:
+        return url
+    if parts.scheme in SSH_SCHEMES:
+        return f"https://{parts.hostname}{parts.path}"
+    if parts.scheme in ("https", "http"):
+        host = parts.hostname + (f":{parts.port}" if parts.port else "")
+        return urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
+    return url
 
 
 class UnresolvedConflict(Exception):
@@ -74,13 +112,28 @@ class GitRepo:
         out = self._read("ls-files", "-z").stdout
         return [path.decode("utf-8", errors="surrogateescape") for path in out.split(b"\0") if path]
 
+    def remote_url(self) -> str | None:
+        """The fetch address of origin, else of the first remote git lists, as https; None without remotes
+        (REQ-VCS-035)."""
+        urls: dict[str, str] = {}
+        for line in self._read("remote", "-v").stdout.decode("utf-8", errors="replace").splitlines():
+            name, _, rest = line.partition("\t")
+            url, _, kind = rest.rpartition(" ")
+            if kind == "(fetch)":
+                urls.setdefault(name, url)
+        url = urls.get("origin") or next(iter(urls.values()), None)
+        return https_url(absolute_url(url, self.path)) if url else None
+
     def content(self, side: Side, path: str) -> Content:
         if side is Side.EMPTY:
             return b""
         if side is Side.WORKTREE:
             return self.path / path
-        rev = f"HEAD:{path}" if side is Side.HEAD else f":{path}"
-        return self._read("cat-file", "blob", rev).stdout
+        return self.blob("HEAD" if side is Side.HEAD else "", path)
+
+    def blob(self, rev: str, path: str) -> bytes:
+        """The file as it is in a commit; an empty `rev` reads the index (DES-VCS-068)."""
+        return self._read("cat-file", "blob", f"{rev}:{path}").stdout
 
     def sides(self, change: FileChange) -> tuple[Content, Content]:
         if change.left is None or change.right is None:

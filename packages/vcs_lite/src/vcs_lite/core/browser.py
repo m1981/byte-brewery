@@ -3,7 +3,7 @@
 Images and PDFs open as the files themselves (DEC-VCS-100); vcs-lite never names a browser on its own, so a
 change of the default in macOS applies at once. macOS answers in about 0.05 s (OBS-VCS-013).
 
-Trace: DES-VCS-060, REQ-VCS-034, DEC-VCS-100, DEC-VCS-101
+Trace: DES-VCS-060, DES-VCS-070, REQ-VCS-034, REQ-VCS-040, DEC-VCS-100, DEC-VCS-101
 """
 
 from __future__ import annotations
@@ -34,5 +34,12 @@ def show(path: Path, *, browser: Callable[[], str | None] = default_browser, run
     app = browser()
     argv = ["open", "-a", app, str(path)] if app else ["open", str(path)]
     result = run(argv, capture_output=True, text=True, timeout=10, check=False)
+    if result.returncode != 0:
+        raise OSError(result.stderr.strip() or f"open zakończył się kodem {result.returncode}")
+
+
+def open_url(url: str, *, run: Run = subprocess.run) -> None:
+    """A web address in the default browser, e.g. a commit on GitHub (H-47)."""
+    result = run(["open", url], capture_output=True, text=True, timeout=10, check=False)
     if result.returncode != 0:
         raise OSError(result.stderr.strip() or f"open zakończył się kodem {result.returncode}")

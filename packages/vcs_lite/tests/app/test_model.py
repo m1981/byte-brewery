@@ -811,7 +811,7 @@ def test_req_vcs_032_a_failing_open_shows_the_error(project, world):
     model = project
     def refuse(command):
         raise OSError("brak aplikacji do otwarcia")
-    model._opener = refuse
+    model._pages._opener = refuse
     model.open_in_app("src/app.py"); world.worker.settle()
     assert model.error_title == "Otwieranie nie powiodło się" and "brak aplikacji" in model.error
 
@@ -873,7 +873,7 @@ def test_des_vcs_060_a_failing_browser_shows_the_error(typed, world):
     model, _ = typed
     def refuse(path):
         raise OSError("brak przeglądarki")
-    model._browser = refuse
+    model._pages._browser = refuse
     model.activate(change(model, Group.CHANGES, "logo.png")); world.worker.settle()
     assert model.error_title == "Otwieranie nie powiodło się" and "brak przeglądarki" in model.error
 
@@ -894,3 +894,72 @@ def test_des_vcs_060_text_search_match_opens_the_text_page_at_its_line(typed, wo
     model, r = typed
     model.open_match("notatki.txt", 1); world.worker.settle()
     assert world.text_reader.calls[0]["line"] == 1
+
+
+# ---------- the remote address to the clipboard (REQ-VCS-035, DES-VCS-063) ----------
+
+def test_req_vcs_035_right_button_copies_the_remote_address_without_selecting_the_repo(world):
+    world.repo("alpha")
+    world.repo("beta").git("remote", "add", "origin", "https://github.com/m1981/beta.git")
+    world.start("alpha", "beta")
+    model = world.select("alpha")
+    copied, missing = [], []
+    model.copy_remote_url("beta", copy=copied.append, missing=lambda: missing.append(True))
+    assert copied == []                                     # read off the UI thread
+    world.worker.settle()
+    assert copied == ["https://github.com/m1981/beta.git"] and missing == []
+    assert model.selected == "alpha" and "beta:remote" in world.worker.history
+
+
+def test_req_vcs_035_no_remote_or_no_repository_copies_nothing(world):
+    world.repo("alpha")
+    model = world.start("alpha", "gone")
+    copied, missing = [], []
+    for name in ("alpha", "gone"):
+        model.copy_remote_url(name, copy=copied.append, missing=lambda n=name: missing.append(n))
+    world.worker.settle()
+    assert copied == [] and missing == ["alpha", "gone"]
+
+
+# ---------- the history panel's height (REQ-VCS-036, DES-VCS-069) ----------
+
+def test_des_vcs_069_history_height_is_saved_in_the_settings(world):
+    saved = []
+    world.save_settings = saved.append
+    model = world.start()
+    assert model.history_height == 240
+    model.history_height = 310
+    assert model.history_height == 310 and saved[-1].history_height == 310
+
+
+def test_des_vcs_067_each_finished_refresh_is_counted(world):
+    world.repo("alpha")
+    model = world.start("alpha")
+    before = model.view("alpha").refreshes
+    model.refresh("alpha"); world.worker.settle()
+    assert model.view("alpha").refreshes == before + 1
+
+
+# ---------- a file of a commit (H-46, DES-VCS-068) ----------
+
+def test_at_vcs_060_a_file_of_a_commit_opens_parent_against_commit(world):
+    from vcs_lite.core.gitlog import GitLog
+    from vcs_lite.core.log import LogQuery
+    alpha = world.repo("alpha")
+    alpha.write("a.py", "stare\n"); alpha.commit("pierwszy")
+    alpha.write("a.py", "nowe\n"); alpha.write("b.py", "b\n"); alpha.git("rm", "-q", "README.md"); alpha.commit("drugi")
+    model = world.start("alpha"); world.select("alpha")
+    log = GitLog(GitCli(env=GIT_ENV))
+    second = log.page(alpha.path, LogQuery(), 0).commits[0]
+    files = {f.path: f for f in log.details(alpha.path, second).files}
+    refreshes = model.view("alpha").refreshes
+    for path in ("a.py", "b.py", "README.md"):
+        model.open_commit_file(second, files[path])
+    world.worker.settle()
+    changed, added = world.tool.calls[0], world.tool.calls[1]
+    assert (changed["left_bytes"], changed["right_bytes"]) == (b"stare\n", b"nowe\n")
+    assert changed["left_title"] == f"a.py ({second.parents[0][:7]})" and changed["right_title"] == f"a.py ({second.short})"
+    assert added["left_bytes"] == b"" and added["left_title"] == "b.py (pusty)"
+    removed = world.md_tool.calls[0]                         # Markdown goes to its own page
+    assert removed["right_bytes"] == b"" and removed["right_title"] == "README.md (pusty)"
+    assert model.view("alpha").refreshes == refreshes        # looking at history changes nothing to refresh

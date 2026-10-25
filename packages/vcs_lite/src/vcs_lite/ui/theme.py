@@ -67,6 +67,10 @@ COLORS = {
     "folder_act_hover": "#e6e8ee",
     # the search window E-04 (section 10, DEC-VCS-097)
     "hit": "#fde68a", "toggle_on": "#dbe8fb", "toggle_on_edge": "#b9d2f5", "placeholder": "#a0a0a6",
+    # the history panel E-06 (section 12, DEC-VCS-119): graph lanes in order, then the labels
+    "lane_0": "#0a66d8", "lane_1": "#1f9e5a", "lane_2": "#c56a12", "lane_3": "#8a4fd3",
+    "lane_4": "#0e8f99", "lane_5": "#c23d7a", "lane_6": "#6b7a1f", "lane_7": "#5a6270",
+    "ref_local_ink": "#0a4fae", "ref_tag": "#fff3d6", "ref_tag_ink": "#7a5300",
 }
 
 
@@ -119,6 +123,19 @@ TYPE = {
     "toggle": Type(12, "bold", COLORS["chip_ink"]),
     "toggle_mono": Type(12, "bold", COLORS["chip_ink"], mono=True),
     "placeholder": Type(13, color=COLORS["placeholder"]),
+    # section 12
+    "history_title": Type(13, "bold"),
+    "unpushed": Type(12, "bold", COLORS["accent"]),
+    "ref_chip": Type(11, color=COLORS["chip_ink"]),
+    "ref_chip_strong": Type(11, "bold", COLORS["ref_local_ink"]),
+    "subject": Type(13),
+    "subject_out": Type(13, "bold"),
+    "subject_empty": Type(13, color=COLORS["dim"]),
+    "history_meta": Type(12, color=COLORS["dim"]),
+    "details_title": Type(14, "bold"),                    # 13.5 → 14 (§6)
+    "details_body": Type(13, color=COLORS["chip_ink"]),   # 12.5 → 13 (§6)
+    "hash": Type(12, mono=True),
+    "link": Type(12, color=COLORS["accent"]),
 }
 
 # Section 3, in points. Pairs are (horizontal, vertical) unless named otherwise.

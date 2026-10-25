@@ -1,6 +1,6 @@
 """Entry point and composition root: settings, git, worker, model and the main window.
 
-Trace: DES-VCS-062, REQ-VCS-104, DEC-VCS-112, DES-VCS-028, DES-VCS-029, DES-VCS-034, DES-VCS-036, DES-VCS-041, DES-VCS-055, REQ-VCS-033, REQ-VCS-103
+Trace: DES-VCS-067, DES-VCS-070, DES-VCS-069, DES-VCS-062, REQ-VCS-104, DEC-VCS-112, DES-VCS-028, DES-VCS-029, DES-VCS-034, DES-VCS-036, DES-VCS-041, DES-VCS-055, REQ-VCS-033, REQ-VCS-103
 """
 
 from __future__ import annotations
@@ -12,11 +12,13 @@ from collections.abc import Sequence
 from pathlib import Path
 from tkinter import messagebox
 
+from vcs_lite.app.history import HistorySession
 from vcs_lite.app.model import AppModel
 from vcs_lite.app.search import SearchSession
 from vcs_lite.app.worker import Worker
 from vcs_lite.core.gitcli import GitCli
 from vcs_lite.core.gitgrep import GitGrepSearcher
+from vcs_lite.core.gitlog import GitLog
 from vcs_lite.core.settings import SettingsStore, default_settings_path
 from vcs_lite.ui.main_window import MainWindow
 from vcs_lite.ui.pump import TkPump, tk_later
@@ -38,7 +40,7 @@ def build(settings_path: Path) -> tuple[tk.Tk, AppModel, TkPump]:
     prepare_tk()
     root = tk.Tk()
     root.title("vcs-lite")
-    root.geometry("960x620")
+    root.geometry("1100x820")  # room for the history panel (DEC-VCS-118)
     set_window_icon(root, WINDOW_ICON)
     pump, git = TkPump(root, Worker()), GitCli()
     model = AppModel.from_settings(store.load(), git=git, worker=pump,
@@ -46,7 +48,8 @@ def build(settings_path: Path) -> tuple[tk.Tk, AppModel, TkPump]:
                                    save_settings=store.save)
     search = SearchSession(GitGrepSearcher(git), pump, later=tk_later(root), repo=lambda: model.selected_path,
                            open_match=model.open_match)
-    MainWindow(root, model, reduce_motion=reduce_motion(), search=search).pack(fill=tk.BOTH, expand=True)
+    history = HistorySession(GitLog(git), pump, later=tk_later(root), model=model)
+    MainWindow(root, model, reduce_motion=reduce_motion(), search=search, history=history).pack(fill=tk.BOTH, expand=True)
     return root, model, pump
 
 

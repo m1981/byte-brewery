@@ -3,7 +3,7 @@
 Geometry (UI-REFERENCE §3): sidebar padding 8 × 10, header padding 8 × 6, row padding 8 × 7,
 rows 2 apart, dot column 10, gap 8; line heights follow the reference's 1.4 line height.
 
-Trace: DES-VCS-023, DES-VCS-042, DES-VCS-046, REQ-VCS-027, DEC-VCS-068, DEC-VCS-069, REQ-VCS-002, REQ-VCS-016, REQ-VCS-018, DEC-VCS-047, DEC-VCS-049
+Trace: DES-VCS-063, REQ-VCS-035, DES-VCS-023, DES-VCS-042, DES-VCS-046, REQ-VCS-027, DEC-VCS-068, DEC-VCS-069, REQ-VCS-002, REQ-VCS-016, REQ-VCS-018, DEC-VCS-047, DEC-VCS-049
 """
 
 from __future__ import annotations
@@ -48,14 +48,18 @@ class Row:
 
 
 class RepoSidebar(tk.Frame):
-    def __init__(self, master: tk.Misc, on_select: Callable[[str], None]):
+    def __init__(self, master: tk.Misc, on_select: Callable[[str], None],
+                 on_copy: Callable[[str], None] = lambda name: None):
         super().__init__(master, bg=C["sidebar"])
         self._on_select = on_select
+        self._on_copy = on_copy
         self.canvas = tk.Canvas(self, bg=C["sidebar"], highlightthickness=0, bd=0, width=S["sidebar_width"],
                                 yscrollincrement=2)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind("<Button-1>", lambda event: self.click(event.y))
         self.canvas.bind("<MouseWheel>", lambda event: self.scroll(event.delta))
+        for sequence in ("<Button-2>", "<Button-3>"):  # right button and two-finger click: copy, no menu (DEC-VCS-113)
+            self.canvas.bind(sequence, lambda event: self.right_click(event.y))
         self._rows: list[Row] = []
         self._shown_selected: str | None = None  # scroll to the selected row only when the selection changes
         self._content_height = 1
@@ -90,6 +94,12 @@ class RepoSidebar(tk.Frame):
         name = self.name_at(int(self.canvas.canvasy(y)))
         if name:
             self._on_select(name)
+
+    def right_click(self, y: int) -> None:
+        """The remote address of the repository under the pointer; the selection stays (REQ-VCS-035)."""
+        name = self.name_at(int(self.canvas.canvasy(y)))
+        if name:
+            self._on_copy(name)
 
     # ---------- drawing ----------
 

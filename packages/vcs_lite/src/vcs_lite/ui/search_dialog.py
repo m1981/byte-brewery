@@ -17,7 +17,7 @@ from vcs_lite.app.search import SearchSession
 from vcs_lite.core.search import Match, SearchQuery
 from vcs_lite.ui import theme
 from vcs_lite.ui.keys import DoubleShift
-from vcs_lite.ui.widgets import Toggle, Tooltip, elide, elide_middle, kbd
+from vcs_lite.ui.widgets import Toggle, Tooltip, elide, elide_middle, hint_over, kbd
 
 C, S = theme.COLORS, theme.SPACE
 ROW_HEIGHT = S["row_height"]
@@ -272,7 +272,7 @@ class SearchDialog(tk.Toplevel):
         self.phrase_entry = tk.Entry(self._field, textvariable=self.phrase, bd=0, highlightthickness=0, bg=C["bg"],
                                      fg=C["ink"], insertbackground=C["ink"], font=theme.font("body"))
         self.phrase_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, pady=fy)
-        self._phrase_hint = _hint_over(self.phrase_entry, self.phrase, f"Szukaj w {repo}")
+        self._phrase_hint = hint_over(self.phrase_entry, self.phrase, f"Szukaj w {repo}")
         self.word_toggle = Toggle(self._field, "W", lambda on: self._push(), role="toggle_mono", parent_bg=C["bg"])
         self.word_toggle.pack(side=tk.RIGHT, padx=(2, 4))
         self.case_toggle = Toggle(self._field, "Aa", lambda on: self._push(), parent_bg=C["bg"])
@@ -293,7 +293,7 @@ class SearchDialog(tk.Toplevel):
         self.mask_entry = tk.Entry(frame, textvariable=self.mask, bd=0, highlightthickness=0, bg=C["bg"], fg=C["ink"],
                                    insertbackground=C["ink"], font=theme.font("body"), width=14)
         self.mask_entry.pack(padx=6, pady=2)
-        self._mask_hint = _hint_over(self.mask_entry, self.mask, "wszystkie")
+        self._mask_hint = hint_over(self.mask_entry, self.mask, "wszystkie")
 
     def _build_status(self) -> None:
         px, py = S["statusbar_pad"]
@@ -420,18 +420,3 @@ class SearchDialog(tk.Toplevel):
 
     def error_text(self) -> str:
         return self.banner_body.cget("text") if self.banner.winfo_manager() else ""
-
-
-def _hint_over(entry: tk.Entry, var: tk.StringVar, text: str) -> tk.Label:
-    """Grey text over an empty field, also while it has the focus (Tk entries have no placeholder)."""
-    hint = theme.label(entry.master, "placeholder", text, bg=str(entry.cget("bg")))
-    hint.bind("<Button-1>", lambda e: entry.focus_set())
-
-    def update(*_args) -> None:
-        if var.get():
-            hint.place_forget()
-        else:
-            hint.place(in_=entry, x=1, rely=0.5, anchor=tk.W)
-    var.trace_add("write", update)
-    update()
-    return hint

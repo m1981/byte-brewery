@@ -1,6 +1,6 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-016, DES-VCS-046, DES-VCS-055, DES-VCS-056, DES-VCS-060, REQ-VCS-033, REQ-VCS-034, DEC-VCS-095, DEC-VCS-098, DEC-VCS-100, DEC-VCS-106, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-067, DES-VCS-069, REQ-VCS-036, DES-VCS-068, DES-VCS-063, REQ-VCS-035, DES-VCS-016, DES-VCS-046, DES-VCS-055, DES-VCS-056, DES-VCS-060, REQ-VCS-033, REQ-VCS-034, DEC-VCS-095, DEC-VCS-098, DEC-VCS-100, DEC-VCS-106, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
@@ -11,18 +11,18 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from vcs_lite.app.opening import PageOpener
 from vcs_lite.app.worker import Executor, Outcome
 from vcs_lite.core import pagekit
 from vcs_lite.core.browser import show
-from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool, compare
-from vcs_lite.core.filekind import Kind, is_text, kind_of
+from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool
+from vcs_lite.core.filekind import Kind, kind_of
 from vcs_lite.core.gitcli import GitCli, GitResult
+from vcs_lite.core.log import Commit, CommitFile
 from vcs_lite.core.pageview import DocumentReader, MarkdownDiffTool, TextDiffTool, open_with_macos
 from vcs_lite.core.repo import GitError, GitRepo
 from vcs_lite.core.settings import Settings, SettingsError, scan_rootdir
-from vcs_lite.core.status import FileChange, Group, RepoStatus, Side
-
-SIDE_LABELS = {Side.HEAD: "HEAD", Side.INDEX: "indeks", Side.WORKTREE: "kopia robocza", Side.EMPTY: "pusty"}
+from vcs_lite.core.status import FileChange, Group, RepoStatus
 
 
 def files_label(n: int) -> str:
@@ -74,6 +74,7 @@ class RepoView:
     draft: str = ""  # DES-VCS-021: kept in memory only
     refreshed_at: datetime | None = None
     tracked: tuple[str, ...] = ()    # files of the index, read only in the project view (DES-VCS-050)
+    refreshes: int = 0               # finished refreshes; the history reads again after each (DES-VCS-067)
 
     @property
     def branch_label(self) -> str:
@@ -122,9 +123,7 @@ COMMIT = Operation("Zapisywanie commita…", "Commit nie powiódł się")
 PUSH = Operation("Wypychanie do origin…", "Push nie powiódł się")
 IGNORE = Operation("Dodawanie do .gitignore…", "Dodanie do .gitignore nie powiodło się")
 PULL = Operation("Pobieranie zmian…", "Pull nie powiódł się")
-COMPARE_FAILED = "Porównanie nie powiodło się"
 REFRESH_FAILED = "Odświeżanie nie powiodło się"
-OPEN_FAILED = "Otwieranie nie powiodło się"
 
 
 class AppModel:
@@ -142,14 +141,14 @@ class AppModel:
         self._save_settings = save_settings
         self._clock = clock
         self._git = git
-        self._diff_tool = diff_tool or TextDiffTool(theme=self._page_theme)
-        self._markdown_tool = markdown_tool or MarkdownDiffTool(theme=self._page_theme)
-        self._markdown_reader = markdown_reader or MarkdownDiffTool(read=True, theme=self._page_theme)
-        self._text_reader = text_reader or TextDiffTool(read=True, theme=self._page_theme)
-        self._external_tool = external_tool
-        self._browser, self._keep_copy = browser, keep_copy
-        self._opener = opener
         self._worker = worker
+        self._pages = PageOpener(git=git, worker=worker,
+                                 diff_tool=diff_tool or TextDiffTool(theme=self._page_theme),
+                                 markdown_tool=markdown_tool or MarkdownDiffTool(theme=self._page_theme),
+                                 markdown_reader=markdown_reader or MarkdownDiffTool(read=True, theme=self._page_theme),
+                                 text_reader=text_reader or TextDiffTool(read=True, theme=self._page_theme),
+                                 external_tool=external_tool, browser=browser, keep_copy=keep_copy, opener=opener,
+                                 on_error=self._report, on_compared=lambda place: self.refresh(place.name))
         self._confirm = confirm
         self._rootdir = settings.rootdir
         self._repos = {name: RepoView(name, settings.repo_path(name)) for name in settings.repos}
@@ -170,7 +169,7 @@ class AppModel:
     @property
     def has_external_tool(self) -> bool:
         """The command-line diff tool plugin is set in the settings (DEC-VCS-106)."""
-        return self._external_tool is not None
+        return self._pages.external_tool is not None
 
     # ---------- choosing repositories (E-02, REQ-VCS-001) ----------
 
@@ -216,6 +215,16 @@ class AppModel:
         if value == "project" and self.selected:
             self.refresh(self.selected)  # the tracked files are read only for this view
         self._changed()
+
+    @property
+    def history_height(self) -> int:
+        """Height of the history panel, kept between starts (REQ-VCS-036, DES-VCS-069)."""
+        return self._settings.history_height
+
+    @history_height.setter
+    def history_height(self, value: int) -> None:
+        self._settings = replace(self._settings, history_height=value)
+        self._save_settings(self._settings)
 
     @property
     def markdown_theme(self) -> str:
@@ -486,7 +495,27 @@ class AppModel:
             view.available = outcome.value is not None
             view.status, view.tracked = outcome.value or (None, ())
             view.refreshed_at = self._clock()
+        view.refreshes += 1
         self._changed()
+
+    def copy_remote_url(self, name: str, *, copy: Callable[[str], None], missing: Callable[[], None]) -> None:
+        """Right button on a repository: its remote address for the clipboard, read off the UI thread under
+        its own key, so operations on the repository go on; the selection stays (REQ-VCS-035, DES-VCS-063)."""
+        view = self._repos[name]
+
+        def done(outcome: Outcome) -> None:
+            if outcome.error is not None and not isinstance(outcome.error, GitError):
+                raise outcome.error
+            url = outcome.value if outcome.error is None else None
+            if url:
+                copy(url)
+            else:
+                missing()
+
+        self._worker.submit(f"{name}:remote", lambda: self._remote_url(view), done)
+
+    def _remote_url(self, view: RepoView) -> str | None:
+        return self._repo(view).remote_url() if (view.path / ".git").exists() else None
 
     # ---------- files ----------
 
@@ -526,101 +555,32 @@ class AppModel:
         self._run(view, IGNORE, lambda: repo.ignore(files, members))
 
     def activate(self, change: FileChange, *, external: bool = False) -> None:
-        """Double click or Enter: the change in the browser, by the kind of file (REQ-VCS-034): Markdown as
-        a rendered diff (REQ-VCS-031), an image or PDF as the file itself, anything else side by side
-        (REQ-VCS-023). `external` uses the command-line plugin instead (DEC-VCS-106)."""
-        view = self._current()
-        if change.left is None or change.right is None:
-            return
-        kind = kind_of(change.path)
-        if external:
-            if self._external_tool is None:
-                return
-            tool = self._external_tool
-        elif kind.shown_as_file:
-            self._show_change(view, change)
-            return
-        else:
-            tool = self._markdown_tool if kind is Kind.MARKDOWN else self._diff_tool
-        # Its own key, so the repository stays usable while the diff window is open.
-        self._worker.submit(f"{view.name}:diff:{change.group.value}:{change.path}",
-                            lambda: self._compare(view, change, tool),
-                            lambda outcome: self._compared(view, outcome))
+        """Double click or Enter: the change in the browser, by the kind of file (DES-VCS-068)."""
+        self._pages.change(self._current(), change, external=external)
 
     def open_file(self, path: str, line: int | None = None) -> None:
-        """A file without changes, by its kind (REQ-VCS-034): Markdown read as a document, an image or PDF in
-        the browser, text as a page with line numbers, anything else (and a folder) in its application. With
-        a line, a page scrolls to it (a search match, DES-VCS-056)."""
-        view = self._current()
-        full, kind = view.path / path, kind_of(path)
-        if kind is Kind.MARKDOWN:
-            self._read(view, self._markdown_reader, path, line)
-        elif kind.shown_as_file:
-            self._show(view, path, lambda: full)
-        elif is_text(full):
-            self._read(view, self._text_reader, path, line)
-        else:
-            self.open_in_app(path)
+        """A file without changes, by its kind; with a line, a page scrolls to it (DES-VCS-056)."""
+        self._pages.file(self._current(), path, line)
 
     def open_match(self, path: str, line: int) -> None:
         """Enter on a search match opens it like the project tree does, at the line (DEC-VCS-095, DEC-VCS-098)."""
         self.open_file(path, line)
 
-    def _read(self, view: RepoView, reader: DocumentReader, path: str, line: int | None) -> None:
-        full, title = view.path / path, f"{path} ({SIDE_LABELS[Side.WORKTREE]})"
-        reader = reader if line is None else reader.at_line(line)
-        self._worker.submit(f"{view.name}:read:{path}",
-                            lambda: compare(reader, full, full, name=full.name, left_title=title, right_title=title),
-                            lambda outcome: self._compared(view, outcome))
-
-    def _show_change(self, view: RepoView, change: FileChange) -> None:
-        """An image or PDF of a group: the right side of T-VCS-01, or the left one when the file is gone.
-        A version that is not on disk is kept as a copy first (DEC-VCS-100)."""
-        side, path = change.right, change.path
-        if side is Side.EMPTY:  # deleted: its last version
-            side = change.left
-            path = change.orig_path if side is Side.HEAD and change.orig_path else change.path
-
-        def file() -> Path:
-            content = self._repo(view).content(side, path)
-            return content if isinstance(content, Path) else self._keep_copy(content, Path(path).name)
-        self._show(view, f"{change.group.value}:{change.path}", file)
-
-    def _show(self, view: RepoView, key: str, file: Callable[[], Path]) -> None:
-        self._worker.submit(f"{view.name}:show:{key}", lambda: self._browser(file()),
-                            lambda outcome: self._opened(view, outcome))
+    def open_commit_file(self, commit: Commit, file: CommitFile) -> None:
+        """A file of a commit from the history panel: parent against commit in the browser (H-46)."""
+        self._pages.commit_file(self._current(), commit, file)
 
     def open_in_app(self, path: str) -> None:
         """The file or folder in its default macOS application, e.g. to edit it (DEC-VCS-090, DEC-VCS-104)."""
-        self._open(["open"], path)
+        self._pages.in_app(self._current(), path)
 
     def reveal(self, path: str) -> None:
         """The file or folder selected in Finder."""
-        self._open(["open", "-R"], path)
+        self._pages.reveal(self._current(), path)
 
-    def _open(self, command: list[str], path: str) -> None:
-        view = self._current()
-        argv = [*command, str(view.path / path)]
-        key = f"{view.name}:{' '.join(command)}:{path}"  # opening and revealing one file do not block each other
-        self._worker.submit(key, lambda: self._opener(argv), lambda outcome: self._opened(view, outcome))
-
-    def _opened(self, view: RepoView, outcome: Outcome) -> None:
-        if outcome.error is not None:
-            view.error, view.error_title = str(outcome.error), OPEN_FAILED
-            self._changed()
-
-    def _compare(self, view: RepoView, change: FileChange, tool: ExternalDiffTool):
-        left, right = self._repo(view).sides(change)
-        return compare(tool, left, right, name=Path(change.path).name,
-                       left_title=f"{change.path} ({SIDE_LABELS[change.left]})",
-                       right_title=f"{change.path} ({SIDE_LABELS[change.right]})")
-
-    def _compared(self, view: RepoView, outcome: Outcome) -> None:
-        if outcome.error is not None:
-            view.error, view.error_title = str(outcome.error), COMPARE_FAILED
-        elif outcome.value.failed:
-            view.error, view.error_title = outcome.value.stderr.strip(), COMPARE_FAILED
-        self.refresh(view.name)
+    def _report(self, view: RepoView, message: str, title: str) -> None:
+        view.error, view.error_title = message, title
+        self._changed()
 
     # ---------- commit, push, pull ----------
     # Each operation captures the repository selected at click time (REQ-VCS-021).

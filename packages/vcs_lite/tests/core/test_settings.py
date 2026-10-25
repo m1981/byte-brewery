@@ -179,3 +179,12 @@ def test_req_vcs_031_markdown_theme_is_stored_and_checked():
     for wrong in ("blue", 1, None):
         with pytest.raises(ValueError, match="markdown_theme"):
             Settings.from_dict({"markdown_theme": wrong})
+
+
+def test_des_vcs_069_history_height_is_stored_and_checked():
+    assert Settings().history_height == 240
+    settings = Settings.from_dict({"history_height": 300})
+    assert settings.history_height == 300 and settings.to_dict()["history_height"] == 300
+    for wrong in ("300", 12.5, True):
+        with pytest.raises(ValueError, match="history_height"):
+            Settings.from_dict({"history_height": wrong})
