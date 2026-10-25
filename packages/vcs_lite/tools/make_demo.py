@@ -8,7 +8,8 @@ Layout:
   <folder>/root/beta     clean, tracking <folder>/remotes/beta.git
   <folder>/root/gamma    a merge conflict
   <folder>/root/delta    a history for the history panel: 40 early commits, a merged branch, an unmerged one,
-                         an octopus merge, a tag, two unpushed commits, another author (step 22)
+                         an octopus merge, a tag, two unpushed commits, another author, folders docs/ and
+                         src/core/ changed in several commits (steps 22 and 23)
   <folder>/root/zdjecia  a plain folder (must not appear in Settings)
   <folder>/root/.ukryte  a hidden repository (must not appear in Settings)
   <folder>/settings.json rootdir = <folder>/root, no repositories chosen yet
@@ -151,6 +152,11 @@ def make_delta(root: Path, remotes: Path) -> None:
     for i in range(40):
         write(d, "log.txt", f"wpis {i}\n")
         commit(d, f"Wpis {i} w dzienniku")
+    write(d, "docs/plan.md", "# Plan\n")
+    commit(d, "Start the plan")
+    write(d, "docs/plan.md", "# Plan\n\n- historia\n")
+    write(d, "src/core/model.py", "class Model:\n    pass\n")
+    commit(d, "Plan the history and add the model")
     write(d, "app.py", "print('start')\n")
     commit(d, "Add the app")
     git(d, "branch", "eksperyment")
@@ -186,7 +192,8 @@ def make_delta(root: Path, remotes: Path) -> None:
     git(d, "push", "-q", "-u", "origin", "main")
     write(d, "app.py", "print('start')\nprint('dalej')\nprint('koniec')\n")
     commit(d, "Specify search in files")
-    write(d, "search.py", "def search():\n    pass\n")
+    write(d, "src/core/search.py", "def search():\n    pass\n")
+    write(d, "docs/plan.md", "# Plan\n\n- historia\n- szukanie\n")
     commit(d, "Add search in files")
 
 
