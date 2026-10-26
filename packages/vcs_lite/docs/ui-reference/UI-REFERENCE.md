@@ -352,3 +352,7 @@ Etykieta gałęzi zdalnej: tło `chip_bg`, tekst `chip_ink`.
 - Q-VCS-030 i Q-VCS-031 rozstrzygnięte: DEC-VCS-047, DEC-VCS-048.
 - Q-VCS-032 rozstrzygnięte dla P2–P10 (DEC-VCS-049, sekcja 8).
 - Q-VCS-033 rozstrzygnięte: DEC-VCS-050 (P1).
+# P17 / P19 — lista zmian według ostatniego zapisu
+
+Przyjęte: DEC-VCS-125, DEC-VCS-126, DEC-VCS-127. Wzorzec kolumny +/−: [P17](../ui-mockups/P17-ostatnio-zmienione.html). Wzorzec separatorów: wyłącznie wariant **Czas względny** w [P19](../ui-mockups/p19-etykiety-czasu.html). Pozostałe warianty nie wchodzą do aplikacji. Szczegóły R-01–R-13 w [propozycji grup czasowych](../PROPOZYCJA-grupy-czasowe.md); REQ-VCS-042, REQ-VCS-043, DES-VCS-074. Sekcje Git pozostają, etykiety czasu bez liczników, pełne dane w dymku.
+

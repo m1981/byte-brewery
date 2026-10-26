@@ -95,3 +95,23 @@ Proponowane reguły po wyborze wariantu (do potwierdzenia):
 - Aktualizacja etykiet przy dotychczasowym odświeżeniu i powrocie fokusu, bez dodatkowego odpytywania Git. Makieta nie wprowadza zegara działającego w tle; sposób odświeżania samego tekstu podczas długiego oglądania wymaga ustalenia w projekcie implementacji.
 
 Nie usuwamy innych informacji z listy: folderów, liczników przy statusach Git ani zer w kolumnie +/−. Dzięki temu porównanie dotyczy wyłącznie separatorów.
+
+## Reguły wdrożenia — P17 i P19 przyjęte, DEC-VCS-127
+
+Użytkownik: „super wykonaj”. Wybrany rekomendowany „Czas względny”. Poniższe szczegóły techniczne to decyzje agenta w przyjętym zakresie.
+
+| Reguła | Zachowanie |
+|---|---|
+| R-01 | Tylko widok Zmiany: Conflicts, Staged, Changes, Unversioned; wewnątrz malejący `lstat().st_mtime_ns`, przy remisie pełna ścieżka alfabetycznie. Jedna ścieżka ma ten sam czas w Staged i Changes. |
+| R-02 | Nowa grupa, jeśli przerwa od poprzedniego pliku > 300 s lub rozpiętość od najnowszego > 900 s. Równość progowi pozostaje w tej samej grupie. |
+| R-03 | Brak pliku lub błąd lstat: końcowa sekcja „Czas nieznany”, pliki alfabetycznie. Brak separatorów w pustym Staged; jego podpowiedź pozostaje. |
+| R-04 | Wiek od najnowszego zapisu grupy: poniżej minuty „przed chwilą”, poniżej godziny „N min temu”, poniżej doby „N h temu”, poniżej tygodnia „1 dzień temu” albo „N dni temu”; dalej data dd.mm, z rokiem gdy inny niż bieżący. Pełne jednostki, zaokrąglane w dół. Przyszłość: „czas z przyszłości”. |
+| R-05 | Separator nie pokazuje liczby plików. Dymek podaje pełny zakres od najstarszego do najnowszego zapisu (rok, sekundy, strefa), licznik i regułę podziału. Wiek aktualizowany przy odrysowaniu/odświeżeniu, bez dodatkowego timera lub operacji Git. |
+| R-06 | Separatory nie są plikami: kliknięcie nie zmienia zaznaczenia, strzałki/Shift/spacja/menu omijają je. Zaznaczenie po kluczu (status, ścieżka) przetrwa sortowanie; spacja używa widocznej kolejności. |
+| R-07 | Foldery i Projekt zachowują dotychczasową kolejność i wygląd, bez liczników linii i separatorów czasu. |
+| R-08 | Dymek i odrysowanie nie czytają plików. Metadane i liczniki pobierane w Workerze razem ze statusem; opublikowany wynik jest spójny w ramach jednego odświeżenia (system plików nie zapewnia atomowego snapshotu). |
+| R-09 | Staged HEAD → indeks (także repo bez HEAD), Changes indeks → dysk, Unversioned pusta treść → dysk. Rename porównuje starą i nową treść, samo przeniesienie daje +0 −0. Git atrybuty diff stosowane dla śledzonych plików; bez external diff i textconv. |
+| R-10 | Kolumna 116 pt (54+8+54), monospace 12 pt, margines prawy 16 pt, zera szare. Duże liczby z wąską spacją; jeśli nie mieszczą się w polu, skrót wizualny z pełną liczbą w dymku. Zielony plus, czerwony minus; cały diff pliku, bez sumy dla grupy. |
+| R-11 | Binarny: „binarne”; konflikt: „konflikt”; niedostępny wynik: „—” z powodem. Przed pierwszym wynikiem „…”. Nie zamieniać błędów ani brakujących rekordów numstat na zera. |
+| R-12 | Unversioned: strumieniowe liczenie LF i końcowej linii bez LF; pusty plik 0. NUL w pierwszych 8000 bajtach oznacza binarny (jak domyślna heurystyka Git). Symlink liczony po treści dowiązania, bez czytania jego celu. Katalog/specjalny plik daje „—” z powodem; błędy poszczególnych plików nie blokują reszty listy. |
+| R-13 | Nazwa/folder skracane przed kolumną liczb; podpowiedź klawiszy przed liczbami tylko przy szerokości listy >= 650 pt, w węższej liście w dymku. Wiersz pliku 24 pt, separator 24 pt, nagłówek listy 28 pt. |
