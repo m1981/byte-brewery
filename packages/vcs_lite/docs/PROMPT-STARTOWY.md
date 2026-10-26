@@ -7,7 +7,7 @@ Zanim cokolwiek zrobisz, przeczytaj:
 4. docs/ui-reference/UI-REFERENCE.md oraz E-01*.html, E-01.png, E-03*.html, E-04-szukaj.html, E-05-diff.html: wiążący wzorzec wyglądu (E-03 strona diffu Markdown, E-04 okno „Szukaj w plikach”, E-05 diff lewo–prawo w przeglądarce).
 5. docs/PROPOZYCJA-szukaj.md: analiza „Szukaj w plikach” (wykonane, REQ-VCS-033).
 6. docs/RETROSPEKTYWA.md: jak pracowaliśmy i czego unikać.
-7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–17 i 20–23 potwierdzone, 18 i 19 czekają).
+7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–23 potwierdzone).
 
 Zasady pracy:
 - Po polsku, według docs/WSPOLPRACA.md.
@@ -31,6 +31,6 @@ Ustalenia techniczne:
 
 Następny krok według „Punktu wznowienia”:
 1. „Szukaj w plikach” (REQ-VCS-033) i przeglądarka zamiast Beyond Compare (REQ-VCS-023, REQ-VCS-034) gotowe i potwierdzone na ekranie (kroki 16, 6, 17).
-2. Adres zdalnego repo do schowka prawym przyciskiem na kafelku (REQ-VCS-035): gotowe, czeka na krok 19; niezatwierdzone. Commity na polecenie, najpierw specyfikacja. Katalog packages/vcs_lite/assets/ nie pochodzi od agenta; nie ruszaj bez pytania.
+2. Adres zdalnego repo do schowka prawym przyciskiem na kafelku (REQ-VCS-035): gotowe i potwierdzone (krok 19). Katalog packages/vcs_lite/assets/ nie pochodzi od agenta; nie ruszaj bez pytania.
 3. Panel „Historia” (DEC-VCS-116–119): plan kroków 0–7 i reguły H-01–H-49 w docs/PROPOZYCJA-historia.md (czytaj przed pracą nad historią); stan w „Punkcie wznowienia” 2d.
 4. Na przyszłość (bez terminu): własne okno podglądu plików (Q-VCS-056).
