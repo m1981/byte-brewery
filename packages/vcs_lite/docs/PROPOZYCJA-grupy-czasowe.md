@@ -1,6 +1,6 @@
 # vcs-lite — grupy plików według czasu ostatniego zapisu
 
-Status 2026-10-26: pilotaż odczytowy wykonany; kierunek grupowania przyjęty (DEC-VCS-126, Q-VCS-065): „d1 tak, pokaz makiete”. [Makieta P18](ui-mockups/P18-grupy-czasowe.html) do akceptacji wyglądu (Q-VCS-066). P17 — sortowanie i kolumna +/− — zaakceptowane osobno (DEC-VCS-125), przed wdrożeniem. Użytkownik: „D1 jest super a widziales jakies wzorce jak mozna by grupowac pliki zmienione w podobnym czasie przez agenta. Jak chcesz mozesz zrobic pilotaz pomiarowy w w tym repo i ../doc oraz ../iso-template-engine”. Lokalizacje potwierdzone: „Tak, docs i iso-template-agent”.
+Status 2026-10-26: pilotaż odczytowy wykonany; kierunek grupowania przyjęty (DEC-VCS-126, Q-VCS-065): „d1 tak, pokaz makiete”. Linie P18 ocenione pozytywnie; uproszczenie etykiet w [P19](ui-mockups/p19-etykiety-czasu.html) do wyboru (Q-VCS-066). P17 — sortowanie i kolumna +/− — zaakceptowane osobno (DEC-VCS-125), przed wdrożeniem. Użytkownik: „D1 jest super a widziales jakies wzorce jak mozna by grupowac pliki zmienione w podobnym czasie przez agenta. Jak chcesz mozesz zrobic pilotaz pomiarowy w w tym repo i ../doc oraz ../iso-template-engine”. Lokalizacje potwierdzone: „Tak, docs i iso-template-agent”.
 
 ## Wzorce i ich zastosowanie
 
@@ -74,3 +74,24 @@ Próg 5 min to kandydat do próby użytkowej, nie wynik optymalizacji: próbka n
 Dlaczego: pomaga przeglądać serie zapisów, zachowując rozróżnienie Staged / Changes / Unversioned. Jeśli nie: wdrożyć samo zaakceptowane P17. Interaktywny podgląd wyników porównuje progi i podział statusów; nie zastępuje makiety finalnego wyglądu separatorów. Makieta P18 w stylu P17 jest przygotowana. Po akceptacji wyglądu: REQ/DES/AT i TDD.
 
 Ograniczenia do uwzględnienia w specyfikacji: `mtime` przechowuje tylko ostatni zapis, kolejna edycja przenosi cały plik; checkout, kopiowanie i narzędzia mogą zmieniać lub zachować dawne czasy; Staged używa czasu pliku roboczego, nie czasu stage. Usunięte pliki zwykle nie mają `mtime`. Pełna kolumna +/− opisuje bieżący diff, a nie zmiany w danej serii zapisów.
+
+## P19 — mniej informacji w separatorach (do wyboru, Q-VCS-066)
+
+Użytkownik po obejrzeniu P18: „Same sekcje z ta linia sa super ale Jakos duzo szumu tutaj” oraz „Moze pokazujmy zamiast tych dat i czasu po porsut x min ago, x h ago”. Linie i podział zachowujemy; proponowane etykiety zmienia [P19](ui-mockups/p19-etykiety-czasu.html). To własne warianty projektowe agenta, nie wyniki dodatkowego badania wzorców.
+
+| Wariant | Etykiety i układ | Ocena agenta |
+|---|---|---|
+| **Czas względny — rekomendacja** | „5 min temu”, „2 h temu”; linia za tekstem jak w P18. Liczba plików tylko przy statusie Git i w dymku separatora. | Zachowuje czytelną hierarchię i pozwala ocenić świeżość jednym spojrzeniem. |
+| W nagłówku | Czas pierwszej grupy przeniesiony do nagłówka Git: „CHANGES 6 · 5 min temu”; pozostałe grupy z własną linią i czasem. | Mniej wierszy. Ryzyko: czas przy Changes może wyglądać jak czas wszystkich plików statusu; dlatego nie jest rekomendowany. |
+| Same linie | Granice grup bez etykiet; czas i zakres dostępne w dymkach. „Czas nieznany” zachowuje opis. | Najciszej, ale świeżość zmian wymaga najechania; słabszy do szybkiego przeglądu. |
+
+Wszystkie trzy pokazują te same przykładowe pliki, grupy i liczby +/−. Względem P18 starszą serię przesunięto w przykładowych danych o 2 godziny, aby pokazać także etykietę godzin. Makieta ma stały czas odniesienia 26.10.2026, 21:19:06; nie jest bieżącym pomiarem. Opcja projektu pozwala przywrócić licznik plików w separatorach dwóch wariantów tekstowych i porównać jego wpływ.
+
+Proponowane reguły po wyborze wariantu (do potwierdzenia):
+
+- Wiek grupy to czas od **najnowszego zapisu**, również w Staged — nie czas stage. Tooltip mówi „Ostatnie zapisy na dysku” i podaje pełny zakres, rok, sekundy oraz liczbę plików. Etykieta „5 min temu” nie oznacza, że każdy plik został zapisany dokładnie wtedy.
+- Mniej niż minuta: „przed chwilą”; mniej niż godzina: pełne minuty, np. „5 min temu”; mniej niż doba: pełne godziny, np. „2 h temu”; mniej niż tydzień: „1 dzień temu”, „3 dni temu”; starsze: data „18.10” (z rokiem, jeżeli inny niż bieżący). Minuty, godziny i dni zaokrąglane w dół. Dni oznaczają okresy 24 h, nie „wczoraj”.
+- „Czas nieznany” bez licznika; dokładny powód w podpowiedzi. Zapis z przyszłości: „czas z przyszłości”, bez ujemnego wieku. Zbliżone lub identyczne etykiety są dozwolone; nie łączą grup. Podział nadal według zaakceptowanych progów 5/15 minut.
+- Aktualizacja etykiet przy dotychczasowym odświeżeniu i powrocie fokusu, bez dodatkowego odpytywania Git. Makieta nie wprowadza zegara działającego w tle; sposób odświeżania samego tekstu podczas długiego oglądania wymaga ustalenia w projekcie implementacji.
+
+Nie usuwamy innych informacji z listy: folderów, liczników przy statusach Git ani zer w kolumnie +/−. Dzięki temu porównanie dotyczy wyłącznie separatorów.
