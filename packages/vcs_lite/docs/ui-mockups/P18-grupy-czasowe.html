@@ -1,0 +1,338 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>vcs-lite · P18 — grupy czasowe</title><style>
+  /* Tokens of E-01-lista.html and E-01-widok.html; additions are marked NEW. */
+  :root {
+    --bg: #ffffff; --chrome: #ececee; --sidebar: #f2f2f5; --line: #dedee3; --ink: #1d1d1f; --dim: #6e6e73;
+    --accent: #0a66d8; --accent-soft: #e3eefc; --row-hover: #f5f7fb; --mod: #b4690e; --conf: #c2302a;
+    --file-mod: #002daa; --file-add: #0c7216; --file-del: #6e6e73; --file-unv: #a92c3e;
+    --track: #e4e4e9; --track-line: #d4d4da; --thumb: #ffffff; --thumb-edge: #cfcfd5; --seg-ink: #3a3a40;
+    --lane-0: #0a66d8; --lane-1: #1f9e5a; --lane-2: #c56a12;                               /* NEW: graph lanes */
+    --ref-local: #e3eefc; --ref-local-ink: #0a4fae;                                        /* NEW: local branch */
+    --ref-remote: #eef0f3; --ref-remote-ink: #3a3a40;                                      /* NEW: remote branch */
+    --ref-tag: #fff3d6; --ref-tag-ink: #7a5300;                                            /* NEW: tag */
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9dbe0; font: 13px/1.4 var(--font); color: var(--ink);
+         padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1240px; margin: 0 auto; display: grid; gap: 26px; }
+  h1 { font-size: 20px; margin: 0; } .lead { color: #3a3a40; margin: 4px 0 0; max-width: 100ch; }
+  h2.sec { font-size: 16px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .pid { font: 600 12px var(--mono); color: #fff; background: #3a3a40; border-radius: 5px; padding: 1px 6px; }
+  .cap { color: #3a3a40; margin: 4px 0 10px; max-width: 100ch; }
+  .scroll { overflow-x: auto; } .inner { min-width: 1080px; }
+  .win { background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.12); }
+  .titlebar { height: 38px; background: var(--chrome); display: flex; align-items: center; padding: 0 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; } .r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
+  .title { flex: 1; text-align: center; font-weight: 600; color: #4a4a50; margin-right: 52px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fafafb; border-bottom: 1px solid var(--line); }
+  .repo-title { font-size: 15px; font-weight: 650; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; background: #eef0f3; color: #3a3a40; font-size: 12px; white-space: nowrap; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; border: 1px solid #c9c9cf; background: #fff; border-radius: 6px; padding: 3px 12px; color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .label { color: var(--dim); font-size: 12px; }
+  .seg { display: inline-flex; align-items: center; height: 24px; padding: 2px; border-radius: 12px; background: var(--track); box-shadow: inset 0 0 0 1px var(--track-line); }
+  .seg span { position: relative; height: 20px; padding: 0 12px; border-radius: 10px; display: inline-flex; align-items: center; font-size: 12px; color: var(--seg-ink); }
+  .seg span + span::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 1px; background: #c3c3ca; }
+  .seg span.on { background: var(--thumb); color: var(--ink); box-shadow: 0 0 0 0.5px var(--thumb-edge), 0 1px 2px rgba(0,0,0,.16); }
+  .seg span.on::before, .seg span.on + span::before { display: none; }
+  .body { display: grid; grid-template-columns: 230px 1fr; height: 300px; }
+  .right { display: flex; flex-direction: column; min-width: 0; }                                     /* NEW: files over commit */
+  .side-foot { margin-top: auto; padding: 8px; display: flex; }
+  .wire { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+  .wf { background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); padding: 10px; display: grid; gap: 4px; font-size: 12px; }
+  .wf .b { border-radius: 5px; display: grid; place-items: center; color: #3a3a40; padding: 4px; text-align: center; }
+  .wf .tb { background: #eef0f3; height: 26px; } .wf .sb { background: #e6e7ec; } .wf .fl { background: #f6f7f9; } .wf .cm { background: #e3eefc; height: 44px; }
+  .wf .hi { background: #e2f3e8; height: 90px; } .wf .st { background: #ececee; height: 20px; }
+  .wf .mid { display: grid; grid-template-columns: 30% 1fr; gap: 4px; height: 130px; } .wf .col { display: grid; grid-template-rows: 1fr 44px; gap: 4px; }
+  .wf .t { font-weight: 650; font-size: 13px; color: var(--ink); margin-bottom: 4px; }
+  .sidebar { background: var(--sidebar); border-right: 1px solid var(--line); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .side-h { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--dim); padding: 6px 8px; text-transform: uppercase; }
+  .repo { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 7px; }
+  .repo.sel { background: var(--accent); color: #fff; } .repo.sel .branch { color: #dbe8fb; }
+  .repo .name { font-weight: 600; } .repo .branch { font-size: 11.5px; color: var(--dim); }
+  .badge { min-width: 22px; text-align: center; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 1px 7px; background: #dfe1e6; color: #3a3a40; }
+  .repo.sel .badge { background: rgba(255,255,255,.25); color: #fff; }
+  .state { width: 9px; height: 9px; border-radius: 50%; } .s-changes { background: var(--mod); } .s-clean { background: #9fd3ad; }
+  .files { padding: 6px 0 0; overflow: hidden; flex: 1; }
+  .group { height: 24px; padding: 6px 16px 3px; font-size: 11px; line-height: 15px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); display: flex; gap: 8px; }
+  .group .n { font-weight: 500; letter-spacing: 0; }
+  .row { height: 24px; display: flex; align-items: center; padding: 0 16px 0 28px; white-space: nowrap; }
+  .M { color: var(--file-mod); } .A { color: var(--file-add); } .D { color: var(--file-del); text-decoration: line-through; } .U { color: var(--file-unv); }
+  .fd { color: var(--dim); font-size: 12px; margin-left: 8px; }
+  .commit { border-top: 1px solid var(--line); background: #fafafb; padding: 10px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+  .msgbox { border: 1px solid #c9c9cf; border-radius: 8px; padding: 8px 10px; height: 48px; color: #a0a0a6; background: #fff; }
+  .actions { display: flex; flex-direction: column; gap: 6px; }
+  .status { display: flex; gap: 14px; align-items: center; padding: 4px 14px; font-size: 11.5px; color: var(--dim); border-top: 1px solid var(--line); background: var(--chrome); }
+  .tool { font-size: 11.5px; padding: 1px 8px; border-radius: 5px; color: #3a3a40; }                 /* NEW: panel toggle */
+  .tool.on { background: #d6d7dc; color: var(--ink); }
+  kbd { font: 11px var(--mono); background: #f0f0f3; border: 1px solid #d5d5da; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+
+  /* NEW: history panel */
+  .hist { border-top: 1px solid var(--line); background: var(--bg); position: relative; }
+  .grip { position: absolute; top: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+  .grip::after { content: ""; position: absolute; left: 50%; top: 2px; width: 36px; margin-left: -18px; height: 3px; border-radius: 2px; background: #cfcfd5; }
+  .hhead { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: #fafafb; }
+  .hhead .t { font-weight: 650; }
+  .search { display: inline-flex; align-items: center; gap: 6px; width: 300px; height: 24px; padding: 0 8px; border: 1px solid #c9c9cf; border-radius: 6px; background: #fff; color: #a0a0a6; font-size: 12px; }
+  .close { color: var(--dim); font-size: 14px; padding: 0 4px; }
+  .hbody { display: grid; grid-template-columns: 62% 38%; height: 264px; }
+  .log { position: relative; overflow: hidden; border-right: 1px solid var(--line); }
+  .lr { height: 24px; display: grid; grid-template-columns: 52px 1fr 120px 104px; align-items: center; padding-right: 12px; white-space: nowrap; }
+  .lr.sel { background: var(--accent-soft); }
+  .lr .s { overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+  .lr .a, .lr .d { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .lr.out .subj { font-weight: 650; }                                                                   /* unpushed */
+  .up { color: var(--accent); font-weight: 700; font-size: 12px; }
+  .ref { font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px; flex: none; }
+  .ref.l { background: var(--ref-local); color: var(--ref-local-ink); font-weight: 600; }
+  .ref.r { background: var(--ref-remote); color: var(--ref-remote-ink); }
+  .ref.t { background: var(--ref-tag); color: var(--ref-tag-ink); }
+  .graph { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .more { height: 24px; padding-left: 52px; display: flex; align-items: center; color: var(--dim); font-size: 12px; }
+  .det { overflow: hidden; padding: 10px 14px; display: grid; align-content: start; gap: 4px; }
+  .det .h { font-weight: 650; font-size: 13.5px; }
+  .det .meta { color: var(--dim); font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .det .meta code { color: var(--ink); }
+  .det .msg { white-space: pre-wrap; font-size: 12.5px; color: #3a3a40; margin: 4px 0 6px; }
+  .det .group { padding: 6px 0 3px; }
+  .det .row { padding-left: 0; }
+  .det .row.hover { background: var(--row-hover); margin: 0 -14px; padding: 0 14px; }
+  .hint { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+  .link { color: var(--accent); }
+  code { font: 12px var(--mono); }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { background: #fafafb; border-radius: 10px; padding: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .card p { margin: 8px 0 0; color: var(--dim); font-size: 12px; }
+  .mini { background: #fff; border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.1); overflow: hidden; }
+  .empty { height: 90px; display: grid; place-items: center; color: var(--dim); text-align: center; font-size: 12.5px; }
+  .notes { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .notes h2 { font-size: 15px; margin: 0 0 8px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #fafafb; }
+
+  .page { max-width: 1120px; }
+  .body { height: 464px; }
+  .files { overflow: auto; padding: 0; }
+  .file-list { container-type: inline-size; }
+  .list-heading { height: 28px; display:flex; align-items:center; justify-content:space-between; padding:0 16px 0 28px; color:var(--dim); font-size:11.5px; border-bottom:1px solid var(--line); background:#fafafb; }
+  .count-label { width:116px; text-align:right; }
+  .file-row { height:24px; display:flex; align-items:center; padding:0 16px 0 28px; gap:16px; white-space:nowrap; }
+  .file-row.selected { background:var(--accent-soft); }
+  .file-row:hover:not(.selected) { background:var(--row-hover); }
+  .filename { display:flex; align-items:baseline; gap:8px; min-width:0; flex:1; overflow:hidden; }
+  .filename > span:first-child { flex:0 1 auto; overflow:hidden; text-overflow:ellipsis; }
+  .folder { color:var(--dim); font-size:12px; min-width:0; flex:0 100000 auto; overflow:hidden; text-overflow:ellipsis; }
+  .counts { width:116px; flex:none; display:grid; grid-template-columns:54px 54px; gap:8px; text-align:right; font:12px var(--mono); font-variant-numeric:tabular-nums; }
+  .plus { color:#1f7a3a; } .minus { color:#c2302a; } .zero, .special { color:var(--dim); }
+  .special { grid-column:1 / -1; font:12px var(--font); }
+  .file-hint { display:none; flex:none; color:var(--dim); font-size:11.5px; }
+  .file-row:hover .file-hint { display:inline; }
+  @container (max-width:650px) { .file-hint { font-size:11px; } .file-row:hover .file-hint { display:none; } }
+  .reason { grid-column:1 / -1; color:var(--dim); font-size:12px; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .pane { background:white; border-radius:10px; overflow:hidden; box-shadow:0 0 0 1px #c9c9cf; padding:6px 0 10px; }
+  .pane .list-heading { margin-top:-6px; }
+  .pane .filename .folder { display:none; }
+  .caption { margin:8px 0 0; color:var(--dim); font-size:12px; }
+  .notes td:first-child { width:220px; }
+  .notes p { color:var(--dim); }
+  @media(max-width:760px) { .pair { grid-template-columns:1fr; } }
+
+  #vcs-p18-preview { padding: 16px 0; }
+  #vcs-p18 {
+    color-scheme: light dark;
+    --p18-bg: light-dark(#ffffff, #202024);
+    --p18-chrome: light-dark(#f5f5f7, #2a2a2f);
+    --p18-ink: light-dark(#1d1d1f, #eeeeef);
+    --p18-dim: light-dark(#6e6e73, #aaaab2);
+    --p18-line: light-dark(#dedee3, #43434a);
+    --p18-selected: light-dark(#e3eefc, #253d5a);
+    --p18-hover: light-dark(#f5f7fb, #292e37);
+    --p18-mod: light-dark(#002daa, #88adff);
+    --p18-unv: light-dark(#a92c3e, #f299a8);
+    --p18-plus: light-dark(#1f7a3a, #85d39b);
+    --p18-minus: light-dark(#c2302a, #ff9390);
+    --p18-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --p18-mono: ui-monospace, "SF Mono", Menlo, monospace;
+    font: 13px/1.4 var(--p18-font); color: var(--p18-ink);
+    background: var(--p18-bg); border: 1px solid var(--p18-line); border-radius: 9px;
+    overflow: hidden; container-type: inline-size;
+  }
+  #vcs-p18 * { box-sizing: border-box; }
+  #vcs-p18 .p18-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 16px; background: var(--p18-chrome); border-bottom: 1px solid var(--p18-line); }
+  #vcs-p18 .p18-repo { font-weight: 600; }
+  #vcs-p18 .p18-view { margin-left: auto; color: var(--p18-dim); font-size: 12px; }
+  #vcs-p18 .p18-heading { height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px 0 28px; color: var(--p18-dim); font-size: 11.5px; border-bottom: 1px solid var(--p18-line); }
+  #vcs-p18 .p18-heading span:last-child { flex: none; width: 116px; text-align: right; }
+  #vcs-p18 .p18-group { margin: 0; padding: 6px 16px 3px; height: 26px; font-size: 11px; line-height: 17px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--p18-dim); }
+  #vcs-p18 .p18-group span { margin-left: 8px; font-weight: 400; letter-spacing: 0; }
+  #vcs-p18 .p18-time { min-height: 24px; display: flex; align-items: center; gap: 10px; padding: 3px 16px 3px 28px; color: var(--p18-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  #vcs-p18 .p18-time::after { content: ''; flex: 1; border-bottom: 1px solid var(--p18-line); }
+  #vcs-p18 .p18-file { width: 100%; height: 24px; display: flex; align-items: center; gap: 16px; padding: 0 16px 0 28px; border: 0; border-radius: 0; background: var(--p18-bg); text-align: left; font: inherit; color: inherit; }
+  #vcs-p18 .p18-file:hover { background: var(--p18-hover); }
+  #vcs-p18 .p18-file[aria-pressed="true"] { background: var(--p18-selected); }
+  #vcs-p18 .p18-filename { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+  #vcs-p18 .p18-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--p18-mod); }
+  #vcs-p18 .p18-folder { color: var(--p18-dim); font-size: 12px; min-width: 0; flex: 0 100000 auto; overflow: hidden; text-overflow: ellipsis; }
+  #vcs-p18 .p18-unversioned .p18-name { color: var(--p18-unv); }
+  #vcs-p18 .p18-deleted .p18-name { color: var(--p18-dim); text-decoration: line-through; }
+  #vcs-p18 .p18-counts { width: 116px; flex: none; display: grid; grid-template-columns: 54px 54px; gap: 8px; text-align: right; font: 12px var(--p18-mono); font-variant-numeric: tabular-nums; }
+  #vcs-p18 .p18-plus { color: var(--p18-plus); }
+  #vcs-p18 .p18-minus { color: var(--p18-minus); }
+  #vcs-p18 .p18-zero { color: var(--p18-dim); }
+  #vcs-p18 .p18-hint { display: none; flex: none; color: var(--p18-dim); font-size: 11.5px; }
+  #vcs-p18 .p18-file:hover .p18-hint { display: inline; }
+  #vcs-p18 .p18-bottom { height: 8px; }
+  @container (max-width: 650px) { #vcs-p18 .p18-file:hover .p18-hint { display: none; } }
+  @container (max-width: 400px) {
+    #vcs-p18 .p18-folder { display: none; }
+    #vcs-p18 .p18-toolbar { gap: 6px; }
+  }
+  @media (pointer: coarse) { #vcs-p18 .p18-file { height: 44px; } }
+
+#vcs-p18 { color-scheme: light; border: 0; border-radius: 0; flex: 1; min-height: 0; overflow: auto; }
+.body { height: 570px; }
+</style></head><body><div class="page">
+<header><h1>vcs-lite — grupy ostatnich zapisów</h1><p class="lead">P18 · Wygląd do akceptacji. Kierunek grupowania przyjęty (DEC-VCS-126). Dane przykładowe — czasy i liczby linii służą pokazaniu układu.</p></header>
+<section><h2 class="sec"><span class="pid">P18a</span> Separatory w obecnym oknie</h2><p class="cap">Szare nagłówki czasu rozdzielają serie zapisów wewnątrz Staged, Changes i Unversioned. Najedź na separator, aby zobaczyć dokładne czasy. Kliknięcie pliku pokazuje zaznaczenie; operacje Git nie są wykonywane.</p><div class="scroll"><div class="win inner">
+      <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">vcs-lite — byte-brewery</span></div>
+      <div class="toolbar">
+        <span class="repo-title">byte-brewery</span>
+        <span class="chip">⎇ main → origin/main · ↑2</span>
+        <span class="spacer"></span>
+        <span class="label">Widok</span><span class="seg"><span class="on">Zmiany</span><span>Foldery</span><span>Projekt</span></span>
+        <span class="btn">⇣ Pull</span><span class="btn">⟳ Odśwież</span>
+      </div>
+      <div class="body">
+        <aside class="sidebar">
+          <div class="side-h">Repozytoria</div>
+          <div class="repo sel"><span class="state s-changes"></span><span><span class="name">byte-brewery</span><br><span class="branch">main · ↑2 ↓0</span></span><span class="badge">10</span></div>
+          <div class="repo"><span class="state s-clean"></span><span><span class="name">kitchen-crm</span><br><span class="branch">main</span></span><span></span></div>
+          <div class="repo"><span class="state s-clean"></span><span><span class="name">mychat</span><br><span class="branch">develop</span></span><span></span></div>
+          <div class="side-foot"><span class="btn">⚙ Repozytoria…</span></div>
+        </aside>
+        <div class="right">
+        <section id="vcs-p18" aria-label="Makieta P18: separatory czasu w widoku Zmiany">
+  <div class="p18-heading"><span>Ostatnio zmienione ↓</span><span>Linie + / −</span></div>
+
+  <h3 class="p18-group">Staged <span>2</span></h3>
+  <div class="p18-time" title="Ostatnie zapisy na dysku: 26.10.2026, 21:11:02–21:14:06. Nowa grupa po przerwie ponad 5 minut lub rozpiętości ponad 15 minut.">26.10 · 21:11–21:14 · 2 pliki</div>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="false" title="src/vcs_lite/ui/history_panel.py · zapis 26.10.2026 21:14:06 · Staged: HEAD → indeks">
+    <span class="p18-filename"><span class="p18-name">history_panel.py</span><span class="p18-folder">src/vcs_lite/ui</span></span><span class="p18-hint">spacja unstage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+18</span><span class="p18-minus">−6</span></span>
+  </button>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="false" title="docs/DESIGN.md · zapis 26.10.2026 21:11:02 · Staged: HEAD → indeks">
+    <span class="p18-filename"><span class="p18-name">DESIGN.md</span><span class="p18-folder">docs</span></span><span class="p18-hint">spacja unstage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+7</span><span class="p18-minus p18-zero">−0</span></span>
+  </button>
+
+  <h3 class="p18-group">Changes <span>6</span></h3>
+  <div class="p18-time" title="Ostatnie zapisy na dysku: 26.10.2026, 21:10:18–21:14:06. Nowa grupa po przerwie ponad 5 minut lub rozpiętości ponad 15 minut.">26.10 · 21:10–21:14 · 3 pliki</div>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="false" title="src/vcs_lite/ui/history_panel.py · zapis 26.10.2026 21:14:06 · Changes: indeks → dysk">
+    <span class="p18-filename"><span class="p18-name">history_panel.py</span><span class="p18-folder">src/vcs_lite/ui</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+3</span><span class="p18-minus">−1</span></span>
+  </button>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="true" title="docs/SPEC.md · zapis 26.10.2026 21:12:45 · Changes: indeks → dysk">
+    <span class="p18-filename"><span class="p18-name">SPEC.md</span><span class="p18-folder">docs</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+24</span><span class="p18-minus">−8</span></span>
+  </button>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="false" title="src/vcs_lite/ui/file_list.py · zapis 26.10.2026 21:10:18 · Changes: indeks → dysk">
+    <span class="p18-filename"><span class="p18-name">file_list.py</span><span class="p18-folder">src/vcs_lite/ui</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+42</span><span class="p18-minus">−17</span></span>
+  </button>
+
+  <div class="p18-time" title="Ostatnie zapisy na dysku: 26.10.2026, 20:58:12–21:02:03. Przerwa do nowszej grupy: 8 minut 15 sekund.">26.10 · 20:58–21:02 · 2 pliki</div>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="false" title="README.md · zapis 26.10.2026 21:02:03 · Changes: indeks → dysk">
+    <span class="p18-filename"><span class="p18-name">README.md</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+6</span><span class="p18-minus">−2</span></span>
+  </button>
+  <button type="button" class="p18-file cursor-interaction" aria-pressed="false" title="docs/TRACE.md · zapis 26.10.2026 20:58:12 · Changes: indeks → dysk">
+    <span class="p18-filename"><span class="p18-name">TRACE.md</span><span class="p18-folder">docs</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+12</span><span class="p18-minus">−4</span></span>
+  </button>
+
+  <div class="p18-time" title="Czas zapisu niedostępny: plik usunięty. Ta sekcja pozostaje na końcu Changes.">Czas nieznany · 1 plik</div>
+  <button type="button" class="p18-file p18-deleted cursor-interaction" aria-pressed="false" title="src/legacy.py · plik usunięty, czas zapisu nieznany · Changes: indeks → dysk">
+    <span class="p18-filename"><span class="p18-name">legacy.py</span><span class="p18-folder">src</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus p18-zero">+0</span><span class="p18-minus">−84</span></span>
+  </button>
+
+  <h3 class="p18-group">Unversioned <span>2</span></h3>
+  <div class="p18-time" title="Ostatnie zapisy na dysku: 26.10.2026, 21:11:08–21:12:11. Grupowanie odbywa się osobno w Unversioned.">26.10 · 21:11–21:12 · 2 pliki</div>
+  <button type="button" class="p18-file p18-unversioned cursor-interaction" aria-pressed="false" title="docs/notes.md · zapis 26.10.2026 21:12:11 · Unversioned: wszystkie linie dodane">
+    <span class="p18-filename"><span class="p18-name">notes.md</span><span class="p18-folder">docs</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+36</span><span class="p18-minus p18-zero">−0</span></span>
+  </button>
+  <button type="button" class="p18-file p18-unversioned cursor-interaction" aria-pressed="false" title="tests/ui/test_file_order.py · zapis 26.10.2026 21:11:08 · Unversioned: wszystkie linie dodane">
+    <span class="p18-filename"><span class="p18-name">test_file_order.py</span><span class="p18-folder">tests/ui</span></span><span class="p18-hint">spacja stage · dwuklik porównaj</span><span class="p18-counts"><span class="p18-plus">+68</span><span class="p18-minus p18-zero">−0</span></span>
+  </button>
+  <div class="p18-bottom"></div>
+</section>
+        <div class="commit">
+          <div class="msgbox">Opis zmian…   ⌘↩ commit · ⌘⇧↩ commit i push</div>
+          <div class="actions"><span class="btn primary" style="opacity:.45">Commit do byte-brewery</span><span class="btn" style="opacity:.45">Commit &amp; Push</span></div>
+        <div class="reason">ⓘ Wpisz wiadomość commita.</div></div>
+        </div>
+      </div>
+
+      <div class="hist">
+        <div class="grip" title="Przeciągnij, żeby zmienić wysokość historii"></div>
+        <div class="hhead">
+          <span class="t">Historia</span>
+          <span class="search">⌕ Filtr: wiadomość, hash albo autor</span>
+          <span class="label">Gałęzie</span><span class="seg"><span class="on">Wszystkie</span><span>Bieżąca</span></span>
+          <span class="spacer"></span>
+          <span class="label">1 248 commitów</span>
+        </div>
+        <div class="hbody">
+          <div class="log">
+            <svg class="graph" width="52" height="240" viewBox="0 0 52 240">
+              <path d="M12 12 V228" stroke="var(--lane-0)" stroke-width="2" fill="none"/>
+              <path d="M12 60 C12 74 28 70 28 84 V132 C28 146 12 166 12 180" stroke="var(--lane-1)" stroke-width="2" fill="none"/>
+              <g fill="var(--lane-0)"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="36" r="4"/><circle cx="12" cy="84" r="4"/><circle cx="12" cy="156" r="4"/><circle cx="12" cy="180" r="4"/><circle cx="12" cy="204" r="4"/><circle cx="12" cy="228" r="4"/></g>
+              <circle cx="12" cy="60" r="4" fill="#fff" stroke="var(--lane-0)" stroke-width="2"/>
+              <g fill="var(--lane-1)"><circle cx="28" cy="108" r="5"/><circle cx="28" cy="132" r="4"/></g>
+            </svg>
+            <div class="lr out"><span></span><span class="s"><span class="up" title="Niewypchnięty">↑</span><span class="ref l">main</span><span class="subj">Add search in files and open files in the browser</span></span><span class="a">Michal</span><span class="d">dziś 14:05</span></div>
+            <div class="lr out"><span></span><span class="s"><span class="up" title="Niewypchnięty">↑</span><span class="subj">Specify search in files</span></span><span class="a">Michal</span><span class="d">dziś 11:40</span></div>
+            <div class="lr"><span></span><span class="s"><span class="ref r">origin/main</span><span class="subj">Merge branch 'feature/log'</span></span><span class="a">Michal</span><span class="d">wczoraj 18:22</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Fix sidebar scrolling on short lists</span></span><span class="a">Michal</span><span class="d">wczoraj 16:03</span></div>
+            <div class="lr sel"><span></span><span class="s"><span class="ref l">feature/log</span><span class="subj">Draw the commit graph</span></span><span class="a">Michal</span><span class="d">wczoraj 15:47</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Read git log into commit values</span></span><span class="a">Michal</span><span class="d">wczoraj 12:10</span></div>
+            <div class="lr"><span></span><span class="s"><span class="ref t">v0.3</span><span class="subj">Use the close-up logo and keep the previous one</span></span><span class="a">Michal</span><span class="d">24.10.2026</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Build vcs-lite.app with the logo</span></span><span class="a">Michal</span><span class="d">23.10.2026</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Specify vcs-lite as a macOS application</span></span><span class="a">Michal</span><span class="d">23.10.2026</span></div>
+            <div class="lr"><span></span><span class="s"><span class="subj">Add search in files</span></span><span class="a">Ola Nowak</span><span class="d">22.10.2026</span></div>
+            <div class="more">…kolejne 500 wczytują się po przewinięciu do końca</div>
+          </div>
+          <div class="det">
+            <div class="h">Draw the commit graph</div>
+            <div class="meta"><code>3f9a2c1</code><span>Michal &lt;michal@example.com&gt;</span><span>wczoraj 15:47</span><span>rodzic <span class="link">8be0d47</span></span></div>
+            <div class="msg">Lanes are assigned in core/graph.py without Tk;
+the canvas draws only the visible rows.</div>
+            <div class="group">Pliki <span class="n">4</span></div>
+            <div class="row"><span class="A">graph.py</span><span class="fd">src/vcs_lite/core</span></div>
+            <div class="row hover"><span class="A">history_panel.py</span><span class="fd">src/vcs_lite/ui</span><span class="hint"><kbd>dwuklik</kbd> porównaj</span></div>
+            <div class="row"><span class="M">model.py</span><span class="fd">src/vcs_lite/app</span></div>
+            <div class="row"><span class="A">test_graph.py</span><span class="fd">tests/core</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="status"><span>Odświeżono 21:15</span><span>Dwuklik: porównanie w przeglądarce</span><span><kbd>⌘1</kbd>–<kbd>⌘9</kbd> wybór repo</span></div>
+    </div></div></section>
+<section class="notes"><h2>P18 — szczegóły wyglądu do akceptacji</h2>
+<div class="tablewrap"><table><thead><tr><th>Element</th><th>Propozycja agenta</th></tr></thead><tbody>
+<tr><td>Hierarchia</td><td>Dotychczasowy nagłówek Git, pod nim szary separator czasu, pod nim pliki. Separator ma tekst 12 pt, wysokość 24 pt i delikatną kreskę 1 pt. Wcięcie 28 pt, takie jak nazwy plików; bez dodatkowego poziomu wcięcia.</td></tr>
+<tr><td>Etykieta</td><td>Data, zakres minut i liczba plików, np. „26.10 · 21:10–21:14 · 3 pliki”. Pojedynczy czas: „26.10 · 21:14 · 1 plik”. Rok widoczny dla lat innych niż bieżący. Przy przejściu przez północ data po obu stronach zakresu. Sekundy i pełny rok w dymku.</td></tr>
+<tr><td>Podział</td><td>Osobno w każdym statusie Git; najnowsza grupa na górze. Nowa grupa przy przerwie ponad 5 min albo rozpiętości ponad 15 min. „Czas nieznany” na końcu. Pusty Staged zachowuje dotychczasową podpowiedź, bez pustego separatora.</td></tr>
+<tr><td>Zachowanie separatora</td><td>Stały nagłówek, bez zwijania, zaznaczania ani działania po spacji; klawiatura przechodzi między plikami. Brak trójkąta sugerującego drzewo. Nawet jedna grupa ma etykietę czasu.</td></tr>
+<tr><td>Kolumna +/−</td><td>Jak w P17: 116 pt, wyrównana do prawej, wiersz pliku 24 pt. Liczby dotyczą całego bieżącego diffu pliku; separator nie ma sumy. Ten sam plik może być w Staged i Changes z różnymi liczbami.</td></tr>
+<tr><td>Wąska lista</td><td>Podpowiedzi w dymkach poniżej 650 pt. Nazwy mają pierwszeństwo przed folderami, liczby zachowują miejsce. Długi zakres dat może zająć dwa wiersze separatora, żeby żadna data nie zniknęła.</td></tr>
+</tbody></table></div>
+<p>Zakres i progi przyjęte: DEC-VCS-126. Do zatwierdzenia pozostaje wygląd P18 (Q-VCS-066). P17 pozostaje podstawą sortowania i liczenia linii. Makieta nie zmienia aplikacji.</p>
+</section>
+</div><script>
+(() => {
+  const root = document.getElementById('vcs-p18');
+  const rows = Array.from(root.querySelectorAll('.p18-file'));
+  rows.forEach(row => row.addEventListener('click', () => {
+    rows.forEach(other => other.setAttribute('aria-pressed', String(other === row)));
+  }));
+})();
+</script></body></html>

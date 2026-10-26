@@ -1,6 +1,6 @@
 # vcs-lite — grupy plików według czasu ostatniego zapisu
 
-Status 2026-10-26: pilotaż odczytowy wykonany; propozycja grupowania do oceny (Q-VCS-065). P17 — sortowanie i kolumna +/− — zaakceptowane osobno (DEC-VCS-125), przed wdrożeniem. Użytkownik: „D1 jest super a widziales jakies wzorce jak mozna by grupowac pliki zmienione w podobnym czasie przez agenta. Jak chcesz mozesz zrobic pilotaz pomiarowy w w tym repo i ../doc oraz ../iso-template-engine”. Lokalizacje potwierdzone: „Tak, docs i iso-template-agent”.
+Status 2026-10-26: pilotaż odczytowy wykonany; kierunek grupowania przyjęty (DEC-VCS-126, Q-VCS-065): „d1 tak, pokaz makiete”. [Makieta P18](ui-mockups/P18-grupy-czasowe.html) do akceptacji wyglądu (Q-VCS-066). P17 — sortowanie i kolumna +/− — zaakceptowane osobno (DEC-VCS-125), przed wdrożeniem. Użytkownik: „D1 jest super a widziales jakies wzorce jak mozna by grupowac pliki zmienione w podobnym czasie przez agenta. Jak chcesz mozesz zrobic pilotaz pomiarowy w w tym repo i ../doc oraz ../iso-template-engine”. Lokalizacje potwierdzone: „Tak, docs i iso-template-agent”.
 
 ## Wzorce i ich zastosowanie
 
@@ -65,12 +65,12 @@ W `docs` 348 z 394 plików leży w jednym katalogu eksportu `chatgpt-…` i ma c
 
 To pojedynczy pomiar, nie benchmark ani wynik odświeżania UI. Największy koszt to odczyty metadanych. Indeksy wszystkich 3 repo miały identyczne sumy przed i po. Pilotaż nie uruchamiał zapisujących poleceń Git ani nie zmieniał badanych plików.
 
-## Rekomendacja D1 — do decyzji
+## Rekomendacja D1 — przyjęta, DEC-VCS-126
 
 Rozwinąć P17 o **delikatne separatory czasu wewnątrz obecnych grup Git**, domyślnie rozwinięte. Początkowy próg: przerwa większa niż 5 min. Nagłówek np. „26.10 · 20:58–21:02 · 4 pliki”; w podpowiedzi dokładne sekundy i reguła podziału. Nie nazywać grup zadaniami ani agentami. Przy jednym pliku nagłówek pokazuje pojedynczy czas. Brak czasu: ostatnia sekcja „Czas nieznany”. Kolumna +/− pozostaje przy plikach według zaakceptowanego P17, bez sumy sugerującej diff tylko z danego okresu.
 
 Próg 5 min to kandydat do próby użytkowej, nie wynik optymalizacji: próbka nie ma oznaczonych prawdziwych sesji. Żeby uniknąć wielogodzinnych grup połączonych łańcuchem krótkich przerw, proponowany dodatkowy limit rozpiętości wynosi 15 min, liczony od najnowszego pliku grupy. Separator niczego nie stage'uje ani nie zmienia wyboru plików. Obliczenia przy dotychczasowym odświeżeniu; bez ciągłego obserwatora.
 
-Dlaczego: pomaga przeglądać serie zapisów, zachowując rozróżnienie Staged / Changes / Unversioned. Jeśli nie: wdrożyć samo zaakceptowane P17. Interaktywny podgląd wyników porównuje progi i podział statusów; nie zastępuje makiety finalnego wyglądu separatorów. Po zgodzie na zakres: makieta P18 w stylu P17, potem REQ/DES/AT i TDD.
+Dlaczego: pomaga przeglądać serie zapisów, zachowując rozróżnienie Staged / Changes / Unversioned. Jeśli nie: wdrożyć samo zaakceptowane P17. Interaktywny podgląd wyników porównuje progi i podział statusów; nie zastępuje makiety finalnego wyglądu separatorów. Makieta P18 w stylu P17 jest przygotowana. Po akceptacji wyglądu: REQ/DES/AT i TDD.
 
 Ograniczenia do uwzględnienia w specyfikacji: `mtime` przechowuje tylko ostatni zapis, kolejna edycja przenosi cały plik; checkout, kopiowanie i narzędzia mogą zmieniać lub zachować dawne czasy; Staged używa czasu pliku roboczego, nie czasu stage. Usunięte pliki zwykle nie mają `mtime`. Pełna kolumna +/− opisuje bieżący diff, a nie zmiany w danej serii zapisów.
