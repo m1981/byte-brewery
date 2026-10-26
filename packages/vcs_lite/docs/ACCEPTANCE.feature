@@ -582,3 +582,13 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And liczby są wyrównane w stałej prawej kolumnie także przy długich nazwach i wąskiej liście
     And widoki Foldery i Projekt zachowują dotychczasowy układ
 
+
+  @AT_VCS_067 @proposal @REQ_VCS_105 @VER_VCS_022
+  Scenario: Widoczne okno zachowuje responsywność przy 3000 zmienionych plików
+    Given repo tymczasowe z 3000 zmienionych plików i historią 4000 commitów
+    And rzeczywiste okno jest widoczne i utrzymywane topmost przez cały pomiar
+    When użytkownik najeżdża na wiersze, przewija do środka i końca, wybiera plik i używa strzałek
+    And zmienia widoki i rozmiar okna oraz odświeża repo
+    Then wszystkie 3000 plików są dostępne, wybór i kolumna liczb pozostają poprawne
+    And na Canvas są tylko obiekty widocznego obszaru z niewielkim zapasem
+    And interakcje i przerwy pętli zdarzeń mieszczą się w 0,5 s, odświeżenie w 2 s, pamięć w 100 MiB
