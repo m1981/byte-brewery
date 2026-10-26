@@ -64,7 +64,7 @@ def test_des_vcs_045_name_first_then_folder_or_old_name(shown):
 def test_des_vcs_045_rows_are_24_points_from_x_28(shown):
     window, _ = shown
     first = window.file_list.rows()[0]
-    assert (first.top, first.height, first.x) == (6 + 24, 24, 28)
+    assert (first.top, first.height, first.x) == (6 + 28 + 24 + 24, 24, 28)
 
 
 def test_des_vcs_024_hint_shows_only_on_the_row_under_the_pointer(shown):
@@ -176,7 +176,7 @@ def test_des_vcs_045_empty_staged_keeps_its_header_and_a_grey_hint(nothing_stage
     assert {c.itemcget(i, "fill") for i in texts if c.itemcget(i, "text") != "spacja"} == {"#6e6e73"}
     assert min(c.coords(i)[0] for i in texts) == 28
     first = fl.rows()[0]
-    assert first.key == (Group.CHANGES, "README.md") and first.top == 6 + 24 + 24 + 24  # header, hint, header
+    assert first.key == (Group.CHANGES, "README.md") and first.top == 6 + 28 + 24 + 24 + 24 + 24  # heading, Staged, hint, Changes, time
 
 
 def test_des_vcs_045_the_hint_row_cannot_be_selected_or_hovered(nothing_staged):

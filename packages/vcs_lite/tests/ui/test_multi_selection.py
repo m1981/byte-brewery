@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import time
 
+import os
+
 import pytest
 from test_main_window import root, world  # noqa: F401 - shared fixtures
 
@@ -32,6 +34,9 @@ def listed(root, world):  # noqa: F811
         r.write(name, "2\n")
     for i in range(1, 7):
         r.write(f"u{i}.txt", "u\n")
+    # Equal mtimes make the fixture order deterministic (P19 breaks ties by path).
+    for path in r.path.rglob("*.txt"):
+        os.utime(path, ns=(1700000000000000000, 1700000000000000000))
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")

@@ -6,6 +6,8 @@ their commands; posting the menu is checked by hand.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from test_main_window import conflicted, root, world  # noqa: F401 - shared fixtures
 
@@ -25,6 +27,9 @@ def listed(root, world):  # noqa: F811
     r.write("c1.txt", "2\n"); r.write("s1.txt", "2\n"); r.git("add", "s1.txt")
     for name in ("u1.txt", "u2.txt", "u3.txt"):
         r.write(name, "u\n")
+    # Equal mtimes preserve the documented fixture order under P19.
+    for path in r.path.glob("*.txt"):
+        os.utime(path, ns=(1700000000000000000, 1700000000000000000))
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")

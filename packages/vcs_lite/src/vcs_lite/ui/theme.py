@@ -4,7 +4,7 @@ Source: docs/ui-reference/UI-REFERENCE.md (sections 1, 2, 3, 8) and E-01.html.
 Approximations allowed by section 6: sizes rounded to whole points, weights >= 550 drawn bold,
 no letter spacing, transparency replaced by computed colours.
 
-Trace: DES-VCS-042, DES-VCS-045, DES-VCS-057, DEC-VCS-097, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068, DEC-VCS-089, DEC-VCS-092
+Trace: DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-042, DES-VCS-045, DES-VCS-057, DEC-VCS-097, DEC-VCS-045, DEC-VCS-047, DEC-VCS-049, DEC-VCS-052, DEC-VCS-053, DEC-VCS-068, DEC-VCS-089, DEC-VCS-092
 """
 
 from __future__ import annotations
@@ -97,6 +97,8 @@ TYPE = {
     "file_name": Type(13, color=COLORS["file_mod"]),         # coloured by status (section 9)
     "file_name_del": Type(13, color=COLORS["file_del"], overstrike=True),
     "file_folder": Type(12, color=COLORS["dim"]),
+    "line_count": Type(12, mono=True),
+    "time_group": Type(12, color=COLORS["dim"]),
     "folder_name": Type(13),
     "folder_count": Type(12, color=COLORS["dim"]),
     "folder_changes": Type(12, color=COLORS["mod"]),
@@ -154,6 +156,8 @@ SPACE = {
     "group_header": (6, 15, 3),        # top, text line, bottom: 24
     "group_side": 16, "group_count_gap": 8,
     "row_height": 24, "row_side": 16, "hint_gap": 16,
+    "change_heading": 28, "time_group_height": 24, "line_counts_width": 116,
+    "line_count_width": 54, "line_count_gap": 8, "inline_hint_min_width": 650,
     "indent_flat": 28, "indent_chevron": 28, "chevron_width": 12, "indent_icon": 46, "indent_child": 68,
     "folder_icon": (16, 13), "suffix_gap": 8,
     "folder_act": 20, "folder_act_radius": 5,

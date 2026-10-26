@@ -4,21 +4,22 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
+Trace: DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
 """
 
 from __future__ import annotations
 
 import tkinter as tk
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from vcs_lite.app.model import AppModel, EmptyState, RepoState, files_label, is_markdown
 from vcs_lite.core.filekind import kind_of
+from vcs_lite.core.changes import TimeGroup, relative_time, time_groups, time_range
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import elide, elide_middle, rounded_rect
+from vcs_lite.ui.widgets import Tooltip, elide, elide_middle, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 
@@ -166,7 +167,10 @@ class FileList(tk.Frame):
         self._advance: Advance | None = None  # planned by space, carried out once the operation is over
         self._model: AppModel | None = None
         self._empty_button: tk.Button | None = None
+        self._time_groups: list[tuple[TimeGroup, int]] = []
+        self._pointer_y = -1
         self._bind()
+        self._tooltip = Tooltip(self.canvas, lambda: self.tooltip_at(self._pointer_y), follow_pointer=True)
 
     def _bind(self) -> None:
         c = self.canvas
@@ -257,6 +261,8 @@ class FileList(tk.Frame):
 
     def click(self, y: int, x: int = 0, *, ctrl: bool = False, shift: bool = False) -> None:
         """Explorer rules (REQ-VCS-029): click, Ctrl-click, Shift-click, Ctrl+Shift-click; empty space clears."""
+        if self._time_at(y) is not None:
+            return
         row = self._row_at(y)
         if not row:
             if not ctrl and not shift:
@@ -334,6 +340,7 @@ class FileList(tk.Frame):
             self._on_toggle_folder(row.group, row.path)
 
     def hover(self, y: int) -> None:
+        self._pointer_y = y
         row = self._row_at(y) if y >= 0 else None
         key = row.key if row else None
         if key != self.hovered_key:
@@ -595,9 +602,13 @@ class FileList(tk.Frame):
 
     def render(self, model: AppModel) -> None:
         self._model = model
+        self._tooltip.hide()
+        self._time_groups = []
         self._rows, self._headers, self._empty, self._placeholder_top = [], [], [], None
         y = S["files_pad_top"]
         anything = any(model.files(group) for group in GROUP_ORDER)
+        if self._recent_view() and anything:
+            y += S["change_heading"]
         for group in GROUP_ORDER:
             changes = model.files(group)
             if not changes and group is Group.STAGED and anything:  # P13b: what the commit takes stays in view
@@ -609,7 +620,12 @@ class FileList(tk.Frame):
                 continue
             self._headers.append((group.value.upper(), len(changes), y))
             y += HEADER_HEIGHT
-            y = self._add_folder_rows(group, changes, y) if model.list_view == "folders" else self._add_flat_rows(changes, y)
+            if self._recent_view():
+                for batch in time_groups(changes, model.change_details):
+                    self._time_groups.append((batch, y))
+                    y = self._add_flat_rows(batch.files, y + S["time_group_height"])
+            else:
+                y = self._add_folder_rows(group, changes, y) if model.list_view == "folders" else self._add_flat_rows(changes, y)
         if model.list_view == "project":
             files = model.project_files()
             self._headers.append(("PROJEKT", len(files), y))
@@ -654,7 +670,7 @@ class FileList(tk.Frame):
         add(tree, "", 0)
         return y
 
-    def _add_flat_rows(self, changes: list[FileChange], y: int) -> int:
+    def _add_flat_rows(self, changes: Sequence[FileChange], y: int) -> int:
         for change in changes:
             self._rows.append(ListRow("file", change.group, change.path, file_color(change),
                                       file_pieces(change, folder_suffix=True), y, S["indent_flat"], change=change))
@@ -709,6 +725,33 @@ class FileList(tk.Frame):
 
     # ---------- drawing ----------
 
+    def _recent_view(self) -> bool:
+        return self._model is not None and self._model.list_view == "changes"
+
+    def _time_at(self, y: int) -> TimeGroup | None:
+        if y < 0:
+            return None
+        position = self.canvas.canvasy(y)
+        return next((batch for batch, top in self._time_groups
+                     if top <= position < top + S["time_group_height"]), None)
+
+    def tooltip_at(self, y: int) -> str | None:
+        if not self._recent_view() or y < 0:
+            return None
+        batch = self._time_at(y)
+        if batch is not None:
+            return (f"{time_range(batch)}\n{files_label(len(batch.files))}. "
+                    "Nowa grupa: przerwa ponad 5 min lub rozpiętość ponad 15 min.\n"
+                    "Etykieta czasu od najnowszego zapisu grupy.")
+        row = self._row_at(y)
+        if row is None or row.change is None:
+            return None
+        lines = self._model.change_details(row.change).lines
+        count = (f"+{lines.added:,} / −{lines.removed:,} linii".replace(',', '\u202f') if lines.kind == "text"
+                 else {"binary": "Plik binarny", "conflict": "Konflikt", "loading": "Liczenie…"}.get(lines.kind, lines.reason))
+        hints = "".join(text for text, _ in self._hints(row))
+        return f"{row.path}\n{count}\n{hints}"
+
     def _width(self) -> int:
         w = self.canvas.winfo_width()
         return w if w > 1 else 700
@@ -725,10 +768,14 @@ class FileList(tk.Frame):
             self._draw_empty(empty)
             c.configure(scrollregion=(0, 0, self._width(), c.winfo_height()))
             return
+        if self._recent_view() and self._rows:
+            self._draw_change_heading()
         for title, count, top in self._headers:
             self._draw_header(title, count, top)
         if self._placeholder_top is not None:
             self._draw_staged_placeholder(self._placeholder_top + ROW_HEIGHT / 2)
+        for batch, top in self._time_groups:
+            self._draw_time_group(batch, top)
         self._redraw_rows()
         c.configure(scrollregion=(0, 0, self._width(), max(self._content_height, c.winfo_height())))
 
@@ -741,6 +788,25 @@ class FileList(tk.Frame):
         label = files_label(count) if title == "PROJEKT" else str(count)
         self.canvas.create_text(x, y, anchor=tk.W, text=label, font=theme.font("group_count"),
                                 fill=theme.TYPE["group_count"].color)
+
+    def _draw_change_heading(self) -> None:
+        c, top, height = self.canvas, S["files_pad_top"], S["change_heading"]
+        right = self._width() - S["row_side"]
+        c.create_rectangle(0, top, self._width(), top + height, fill=C["panel"], outline="")
+        c.create_text(S["indent_flat"], top + height / 2, text="Ostatnio zmienione ↓", anchor=tk.W,
+                      font=theme.font("group_count"), fill=C["dim"])
+        c.create_text(right, top + height / 2, text="Linie + / −", anchor=tk.E,
+                      font=theme.font("group_count"), fill=C["dim"])
+        c.create_line(0, top + height, self._width(), top + height, fill=C["line"])
+
+    def _draw_time_group(self, batch: TimeGroup, top: int) -> None:
+        text = relative_time(batch.newest, self._model.now())
+        x, y = S["indent_flat"], top + S["time_group_height"] / 2
+        font = theme.font("time_group")
+        self.canvas.create_text(x, y, text=text, anchor=tk.W, font=font, fill=C["dim"], tags=("time_label",))
+        start, end = x + font.measure(text) + 10, self._width() - S["row_side"]
+        if start < end:
+            self.canvas.create_line(start, y, end, y, fill=C["line"], tags=("time_separator",))
 
     def _redraw_rows(self) -> None:
         c = self.canvas
@@ -760,9 +826,32 @@ class FileList(tk.Frame):
                     self._draw_action(FOLDER_ACTIONS[row.group], middle)
             else:
                 right = width - S["row_side"]
-                if row.key == self.hovered_key:  # P12: one hint, only on the row under the pointer
+                if self._recent_view():
+                    self._draw_counts(row, right, middle)
+                    right -= S["line_counts_width"] + S["hint_gap"]
+                if row.key == self.hovered_key and (not self._recent_view() or width >= S["inline_hint_min_width"]):
                     right = self._draw_hint(row, right, middle) - S["hint_gap"]
                 self._draw_pieces(row, row.x, middle, right)
+
+    def _draw_counts(self, row: ListRow, right: float, middle: float) -> None:
+        lines = self._model.change_details(row.change).lines
+        tags = ("row", "line_count")
+        if lines.kind != "text":
+            label = {"binary": "binarne", "conflict": "konflikt", "loading": "…"}.get(lines.kind, "—")
+            self.canvas.create_text(right, middle, text=label, anchor=tk.E, font=theme.font("file_folder"),
+                                    fill=C["dim"], tags=tags)
+            return
+        for value, sign, color, x in ((lines.added, "+", C["add"], right - S["line_count_width"] - S["line_count_gap"]),
+                                      (lines.removed, "−", C["del"], right)):
+            font = theme.font("line_count")
+            text = sign + f"{value:,}".replace(',', '\u202f')
+            if font.measure(text) > S["line_count_width"]:
+                for divisor, suffix in ((10**3, 'k'), (10**6, 'M'), (10**9, 'G'), (10**12, 'T')):
+                    text = f"{sign}{value / divisor:.1f}{suffix}"
+                    if font.measure(text) <= S["line_count_width"]:
+                        break
+            self.canvas.create_text(x, middle, text=text, anchor=tk.E, font=font,
+                                    fill=color if value else C["dim"], tags=tags)
 
     def _draw_pieces(self, row: ListRow, x: float, middle: float, right: float | None = None) -> None:
         pieces = row.pieces if right is None else fit_pieces(row.pieces, right - x)

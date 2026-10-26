@@ -1,6 +1,6 @@
 # vcs-lite — grupy plików według czasu ostatniego zapisu
 
-Status 2026-10-26: pilotaż odczytowy wykonany; kierunek grupowania przyjęty (DEC-VCS-126, Q-VCS-065): „d1 tak, pokaz makiete”. Linie P18 ocenione pozytywnie; uproszczenie etykiet w [P19](ui-mockups/p19-etykiety-czasu.html) do wyboru (Q-VCS-066). P17 — sortowanie i kolumna +/− — zaakceptowane osobno (DEC-VCS-125), przed wdrożeniem. Użytkownik: „D1 jest super a widziales jakies wzorce jak mozna by grupowac pliki zmienione w podobnym czasie przez agenta. Jak chcesz mozesz zrobic pilotaz pomiarowy w w tym repo i ../doc oraz ../iso-template-engine”. Lokalizacje potwierdzone: „Tak, docs i iso-template-agent”.
+Status 2026-10-26: pilotaż odczytowy wykonany; kierunek grupowania przyjęty (DEC-VCS-126, Q-VCS-065): „d1 tak, pokaz makiete”. Linie P18 ocenione pozytywnie; wariant „Czas względny” w [P19](ui-mockups/p19-etykiety-czasu.html) przyjęty i wdrożony (DEC-VCS-127, Q-VCS-066). Próba ręczna 24 czeka na użytkownika. P17 — sortowanie i kolumna +/− — zaakceptowane osobno (DEC-VCS-125), przed wdrożeniem. Użytkownik: „D1 jest super a widziales jakies wzorce jak mozna by grupowac pliki zmienione w podobnym czasie przez agenta. Jak chcesz mozesz zrobic pilotaz pomiarowy w w tym repo i ../doc oraz ../iso-template-engine”. Lokalizacje potwierdzone: „Tak, docs i iso-template-agent”.
 
 ## Wzorce i ich zastosowanie
 
@@ -75,7 +75,7 @@ Dlaczego: pomaga przeglądać serie zapisów, zachowując rozróżnienie Staged 
 
 Ograniczenia do uwzględnienia w specyfikacji: `mtime` przechowuje tylko ostatni zapis, kolejna edycja przenosi cały plik; checkout, kopiowanie i narzędzia mogą zmieniać lub zachować dawne czasy; Staged używa czasu pliku roboczego, nie czasu stage. Usunięte pliki zwykle nie mają `mtime`. Pełna kolumna +/− opisuje bieżący diff, a nie zmiany w danej serii zapisów.
 
-## P19 — mniej informacji w separatorach (do wyboru, Q-VCS-066)
+## P19 — mniej informacji w separatorach (wybrany Czas względny, DEC-VCS-127)
 
 Użytkownik po obejrzeniu P18: „Same sekcje z ta linia sa super ale Jakos duzo szumu tutaj” oraz „Moze pokazujmy zamiast tych dat i czasu po porsut x min ago, x h ago”. Linie i podział zachowujemy; proponowane etykiety zmienia [P19](ui-mockups/p19-etykiety-czasu.html). To własne warianty projektowe agenta, nie wyniki dodatkowego badania wzorców.
 

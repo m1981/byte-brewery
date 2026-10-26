@@ -22,6 +22,7 @@ import os
 import struct
 import subprocess
 import sys
+import time
 import zlib
 from pathlib import Path
 
@@ -197,6 +198,28 @@ def make_delta(root: Path, remotes: Path) -> None:
     commit(d, "Add search in files")
 
 
+def make_czas(root: Path) -> None:
+    """P17/P19, manual step 24: two ages, partial stage, binary and deleted file."""
+    repo = new_repo(root / "czas")
+    for name in ("a.py", "b.py", "README.md", "removed.txt"):
+        write(repo, name, "before\n")
+    (repo / "logo.png").write_bytes(png((200, 40, 40)))
+    commit(repo, "Start the time-group demo")
+    write(repo, "a.py", "before\nstaged\n")
+    git(repo, "add", "a.py")
+    write(repo, "a.py", "before\nstaged\nworking\n")
+    write(repo, "b.py", "after\nextra\n")
+    write(repo, "README.md", "before\nEarlier work\n")
+    write(repo, "new/notes.md", "# Notes\n\nA new file.\n")
+    (repo / "logo.png").write_bytes(png((40, 120, 220)))
+    (repo / "removed.txt").unlink()
+    now = time.time_ns()
+    for name, age in (("a.py", 300), ("b.py", 360), ("README.md", 7200),
+                      ("logo.png", 7260), ("new/notes.md", 330)):
+        stamp = now - age * 10**9
+        os.utime(repo / name, ns=(stamp, stamp))
+
+
 def main(target: Path) -> None:
     if target.exists() and any(target.iterdir()):
         sys.exit(f"{target} nie jest pusty; podaj pusty folder.")
@@ -205,6 +228,7 @@ def main(target: Path) -> None:
     make_beta(root, target / "remotes")
     make_gamma(root)
     make_delta(root, target / "remotes")
+    make_czas(root)
     (root / "zdjecia").mkdir()
     write(root / "zdjecia", "wakacje.txt", "nie repo\n")
     hidden = new_repo(root / ".ukryte")

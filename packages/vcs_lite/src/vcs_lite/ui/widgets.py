@@ -1,6 +1,6 @@
 """Small drawn widgets of the reference: rounded pills (chip, badge, kbd) and hover tooltips.
 
-Trace: DES-VCS-042, DES-VCS-051, DES-VCS-057, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
+Trace: DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-042, DES-VCS-051, DES-VCS-057, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
 """
 
 from __future__ import annotations
@@ -207,17 +207,29 @@ class Tooltip:
 
     DELAY_MS = 500
 
-    def __init__(self, widget: tk.Widget, text: Callable[[], str | None]):
+    def __init__(self, widget: tk.Widget, text: Callable[[], str | None], *, follow_pointer: bool = False):
         self._widget, self._text = widget, text
+        self._follow_pointer = follow_pointer
         self._after: str | None = None
         self._tip: tk.Toplevel | None = None
         widget.bind("<Enter>", self._schedule, add="+")
         widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<Destroy>", self._hide, add="+")
+        if follow_pointer:
+            widget.bind("<Motion>", self._move, add="+")
+            widget.bind("<ButtonPress>", self._hide, add="+")
+            widget.bind("<MouseWheel>", self._hide, add="+")
+
+    def _move(self, _event=None) -> None:
+        self._hide()
+        self._schedule()
 
     def _schedule(self, _event=None) -> None:
+        self._hide()
         self._after = self._widget.after(self.DELAY_MS, self._show)
 
     def _show(self) -> None:
+        self._after = None
         text = self._text()
         if not text:
             return
@@ -225,9 +237,17 @@ class Tooltip:
         self._tip.wm_overrideredirect(True)
         x = self._widget.winfo_rootx()
         y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        if self._follow_pointer:
+            x, y = self._widget.winfo_pointerxy()
+            x, y = x + 12, y + 20
         self._tip.wm_geometry(f"+{x}+{y}")
         tk.Label(self._tip, text=text, font=theme.font("reason"), bg=theme.COLORS["bg"], fg=theme.COLORS["ink"],
-                 padx=8, pady=4, highlightthickness=1, highlightbackground=theme.COLORS["control_border"]).pack()
+                 padx=8, pady=4, wraplength=440, justify=tk.LEFT,
+                 highlightthickness=1, highlightbackground=theme.COLORS["control_border"]).pack()
+        self._tip.update_idletasks()
+        x = max(0, min(x, self._widget.winfo_screenwidth() - self._tip.winfo_reqwidth() - 8))
+        y = max(0, min(y, self._widget.winfo_screenheight() - self._tip.winfo_reqheight() - 8))
+        self._tip.wm_geometry(f"+{x}+{y}")
 
     def _hide(self, _event=None) -> None:
         if self._after:
@@ -236,6 +256,10 @@ class Tooltip:
         if self._tip:
             self._tip.destroy()
             self._tip = None
+
+    def hide(self) -> None:
+        """Dismiss stale text when the underlying view changes."""
+        self._hide()
 
 
 def hint_over(entry: tk.Entry, var: tk.StringVar, text: str) -> tk.Label:

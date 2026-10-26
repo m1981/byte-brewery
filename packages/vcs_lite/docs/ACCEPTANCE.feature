@@ -555,7 +555,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik wybiera „Pokaż historię” w menu pliku "a.py" w szczegółach
     Then panel pokazuje historię "a.py"
 
-  @AT_VCS_064 @proposal @REQ_VCS_042 @VER_VCS_021
+  @AT_VCS_064 @confirmed @REQ_VCS_042 @VER_VCS_021
   Scenario: Ostatnie zapisy i grupy czasu
     Given zmienione pliki z czasami zapisu, remisami i usunięty plik bez czasu
     When użytkownik otwiera widok Zmiany
@@ -564,7 +564,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And pliki bez czasu są na końcu w sekcji „Czas nieznany”
     And etykieta pokazuje wiek najnowszego pliku, a dymek pełny zakres i liczbę plików
 
-  @AT_VCS_065 @proposal @REQ_VCS_043 @VER_VCS_021
+  @AT_VCS_065 @confirmed @REQ_VCS_043 @VER_VCS_021
   Scenario: Liczby linii względem stron statusu Git
     Given częściowo staged plik, plik dodany, usunięty, przemianowany i binarny
     Then Staged pokazuje liczby HEAD do indeksu, Changes indeks do dysku, Unversioned wszystkie dodane linie
@@ -572,7 +572,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And błąd odczytu daje „—” z wyjaśnieniem, a nie fałszywe zera
     And odczyt nie zmienia indeksu i nie uruchamia zewnętrznych narzędzi diff ani textconv
 
-  @AT_VCS_066 @proposal @REQ_VCS_042 @REQ_VCS_043 @REQ_VCS_028 @VER_VCS_021
+  @AT_VCS_066 @confirmed @REQ_VCS_042 @REQ_VCS_043 @REQ_VCS_028 @VER_VCS_021
   Scenario: Kolumna liczb i przegląd plików przez separatory
     Given zaznaczony plik w widoku Zmiany z separatorami czasu
     When następuje odświeżenie z nową kolejnością plików

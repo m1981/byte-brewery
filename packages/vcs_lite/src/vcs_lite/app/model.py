@@ -1,12 +1,12 @@
 """State and rules of the main window, without Tk: repository list, files, drafts, buttons, operations.
 
-Trace: DES-VCS-067, DES-VCS-069, REQ-VCS-036, DES-VCS-068, DES-VCS-063, REQ-VCS-035, DES-VCS-016, DES-VCS-046, DES-VCS-055, DES-VCS-056, DES-VCS-060, REQ-VCS-033, REQ-VCS-034, DEC-VCS-095, DEC-VCS-098, DEC-VCS-100, DEC-VCS-106, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
+Trace: DES-VCS-073, REQ-VCS-042, REQ-VCS-043, DES-VCS-067, DES-VCS-069, REQ-VCS-036, DES-VCS-068, DES-VCS-063, REQ-VCS-035, DES-VCS-016, DES-VCS-046, DES-VCS-055, DES-VCS-056, DES-VCS-060, REQ-VCS-033, REQ-VCS-034, DEC-VCS-095, DEC-VCS-098, DEC-VCS-100, DEC-VCS-106, REQ-VCS-027, REQ-VCS-029, REQ-VCS-030, DES-VCS-048, REQ-VCS-031, DES-VCS-049, REQ-VCS-032, DES-VCS-050, DES-VCS-018, DES-VCS-021, DES-VCS-043, DES-VCS-045, DES-VCS-026, DES-VCS-036, DES-VCS-038, REQ-VCS-002, REQ-VCS-009, REQ-VCS-010, REQ-VCS-011, REQ-VCS-012, REQ-VCS-013, REQ-VCS-015, REQ-VCS-016, REQ-VCS-018, REQ-VCS-019, REQ-VCS-020, REQ-VCS-021, REQ-VCS-022, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, REQ-VCS-001, S-VCS-01, E-02
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -14,6 +14,8 @@ from pathlib import Path
 from vcs_lite.app.opening import PageOpener
 from vcs_lite.app.worker import Executor, Outcome
 from vcs_lite.core import pagekit
+from vcs_lite.core.changes import ChangeDetails
+from vcs_lite.core.gitdetails import GitChangeReader
 from vcs_lite.core.browser import show
 from vcs_lite.core.difftool import CommandTemplateDiffTool, ExternalDiffTool
 from vcs_lite.core.filekind import Kind, kind_of
@@ -75,6 +77,7 @@ class RepoView:
     refreshed_at: datetime | None = None
     tracked: tuple[str, ...] = ()    # files of the index, read only in the project view (DES-VCS-050)
     refreshes: int = 0               # finished refreshes; the history reads again after each (DES-VCS-067)
+    details: dict[tuple[Group, str], ChangeDetails] = field(default_factory=dict)
 
     @property
     def branch_label(self) -> str:
@@ -342,6 +345,13 @@ class AppModel:
         view = self._current()
         return view.status.group(group) if view and view.status else []
 
+    def change_details(self, change: FileChange) -> ChangeDetails:
+        view = self._current()
+        return view.details.get((change.group, change.path), ChangeDetails()) if view else ChangeDetails()
+
+    def now(self) -> datetime:
+        return self._clock()
+
     @property
     def error(self) -> str | None:
         view = self._current()
@@ -479,12 +489,13 @@ class AppModel:
         view = self._repos[name]
         self._worker.submit(name, lambda: self._read_status(view), lambda outcome: self._status_read(view, outcome))
 
-    def _read_status(self, view: RepoView) -> tuple[RepoStatus, tuple[str, ...]] | None:
+    def _read_status(self, view: RepoView) -> tuple[RepoStatus, tuple[str, ...], dict[tuple[Group, str], ChangeDetails]] | None:
         if not (view.path / ".git").exists():
             return None
         repo = self._repo(view)
         tracked = tuple(repo.tracked_files()) if self.list_view == "project" else ()
-        return repo.status(), tracked
+        status = repo.status()
+        return status, tracked, GitChangeReader(self._git).read(view.path, status)
 
     def _status_read(self, view: RepoView, outcome: Outcome) -> None:
         if isinstance(outcome.error, GitError):
@@ -493,7 +504,7 @@ class AppModel:
             raise outcome.error
         else:
             view.available = outcome.value is not None
-            view.status, view.tracked = outcome.value or (None, ())
+            view.status, view.tracked, view.details = outcome.value or (None, (), {})
             view.refreshed_at = self._clock()
         view.refreshes += 1
         self._changed()

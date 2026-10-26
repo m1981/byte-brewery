@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from test_main_window import conflicted, root, world  # noqa: F401 - shared fixtures
 
@@ -22,6 +24,9 @@ def review(root, world):  # noqa: F811
     r.write("c1.txt", "2\n"); r.write("c2.txt", "2\n")
     for name in ("u1.txt", "u2.txt", "u3.txt"):
         r.write(name, "u\n")
+    # Equal mtimes make the fixture order deterministic (P19 breaks ties by path).
+    for path in r.path.rglob("*.txt"):
+        os.utime(path, ns=(1700000000000000000, 1700000000000000000))
     model = world.start("alpha")
     window = MainWindow(root, model)
     world.select("alpha")
