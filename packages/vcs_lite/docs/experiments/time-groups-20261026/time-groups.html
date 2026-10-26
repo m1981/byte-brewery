@@ -1,0 +1,128 @@
+<div id="vcs-time-pilot">
+  <h3>Grupy czasu · pilotaż 26.10.2026</h3>
+  <div class="viz-controls">
+    <label class="form-label">Repozytorium
+      <select class="form-select" id="vcs-time-repo">
+        <option value="iso-template-agent">iso-template-agent</option>
+        <option value="docs">docs</option>
+        <option value="byte-brewery">byte-brewery</option>
+      </select>
+    </label>
+    <label class="form-label">Maksymalna przerwa między zapisami
+      <select class="form-select" id="vcs-time-gap">
+        <option value="30">30 sekund</option><option value="60">1 minuta</option>
+        <option value="120">2 minuty</option><option value="300" selected>5 minut</option>
+        <option value="600">10 minut</option><option value="900">15 minut</option>
+      </select>
+    </label>
+  </div>
+  <div class="viz-row">
+    <label class="form-check"><input class="form-check-input" type="checkbox" id="vcs-time-status" checked><span class="form-check-label">Osobno w grupach Git</span></label>
+    <label class="form-check"><input class="form-check-input" type="checkbox" id="vcs-time-cap" checked><span class="form-check-label">Rozpiętość grupy do 15 minut</span></label>
+  </div>
+  <p class="tabular-nums" id="vcs-time-summary" aria-live="polite"></p>
+  <table class="table table-sm">
+    <caption class="sr-only">Zakresy ostatnich zapisów, grupa Git i liczba plików. Strefa Europe/Warsaw.</caption>
+    <thead><tr><th scope="col">Ostatnie zapisy · Warszawa</th><th scope="col">Grupa Git</th><th scope="col" class="text-end">Pliki</th></tr></thead>
+    <tbody id="vcs-time-rows"></tbody>
+  </table>
+  <div class="text-small text-muted">Stan z 26.10.2026, 21:35 CET · metadane plików · bez identyfikacji autora</div>
+</div>
+<script type="application/json" id="vcs-time-data">{"byte-brewery":[["1792966845268183131",["Staged"]],["1793045036254123027",["Changes"]]],"docs":[["1790514269028820529",["Unversioned"]],["1790514274998245822",["Unversioned"]],["1790514281598070969",["Unversioned"]],["1790514289356743045",["Unversioned"]],["1790514296386839818",["Unversioned"]],["1790514307237284301",["Unversioned"]],["1790514312075380745",["Unversioned"]],["1792775494723007980",["Unversioned"]],["1782086016742284563",["Unversioned"]],["1782086051895339152",["Unversioned"]],["1782086051734747934",["Unversioned"]],["1782086051594148201",["Unversioned"]],["1782086051853044715",["Unversioned"]],["1782086051760392856",["Unversioned"]],["1782086051743956507",["Unversioned"]],["1782086051752477328",["Unversioned"]],["1782086051878008343",["Unversioned"]],["1782086051815858629",["Unversioned"]],["1782086051800040242",["Unversioned"]],["1782086051809369690",["Unversioned"]],["1782086051778311417",["Unversioned"]],["1782086051787000364",["Unversioned"]],["1782086051535037665",["Unversioned"]],["1782086051579012816",["Unversioned"]],["1782086051639258898",["Unversioned"]],["1782086051654673284",["Unversioned"]],["1782086051614363979",["Unversioned"]],["1782086051565253727",["Unversioned"]],["1782086051628226777",["Unversioned"]],["1782086051836536451",["Unversioned"]],["1782086051725544027",["Unversioned"]],["1782086051717733001",["Unversioned"]],["1782086051605719699",["Unversioned"]],["1782086051769070052",["Unversioned"]],["1782086051824101491",["Unversioned"]],["1782086051671266174",["Unversioned"]],["1782086051663197647",["Unversioned"]],["1782086051705980752",["Unversioned"]],["1782086051698748477",["Unversioned"]],["1782086051680584623",["Unversioned"]],["1782086051687292230",["Unversioned"]],["1792350484000000000",["Unversioned"]],["1792350484000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792971703735959096",["Unversioned"]],["1792350484000000000",["Unversioned"]],["1792350484000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350486000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350488000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350490000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350492000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350494000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350496000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350498000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1792350500000000000",["Unversioned"]],["1790509075456028927",["Unversioned"]],["1790763111617859242",["Unversioned"]],["1792946982229770322",["Unversioned"]],["1792947011129133236",["Unversioned"]]],"iso-template-agent":[["1793045646441027362",["Changes"]],["1793045646460883943",["Changes"]],["1792748034954057672",["Changes"]],["1792748034954696720",["Changes"]],["1792748034955021016",["Changes"]],["1792748034955664773",["Changes"]],["1792748034956323906",["Changes"]],["1792748034957008247",["Changes"]],["1792748101783001954",["Staged"]],["1792361879411440910",["Unversioned"]],["1793044908921625261",["Unversioned"]],["1793044843267040137",["Unversioned"]],["1793045646420242407",["Unversioned"]],["1793044674671101641",["Unversioned"]],["1793044923347075259",["Unversioned"]],["1793044908894214447",["Unversioned"]],["1793044843290111579",["Unversioned"]],["1792748034954397009",["Unversioned"]],["1792748034955372770",["Unversioned"]],["1792748034956003527",["Unversioned"]],["1792748034956661618",["Unversioned"]]]}</script>
+<script>
+(() => {
+  const root = document.getElementById('vcs-time-pilot');
+  const data = JSON.parse(document.getElementById('vcs-time-data').textContent);
+  const repo = root.querySelector('#vcs-time-repo');
+  const gap = root.querySelector('#vcs-time-gap');
+  const status = root.querySelector('#vcs-time-status');
+  const cap = root.querySelector('#vcs-time-cap');
+  const summary = root.querySelector('#vcs-time-summary');
+  const body = root.querySelector('#vcs-time-rows');
+  const date = new Intl.DateTimeFormat('pl-PL', {timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric'});
+  const time = new Intl.DateTimeFormat('pl-PL', {timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false});
+  const asDate = value => new Date(Number(value / 1000000n));
+
+  function groupRows(rows) {
+    const result = [];
+    const sorted = rows.filter(r => r[0] !== null).map(r => BigInt(r[0])).sort((a,b) => a > b ? -1 : a < b ? 1 : 0);
+    const limit = BigInt(gap.value) * 1000000000n;
+    for (const timestamp of sorted) {
+      let current = result[result.length - 1];
+      if (!current || current[current.length - 1] - timestamp > limit ||
+          (cap.checked && current[0] - timestamp > 900000000000n)) {
+        current = [];
+        result.push(current);
+      }
+      current.push(timestamp);
+    }
+    return result;
+  }
+
+  function render() {
+    const records = data[repo.value];
+    const statuses = status.checked ? ['Conflicts', 'Staged', 'Changes', 'Unversioned'] : ['Wszystkie'];
+    body.replaceChildren();
+    let sections = 0;
+    let visibleRows = 0;
+    for (const name of statuses) {
+      const subset = records.filter(r => name === 'Wszystkie' || r[1].includes(name));
+      const groups = groupRows(subset);
+      visibleRows += subset.length;
+      sections += groups.length;
+      for (const group of groups) {
+        const start = asDate(group[group.length - 1]);
+        const end = asDate(group[0]);
+        const firstDate = date.format(start);
+        const lastDate = date.format(end);
+        const range = time.format(start) === time.format(end) && firstDate === lastDate
+          ? time.format(end) : time.format(start) + '–' + (firstDate === lastDate ? '' : lastDate + ' ') + time.format(end);
+        const row = document.createElement('tr');
+        const when = document.createElement('td');
+        const day = document.createElement('div');
+        day.textContent = firstDate;
+        const hours = document.createElement('div');
+        hours.className = 'text-small tabular-nums';
+        hours.textContent = range;
+        when.append(day, hours);
+        const state = document.createElement('td');
+        state.textContent = name;
+        const count = document.createElement('td');
+        count.className = 'text-end tabular-nums';
+        count.textContent = String(group.length);
+        row.append(when, state, count);
+        body.append(row);
+      }
+      const unknown = subset.filter(r => r[0] === null).length;
+      if (unknown) {
+        sections += 1;
+        const row = document.createElement('tr');
+        for (const label of ['Czas nieznany', name, String(unknown)]) {
+          const cell = document.createElement('td'); cell.textContent = label; row.append(cell);
+        }
+        body.append(row);
+      }
+    }
+    summary.textContent = records.length + ' unikalnych plików · ' + visibleRows + ' wierszy · ' + sections + ' sekcji';
+  }
+
+  function restore(saved) {
+    const choice = saved && saved.modelContent;
+    if (!choice || !Object.hasOwn(data, choice.repo)) return;
+    repo.value = choice.repo;
+    if (['30','60','120','300','600','900'].includes(String(choice.gap))) gap.value = String(choice.gap);
+    if (typeof choice.perStatus === 'boolean') status.checked = choice.perStatus;
+    if (typeof choice.cap === 'boolean') cap.checked = choice.cap;
+    render();
+  }
+  for (const input of [repo, gap, status, cap]) input.addEventListener('change', () => {
+    render();
+    if (window.openai && window.openai.setWidgetState) {
+      window.openai.setWidgetState({modelContent: {repo: repo.value, gap: Number(gap.value), perStatus: status.checked, cap: cap.checked}}).catch(() => {});
+    }
+  });
+  render();
+  if (window.openai) restore(window.openai.widgetState);
+  window.addEventListener('openai:set_globals', event => restore(event.detail && event.detail.globals && event.detail.globals.widgetState));
+})();
+</script>
