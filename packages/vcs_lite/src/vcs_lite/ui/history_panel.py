@@ -5,7 +5,7 @@ view, with their piece of the graph (P. Vigier: drawing only the visible part is
 fast). Lanes beyond the eighth are not drawn and their commits get a hollow dot in the eighth column (H-33);
 a filtered list has dots only (H-34). The details show the selected commit and its files.
 
-Trace: DES-VCS-077, REQ-VCS-044, DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
+Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-077, REQ-VCS-044, DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from datetime import datetime
 from vcs_lite.app.history import HistorySession, commits_label, date_label
 from vcs_lite.core.graph import Edge, GraphRow
 from vcs_lite.core.log import Commit, CommitFile, RefKind, Scope
+from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import SegmentedControl, elide, elide_middle, hint_over, rounded_rect
 
@@ -125,9 +126,11 @@ class HistoryPanel(tk.Frame):
         self._grip = tk.Canvas(self, height=GRIP[1] + 2, bg=C["panel"], highlightthickness=0, bd=0)
         self._grip.pack(fill=tk.X)
         self._grip.bind("<Configure>", lambda _e: self._draw_grip())
+        tk.Frame(self, height=S["line"], bg=C["line"]).pack(side=tk.TOP, fill=tk.X)
         self._build_header()
         tk.Frame(self, height=S["line"], bg=C["line"]).pack(fill=tk.X)
         body = tk.Frame(self, bg=C["line"])
+        tk.Frame(self, height=S["line"], bg=C["line"]).pack(side=tk.BOTTOM, fill=tk.X)
         body.pack(fill=tk.BOTH, expand=True)
         body.columnconfigure(0, weight=62, uniform="split")
         body.columnconfigure(1, weight=38, uniform="split")
@@ -220,8 +223,10 @@ class CommitList(tk.Frame):
         super().__init__(master, bg=C["bg"])
         self.session, self._clipboard, self._open_url = session, clipboard, open_url
         self._on_open_file = on_open_file
-        self.canvas = c = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, takefocus=True)
-        c.pack(fill=tk.BOTH, expand=True)
+        self.scroller = ScrollPane(self, bg=C["bg"])
+        self.scroller.pack(fill=tk.BOTH, expand=True)
+        self.canvas = c = tk.Canvas(self.scroller, bg=C["bg"], highlightthickness=0, bd=0, takefocus=True)
+        self.scroller.attach(c, on_view=lambda *_: self.render())
         self.drawn: list[int] = []
         self.placeholder_text = ""
         self._hover = -1
@@ -422,8 +427,9 @@ class CommitView(tk.Frame):
                  on_open_file: Callable[[Commit, CommitFile], None], on_show_history: Callable[[str], None]):
         super().__init__(master, bg=C["bg"])
         self.session, self._on_open_file, self._on_show_history = session, on_open_file, on_show_history
-        self.canvas = c = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0)
-        c.pack(fill=tk.BOTH, expand=True)
+        self.scroller = ScrollPane(self, bg=C["bg"])
+        self.scroller.pack(fill=tk.BOTH, expand=True)
+        self.canvas = c = tk.Canvas(self.scroller, bg=C["bg"], highlightthickness=0, bd=0)
         self.title_text = ""
         self.selected_path: str | None = None
         self._shown_context: tuple | None = None
@@ -431,7 +437,7 @@ class CommitView(tk.Frame):
         self._parents: list[tuple[str, tuple[int, int, int, int]]] = []
         self._hover = -1
         self._painted_top: float | None = None
-        c.configure(yscrollcommand=self._viewport_changed)
+        self.scroller.attach(c, on_view=self._viewport_changed)
         c.bind("<Configure>", lambda _e: self.render())
         c.bind("<MouseWheel>", lambda e: (c.yview_scroll(-e.delta, "units"), self.render()))
         c.bind("<Double-Button-1>", lambda e: self.double_click(e.y))
@@ -518,7 +524,7 @@ class CommitView(tk.Frame):
         self.title_text = commit.subject if commit else ""
         width = c.winfo_width() if c.winfo_ismapped() else max(c.winfo_reqwidth(), 400)
         if commit is None:
-            c.configure(scrollregion=(0, 0, width, 1))
+            c.configure(scrollregion=(0, 0, width, c.winfo_height()))
             return
         x, room = self.PAD_X, width - 2 * self.PAD_X
         y = self.PAD_Y
@@ -533,7 +539,7 @@ class CommitView(tk.Frame):
             y = c.bbox(body)[3] + 8
         if details:
             y = self._draw_files(details.files, x, y + 4, width)
-        c.configure(scrollregion=(0, 0, width, y + self.PAD_Y))
+        c.configure(scrollregion=(0, 0, width, max(y + self.PAD_Y, c.winfo_height())))
 
     def _draw_meta(self, commit: Commit, x: float, y: float, room: float) -> float:
         c = self.canvas

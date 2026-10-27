@@ -1,6 +1,6 @@
 """Repository dialog E-02 after the reference (UI-REFERENCE §8, P8): modal, folder shown, native checkboxes.
 
-Trace: DES-VCS-019, DES-VCS-042, REQ-VCS-001, REQ-VCS-018, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027, DEC-VCS-049, E-02
+Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-019, DES-VCS-042, REQ-VCS-001, REQ-VCS-018, DEC-VCS-007, DEC-VCS-016, DEC-VCS-027, DEC-VCS-049, E-02
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ import tkinter as tk
 from collections.abc import Callable
 
 from vcs_lite.app.model import AppModel
+from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import Pill, elide_middle
 
@@ -70,11 +71,11 @@ class RepoDialog(tk.Toplevel):
                     wraplength=S["dialog_width"] - 2 * PAD_X - 24).pack(side=tk.LEFT, padx=(9, 10), pady=8)
 
     def _build_list(self, choices) -> None:
-        holder = tk.Frame(self, bg=C["bg"], width=S["dialog_width"])
-        holder.pack(fill=tk.X)
-        canvas = self.list_canvas = tk.Canvas(holder, bg=C["bg"], highlightthickness=0, bd=0, width=S["dialog_width"])
+        holder = self.scroller = ScrollPane(self, bg=C["bg"], width=S["dialog_width"])
+        holder.pack(fill=tk.X, pady=4)
+        canvas = self.list_canvas = tk.Canvas(holder, bg=C["bg"], highlightthickness=0, bd=0, width=S["dialog_width"] - holder.scrollbar.winfo_reqwidth())
         inner = tk.Frame(canvas, bg=C["bg"])
-        canvas.create_window(0, 0, window=inner, anchor=tk.NW, width=S["dialog_width"])  # rows span the list
+        window = canvas.create_window(0, 0, window=inner, anchor=tk.NW, width=S["dialog_width"])  # rows span the list
         for choice in choices:
             var = tk.BooleanVar(value=choice.chosen)
             row = tk.Frame(inner, bg=C["bg"])
@@ -89,7 +90,11 @@ class RepoDialog(tk.Toplevel):
         inner.update_idletasks()
         needed = inner.winfo_reqheight() + 8
         canvas.configure(height=min(needed, S["dialog_list_height"]), scrollregion=(0, 0, S["dialog_width"], needed))
-        canvas.pack(fill=tk.X, pady=4)
+        holder.attach(canvas)
+        def fit(_event=None):
+            canvas.itemconfigure(window, width=max(1, canvas.winfo_width()))
+            canvas.configure(scrollregion=(0, 0, canvas.winfo_width(), max(needed, canvas.winfo_height())))
+        canvas.bind("<Configure>", fit)
         # Tk sends the wheel to the widget under the pointer, not to its parent: every row widget scrolls.
         scroll = lambda e: canvas.yview_scroll(-e.delta, "units")  # noqa: E731
         pending = [canvas]

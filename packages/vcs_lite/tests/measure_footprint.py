@@ -188,7 +188,9 @@ def exercise_window(root, window, model, pump) -> dict:
             act(f"{view}:{label}:down", fl.press_down)
             assert fl.selected_key == rows[min(max(0, index - 1) + 1, len(rows) - 1)].key
         act(f"{view}:wheel", lambda: fl.scroll(120))
-        act(f"{view}:home", lambda: fl.canvas.yview_moveto(0))
+        for label, args in (("drag", ("moveto", .5)), ("page", ("scroll", 1, "pages")),
+                            ("unit", ("scroll", -1, "units")), ("home", ("moveto", 0))):
+            act(f"{view}:bar:{label}", lambda a=args: fl.tk.call(fl.scroller.scrollbar.cget("command"), *a))
     act("resize:narrow", lambda: root.geometry("850x700"))
     act("resize:wide", lambda: root.geometry("1100x820"))
     act("changes:return", lambda: window.set_list_view("changes"))
@@ -196,7 +198,7 @@ def exercise_window(root, window, model, pump) -> dict:
         y = 150 + (i % 6) * 24
         act(f"hover-burst:{i}", lambda y=y: fl.hover(y))
     for i, fraction in enumerate((0, 0.5, 1, 0)):
-        act(f"commit-files:{i}:scroll", lambda f=fraction: details.canvas.yview_moveto(f))
+        act(f"commit-files:{i}:scroll", lambda f=fraction: details.tk.call(details.scroller.scrollbar.cget("command"), "moveto", f))
         act(f"commit-files:{i}:hover", lambda: details._set_hover(details.file_index_at(120)))
     return {"interaction_s": samples, "operation_s": completed, "canvas_items_max": max(objects),
             "history_detail_items_max": max(detail_objects)}

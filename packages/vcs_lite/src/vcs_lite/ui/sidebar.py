@@ -3,7 +3,7 @@
 Geometry (UI-REFERENCE §3): sidebar padding 8 × 10, header padding 8 × 6, row padding 8 × 7,
 rows 2 apart, dot column 10, gap 8; line heights follow the reference's 1.4 line height.
 
-Trace: DES-VCS-063, REQ-VCS-035, DES-VCS-023, DES-VCS-042, DES-VCS-046, REQ-VCS-027, DEC-VCS-068, DEC-VCS-069, REQ-VCS-002, REQ-VCS-016, REQ-VCS-018, DEC-VCS-047, DEC-VCS-049
+Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-063, REQ-VCS-035, DES-VCS-023, DES-VCS-042, DES-VCS-046, REQ-VCS-027, DEC-VCS-068, DEC-VCS-069, REQ-VCS-002, REQ-VCS-016, REQ-VCS-018, DEC-VCS-047, DEC-VCS-049
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from vcs_lite.app.model import AppModel, RepoState
+from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import elide, rounded_rect
 
@@ -24,7 +25,7 @@ ITEM_PAD_X, ITEM_PAD_Y = S["repo_item_pad"]
 NAME_LINE, BRANCH_LINE, HEADER_LINE = 18, 16, 15          # 13, 11.5 and 11 pt at line height 1.4
 ITEM_HEIGHT = 2 * ITEM_PAD_Y + NAME_LINE + BRANCH_LINE     # 48
 ITEM_STRIDE = ITEM_HEIGHT + S["sidebar_item_gap"]          # 50
-FIRST_ITEM_TOP = PAD_Y + 2 * HEADER_PAD_Y + HEADER_LINE    # 37
+FIRST_ITEM_TOP = 6  # fixed header is outside the viewport (P20)
 TEXT_X = PAD_X + ITEM_PAD_X + S["repo_dot_column"] + S["repo_item_gap"]  # 34
 
 DOT_COLORS = {
@@ -53,9 +54,17 @@ class RepoSidebar(tk.Frame):
         super().__init__(master, bg=C["sidebar"])
         self._on_select = on_select
         self._on_copy = on_copy
-        self.canvas = tk.Canvas(self, bg=C["sidebar"], highlightthickness=0, bd=0, width=S["sidebar_width"],
+        self.heading = tk.Frame(self, height=S["change_heading"], bg=C["sidebar"])
+        self.heading.pack(fill=tk.X)
+        self.heading.pack_propagate(False)
+        tk.Frame(self.heading, height=1, bg=C["line"]).pack(side=tk.BOTTOM, fill=tk.X)
+        theme.label(self.heading, "side_header", "REPOZYTORIA", bg=C["sidebar"]).pack(side=tk.LEFT, padx=PAD_X + HEADER_PAD_X)
+        self.scroller = ScrollPane(self, bg=C["sidebar"])
+        self.scroller.pack(fill=tk.BOTH, expand=True)
+        self.canvas = tk.Canvas(self.scroller, bg=C["sidebar"], highlightthickness=0, bd=0, width=S["sidebar_width"],
                                 yscrollincrement=2)
-        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.scroller.attach(self.canvas)
+        self._model = None
         self.canvas.bind("<Button-1>", lambda event: self.click(event.y))
         self.canvas.bind("<MouseWheel>", lambda event: self.scroll(event.delta))
         for sequence in ("<Button-2>", "<Button-3>"):  # right button and two-finger click: copy, no menu (DEC-VCS-113)
@@ -63,7 +72,7 @@ class RepoSidebar(tk.Frame):
         self._rows: list[Row] = []
         self._shown_selected: str | None = None  # scroll to the selected row only when the selection changes
         self._content_height = 1
-        self.canvas.bind("<Configure>", lambda event: self._fit_region())
+        self.canvas.bind("<Configure>", lambda event: self.render(self._model) if self._model else self._fit_region())
         self.empty_text = ""
 
     # ---------- reading what was drawn ----------
@@ -104,12 +113,11 @@ class RepoSidebar(tk.Frame):
     # ---------- drawing ----------
 
     def render(self, model: AppModel) -> None:
+        self._model = model
         c = self.canvas
         c.delete("all")
         self._rows = []
-        width = S["sidebar_width"]
-        c.create_text(PAD_X + HEADER_PAD_X, PAD_Y + HEADER_PAD_Y, anchor=tk.NW, text="REPOZYTORIA",
-                      font=theme.font("side_header"), fill=theme.TYPE["side_header"].color)
+        width = c.winfo_width() if c.winfo_width() > 1 else S["sidebar_width"] - self.scroller.scrollbar.winfo_reqwidth()
         self.empty_text = "" if model.repo_names else "Brak"
         if self.empty_text:
             c.create_text(PAD_X + HEADER_PAD_X, FIRST_ITEM_TOP + 4, anchor=tk.NW, text=self.empty_text,

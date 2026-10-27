@@ -1,6 +1,6 @@
 """Main window E-01 after the reference: toolbar, repositories, files, commit panel, status bar.
 
-Trace: DES-VCS-071, REQ-VCS-041, DES-VCS-069, REQ-VCS-036, DEC-VCS-118, DES-VCS-063, REQ-VCS-035, DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
+Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-071, REQ-VCS-041, DES-VCS-069, REQ-VCS-036, DEC-VCS-118, DES-VCS-063, REQ-VCS-035, DES-VCS-018, DES-VCS-057, REQ-VCS-033, DEC-VCS-097, REQ-VCS-015, DEC-VCS-059, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-045, DES-VCS-042, DES-VCS-043, REQ-VCS-002, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, DES-VCS-051, DEC-VCS-064, DEC-VCS-083, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-091, DEC-VCS-092, DEC-VCS-068, E-01, E-02
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from vcs_lite.app.model import AppModel
 from vcs_lite.app.history import HistorySession
 from vcs_lite.app.search import SearchSession
 from vcs_lite.core.browser import open_url
+from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.ui.file_list import FileList, file_color
 from vcs_lite.ui.history_panel import HistoryPanel
@@ -198,15 +199,20 @@ class MainWindow(tk.Frame):
         close.configure(font=theme.font("folder_act"))
         close.grid(row=0, column=2, sticky=tk.NE)
         close.bind("<Button-1>", lambda e: self.close_banner())
-        self.banner_body = tk.Text(content, height=1, wrap=tk.WORD, bd=0, highlightthickness=0, bg=C["conf_soft"],
+        self.banner_scroller = ScrollPane(content, bg=C["conf_soft"])
+        self.banner_scroller.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=(4, 0))
+        self.banner_body = tk.Text(self.banner_scroller, height=1, wrap=tk.WORD, bd=0, highlightthickness=0, bg=C["conf_soft"],
                                    fg=theme.TYPE["banner_body"].color, font=theme.font("banner_body"))
-        self.banner_body.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=(4, 0))
+        self.banner_scroller.attach(self.banner_body)
         content.columnconfigure(1, weight=1)
 
     def _draw_banner(self) -> None:
         c, edge, (pad_left, pad_y) = self.banner, S["banner_edge"], S["banner_pad"]
         width = max(c.winfo_width(), c.winfo_reqwidth())
-        height = self._banner_content.winfo_reqheight() + 2 * pad_y
+        # Read leaf requests: grid propagation may still be pending while the banner is hidden.
+        body_height = max(self.banner_body.winfo_reqheight(), self.banner_scroller.scrollbar.winfo_reqheight() + 12)
+        header_height = max(w.winfo_reqheight() for w in self._banner_content.grid_slaves(row=0))
+        height = header_height + 4 + body_height + 2 * pad_y
         if int(c.cget("height")) != height:
             c.configure(height=height)
         c.itemconfigure("banner_content", width=max(1, width - edge - pad_left - S["banner_pad_right"]))
@@ -241,10 +247,12 @@ class MainWindow(tk.Frame):
                        highlightcolor=C["accent"])
         box.grid(row=0, column=0, sticky=tk.NSEW, padx=(0, gap_x))
         mx, my = S["message_pad"]
-        self.message_box = tk.Text(box, height=3, wrap=tk.WORD, undo=True, bd=0, highlightthickness=0,
+        self.message_scroller = ScrollPane(box, bg=C["bg"])
+        self.message_scroller.pack(fill=tk.BOTH, expand=True)
+        self.message_box = tk.Text(self.message_scroller, height=3, wrap=tk.WORD, undo=True, bd=0, highlightthickness=0,
                                    font=theme.font("message"), fg=C["ink"], bg=C["bg"], padx=mx, pady=my,
                                    insertbackground=C["ink"])
-        self.message_box.pack(fill=tk.BOTH, expand=True)
+        self.message_scroller.attach(self.message_box)
         self.message_box.bind("<FocusIn>", self._message_focus_in)
         self.message_box.bind("<FocusOut>", self._message_focus_out)
         self.message_box.bind("<KeyRelease>", lambda _e: self._sync_message())

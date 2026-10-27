@@ -603,7 +603,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     When użytkownik wybiera inny commit lub repo
     Then wybór pliku i przewinięcie zaczynają się od nowa
 
-  @AT_VCS_069 @planned @REQ_VCS_045 @VER_VCS_024
+  @AT_VCS_069 @confirmed @REQ_VCS_045 @VER_VCS_024
   Scenario: Niezależne paski i stałe granice paneli
     Given długie listy i teksty w oknie głównym oraz oknach Repozytoria i Szukaj
     When użytkownik przeciąga suwak, przewija stronami lub kółkiem i zmienia rozmiar

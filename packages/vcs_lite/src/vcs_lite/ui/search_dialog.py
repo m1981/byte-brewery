@@ -4,7 +4,7 @@ matches with their file on the right, status line. It only draws the SearchSessi
 The focus stays in the phrase field: ↑ ↓ move the selection, ↩ opens, Esc closes. ⌥⌘C and ⌥⌘W switch the
 options; plain ⌥C would type "ć" on the Polish keyboard (DEC-VCS-109).
 
-Trace: DES-VCS-057, DES-VCS-042, REQ-VCS-033, DEC-VCS-097, DEC-VCS-109, E-04
+Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-057, DES-VCS-042, REQ-VCS-033, DEC-VCS-097, DEC-VCS-109, E-04
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from vcs_lite.app.search import SearchSession
 from vcs_lite.core.search import Match, SearchQuery
+from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.ui.keys import DoubleShift
 from vcs_lite.ui.widgets import Toggle, Tooltip, elide, elide_middle, hint_over, kbd
@@ -63,8 +64,10 @@ class ResultList(tk.Frame):
                  on_open: Callable[[], None]):
         super().__init__(master, bg=C["bg"])
         self._session, self._color_of, self._on_open = session, color_of, on_open
-        self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2)
-        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.scroller = ScrollPane(self, bg=C["bg"])
+        self.scroller.pack(fill=tk.BOTH, expand=True)
+        self.canvas = tk.Canvas(self.scroller, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2)
+        self.scroller.attach(self.canvas)
         self._rows: list[ResultRow] = []
         self._shown: dict[int, str] = {}     # row top -> the line text as drawn
         self._placeholder: list[str] = []

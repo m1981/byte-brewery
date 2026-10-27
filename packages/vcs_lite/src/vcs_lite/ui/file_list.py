@@ -4,7 +4,7 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-075, REQ-VCS-105, DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
+Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-075, REQ-VCS-105, DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from vcs_lite.app.model import AppModel, EmptyState, RepoState, files_label, is_
 from vcs_lite.core.filekind import kind_of
 from vcs_lite.core.changes import TimeGroup, relative_time, time_groups, time_range
 from vcs_lite.core.status import FileChange, Group
+from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.ui.widgets import Tooltip, elide, elide_middle, rounded_rect
 
@@ -150,8 +151,11 @@ class FileList(tk.Frame):
         self._on_compare_external = on_compare_external
         self._on_open, self._on_open_in_app, self._on_reveal = on_open, on_open_in_app, on_reveal
         self._on_show_history = on_show_history
-        self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
-        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.heading = tk.Canvas(self, height=S["change_heading"], bg=C["panel"], highlightthickness=0, bd=0)
+        self.scroller = ScrollPane(self, bg=C["bg"])
+        self.scroller.pack(fill=tk.BOTH, expand=True)
+        self.heading.bind("<Configure>", lambda _e: self._draw_change_heading())
+        self.canvas = tk.Canvas(self.scroller, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self._rows: list[ListRow] = []
         self._row_tops: list[int] = []
         self._painted_view: tuple | None = None
@@ -174,7 +178,7 @@ class FileList(tk.Frame):
         self._pointer_y = -1
         self._bind()
         self._tooltip = Tooltip(self.canvas, lambda: self.tooltip_at(self._pointer_y), follow_pointer=True)
-        self.canvas.configure(yscrollcommand=self._viewport_changed)
+        self.scroller.attach(self.canvas, on_view=self._viewport_changed)
 
     def _bind(self) -> None:
         c = self.canvas
@@ -614,7 +618,9 @@ class FileList(tk.Frame):
         y = S["files_pad_top"]
         anything = any(model.files(group) for group in GROUP_ORDER)
         if self._recent_view() and anything:
-            y += S["change_heading"]
+            self.heading.pack(before=self.scroller, fill=tk.X)
+        else:
+            self.heading.pack_forget()
         for group in GROUP_ORDER:
             changes = model.files(group)
             if not changes and group is Group.STAGED and anything:  # P13b: what the commit takes stays in view
@@ -798,7 +804,7 @@ class FileList(tk.Frame):
             self._draw_empty(empty)
             c.configure(scrollregion=(0, 0, self._width(), c.winfo_height()))
             return
-        if self._recent_view() and self._rows and self._in_view(S["files_pad_top"], S["change_heading"]):
+        if self._recent_view() and self._rows:
             self._draw_change_heading()
         for title, count, top in self._headers:
             if self._in_view(top, HEADER_HEIGHT):
@@ -821,14 +827,15 @@ class FileList(tk.Frame):
                                 fill=theme.TYPE["group_count"].color)
 
     def _draw_change_heading(self) -> None:
-        c, top, height = self.canvas, S["files_pad_top"], S["change_heading"]
+        c, top, height = self.heading, 0, S["change_heading"]
+        c.delete("all")
         right = self._width() - S["row_side"]
         c.create_rectangle(0, top, self._width(), top + height, fill=C["panel"], outline="")
         c.create_text(S["indent_flat"], top + height / 2, text="Ostatnio zmienione ↓", anchor=tk.W,
                       font=theme.font("group_count"), fill=C["dim"])
         c.create_text(right, top + height / 2, text="Linie + / −", anchor=tk.E,
                       font=theme.font("group_count"), fill=C["dim"])
-        c.create_line(0, top + height, self._width(), top + height, fill=C["line"])
+        c.create_line(0, height - 1, c.winfo_width(), height - 1, fill=C["line"])
 
     def _draw_time_group(self, batch: TimeGroup, top: int) -> None:
         text = relative_time(batch.newest, self._model.now())
