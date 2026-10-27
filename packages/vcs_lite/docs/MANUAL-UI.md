@@ -59,3 +59,7 @@ Lista kontrolna dla VER-VCS-013 i części ręcznej DES-VCS-032. Wykonuje ją u�
 | UI-5 | Pasek commita: przyczyna nieaktywności, szkice, skróty, commit. | 7, 8, 9 |
 | UI-6 | Konflikty, Commit & Push, Pull. | 10, 11, 14 |
 | UI-7 | Odświeżanie po fokusie, repo niedostępne, pomiar pamięci. | 12, 13 |
+
+### 25. Responsywność przy 3000 plików (DEC-VCS-128, REQ-VCS-105)
+
+Oczekuje na użytkownika. Agent uruchamia osobne demo z 3000 zmian (repo `duzy`, izolowane ustawienia). Przesuwaj kursor po plikach, przewijaj, wybierz plik na końcu, użyj strzałek, zmień rozmiar i widoki Zmiany/Foldery/Projekt. Przewiń też listę 3000 plików pierwszego commita w Historii i najedź na jej wiersze. Lista ma reagować płynnie, zachowywać zaznaczenie i pokazywać nazwy oraz +/− po każdym przewinięciu. Podeślij zrzut po przewinięciu oraz informację, czy okno nadal przestaje odpowiadać. Test automatyczny `tests/test_large_changes_performance.py` używa topmost przez cały pomiar; ręczne demo nie wymusza stałego topmost. Samodzielny pomiar: `PYTHONPATH=src ../../.venv/bin/python tests/measure_footprint.py --changes 3000 --exercise` (z katalogu pakietu). Zrzuty P19 z 2026-10-27 obejrzane: separatory, czasy i +/− zgodne z makietą; pełne daty w dymku. To nie potwierdza jeszcze wszystkich operacji kroku 24.

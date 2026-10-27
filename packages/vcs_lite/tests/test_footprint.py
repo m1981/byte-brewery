@@ -25,6 +25,7 @@ def report(measurement: dict) -> str:
 
 
 def test_at_vcs_016_vcs_lite_stays_within_60_mb_with_an_open_compare(measured):
+    assert measured["topmost"] and measured["viewable"], report(measured)
     assert len(measured["footprint_mib"]) == 5
     assert measured["history_total"] >= 4000 and measured["history_loaded"] == 500, report(measured)
     assert measured["footprint_mib_max"] <= 60, report(measured)

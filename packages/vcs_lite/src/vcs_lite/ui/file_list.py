@@ -4,12 +4,13 @@ Flat view: files from 28, the parent folder in grey after the name. Folder view:
 (chevron 28, icon 46, name 68) with a hover button that stages or unstages the whole folder; files inside
 a folder from 68, files at the repository root from 46.
 
-Trace: DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
+Trace: DES-VCS-075, REQ-VCS-105, DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-071, REQ-VCS-041, DES-VCS-024, DES-VCS-042, DES-VCS-043, DES-VCS-045, REQ-VCS-003, REQ-VCS-005, REQ-VCS-023, REQ-VCS-024, REQ-VCS-025, REQ-VCS-026, DEC-VCS-040, DEC-VCS-049, DEC-VCS-050, DEC-VCS-051, DEC-VCS-057, DEC-VCS-071, DEC-VCS-072, DEC-VCS-073, REQ-VCS-028, REQ-VCS-029, REQ-VCS-030, REQ-VCS-031, REQ-VCS-032, REQ-VCS-034, DEC-VCS-076, DEC-VCS-089, DEC-VCS-090, DEC-VCS-100, DEC-VCS-104, DEC-VCS-106, DES-VCS-060, T-VCS-01
 """
 
 from __future__ import annotations
 
 import tkinter as tk
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -152,6 +153,8 @@ class FileList(tk.Frame):
         self.canvas = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0, yscrollincrement=2, takefocus=1)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self._rows: list[ListRow] = []
+        self._row_tops: list[int] = []
+        self._painted_view: tuple | None = None
         self._headers: list[tuple[str, int, int]] = []   # title, count, top
         self._placeholder_top: int | None = None          # the grey hint of an empty Staged group (P13b)
         self._empty: list[str] = []
@@ -171,6 +174,7 @@ class FileList(tk.Frame):
         self._pointer_y = -1
         self._bind()
         self._tooltip = Tooltip(self.canvas, lambda: self.tooltip_at(self._pointer_y), follow_pointer=True)
+        self.canvas.configure(yscrollcommand=self._viewport_changed)
 
     def _bind(self) -> None:
         c = self.canvas
@@ -195,7 +199,7 @@ class FileList(tk.Frame):
         c.bind("<MouseWheel>", lambda e: self.scroll(e.delta))
         for sequence in ("<Button-2>", "<Button-3>"):  # right button and two-finger click (DEC-VCS-073)
             c.bind(sequence, lambda e: self.open_menu(e.y, e.x_root, e.y_root))
-        c.bind("<Configure>", lambda e: self._model and self.render(self._model))
+        c.bind("<Configure>", lambda e: self._model and self._redraw_all(self._model))
 
     def scroll(self, delta: int) -> None:
         """Mouse wheel; a list that fits its window stays put (Tk would move a short region into empty space)."""
@@ -204,6 +208,7 @@ class FileList(tk.Frame):
             c.yview_moveto(0)
             return
         c.yview_scroll(-delta, "units")
+        self._viewport_changed()
 
     # ---------- reading what was drawn ----------
 
@@ -597,6 +602,7 @@ class FileList(tk.Frame):
             c.yview_moveto(row.top / self._content_height)
         elif row.top + row.height > view_top + view_height:
             c.yview_moveto((row.top + row.height - view_height) / self._content_height)
+        self._viewport_changed()
 
     # ---------- building rows ----------
 
@@ -631,6 +637,7 @@ class FileList(tk.Frame):
             self._headers.append(("PROJEKT", len(files), y))
             y = self._add_project_rows(files, y + HEADER_HEIGHT)
         self._content_height = max(y, 1)
+        self._row_tops = [row.top for row in self._rows]
         moved = self._keep_selection()
         self._redraw_all(model)
         if moved:
@@ -756,11 +763,34 @@ class FileList(tk.Frame):
         w = self.canvas.winfo_width()
         return w if w > 1 else 700
 
+    def _viewport(self) -> tuple[float, int, int]:
+        height = self.canvas.winfo_height()
+        return self.canvas.canvasy(0), self._width(), height if height > 1 else 600
+
+    def _viewport_changed(self, *_fractions) -> None:
+        """Tk calls this for every way of scrolling, including direct yview commands."""
+        if self._model is not None and self._viewport() != self._painted_view:
+            self._tooltip.hide()
+            self.hovered_key = None
+            self._redraw_all(self._model)
+
+    def _in_view(self, top: float, height: int) -> bool:
+        start, _, view_height = self._painted_view
+        return top + height >= start - ROW_HEIGHT and top <= start + view_height + ROW_HEIGHT
+
+    def _visible_rows(self) -> list[ListRow]:
+        top, _, height = self._viewport()
+        first = max(0, bisect_left(self._row_tops, top - ROW_HEIGHT) - 1)
+        last = bisect_right(self._row_tops, top + height + ROW_HEIGHT)
+        return self._rows[first:last]
+
     def _action_left(self) -> int:
         return self._width() - S["row_side"] - S["folder_act"]
 
     def _redraw_all(self, model: AppModel) -> None:
         c = self.canvas
+        c.configure(scrollregion=(0, 0, self._width(), max(self._content_height, c.winfo_height())))
+        self._painted_view = self._viewport()
         c.delete("all")
         self._empty_button = None
         empty = model.empty_state
@@ -768,16 +798,17 @@ class FileList(tk.Frame):
             self._draw_empty(empty)
             c.configure(scrollregion=(0, 0, self._width(), c.winfo_height()))
             return
-        if self._recent_view() and self._rows:
+        if self._recent_view() and self._rows and self._in_view(S["files_pad_top"], S["change_heading"]):
             self._draw_change_heading()
         for title, count, top in self._headers:
-            self._draw_header(title, count, top)
-        if self._placeholder_top is not None:
+            if self._in_view(top, HEADER_HEIGHT):
+                self._draw_header(title, count, top)
+        if self._placeholder_top is not None and self._in_view(self._placeholder_top, ROW_HEIGHT):
             self._draw_staged_placeholder(self._placeholder_top + ROW_HEIGHT / 2)
         for batch, top in self._time_groups:
-            self._draw_time_group(batch, top)
+            if self._in_view(top, S["time_group_height"]):
+                self._draw_time_group(batch, top)
         self._redraw_rows()
-        c.configure(scrollregion=(0, 0, self._width(), max(self._content_height, c.winfo_height())))
 
     def _draw_header(self, title: str, count: int, top: int) -> None:
         color = C["conf"] if title == Group.CONFLICTS.value.upper() else theme.TYPE["group_header"].color
@@ -812,7 +843,7 @@ class FileList(tk.Frame):
         c = self.canvas
         c.delete("row")
         width, action_row = self._width(), self._action_row()
-        for row in self._rows:
+        for row in self._visible_rows():
             fill = C["accent_soft"] if row.key in self.selected_keys else (
                 C["row_hover"] if row.key == self.hovered_key else C["bg"])
             c.create_rectangle(0, row.top, width, row.top + row.height, fill=fill, outline="", tags=("row",))

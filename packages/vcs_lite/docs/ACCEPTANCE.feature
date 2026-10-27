@@ -583,7 +583,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And widoki Foldery i Projekt zachowują dotychczasowy układ
 
 
-  @AT_VCS_067 @proposal @REQ_VCS_105 @VER_VCS_022
+  @AT_VCS_067 @confirmed @REQ_VCS_105 @VER_VCS_022
   Scenario: Widoczne okno zachowuje responsywność przy 3000 zmienionych plików
     Given repo tymczasowe z 3000 zmienionych plików i historią 4000 commitów
     And rzeczywiste okno jest widoczne i utrzymywane topmost przez cały pomiar

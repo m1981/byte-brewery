@@ -5,7 +5,7 @@ view, with their piece of the graph (P. Vigier: drawing only the visible part is
 fast). Lanes beyond the eighth are not drawn and their commits get a hollow dot in the eighth column (H-33);
 a filtered list has dots only (H-34). The details show the selected commit and its files.
 
-Trace: DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
+Trace: DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
 """
 
 from __future__ import annotations
@@ -428,6 +428,8 @@ class CommitView(tk.Frame):
         self._files: list[tuple[CommitFile, int]] = []
         self._parents: list[tuple[str, tuple[int, int, int, int]]] = []
         self._hover = -1
+        self._painted_top: float | None = None
+        c.configure(yscrollcommand=self._viewport_changed)
         c.bind("<Configure>", lambda _e: self.render())
         c.bind("<MouseWheel>", lambda e: (c.yview_scroll(-e.delta, "units"), self.render()))
         c.bind("<Double-Button-1>", lambda e: self.double_click(e.y))
@@ -484,8 +486,14 @@ class CommitView(tk.Frame):
             self._hover = index
             self.render()
 
+    def _viewport_changed(self, *_fractions) -> None:
+        if self.canvas.canvasy(0) != self._painted_top:
+            self._hover = -1
+            self.render()
+
     def render(self) -> None:
         c, session = self.canvas, self.session
+        self._painted_top = c.canvasy(0)
         c.delete("all")
         self._files, self._parents = [], []
         commit = session.selected_commit if session else None
@@ -536,8 +544,14 @@ class CommitView(tk.Frame):
                       font=theme.font("group_count"), fill=theme.TYPE["group_count"].color)
         y += header_font.metrics("linespace") + 6
         name_font, folder_font = theme.font("file_name"), theme.font("file_folder")
-        for index, file in enumerate(files):
-            top, middle = int(y), y + ROW / 2
+        self._files = [(file, int(y + index * ROW)) for index, file in enumerate(files)]
+        height = c.winfo_height() if c.winfo_ismapped() else c.winfo_reqheight()
+        view_top = c.canvasy(0)
+        first = max(0, int((view_top - y) // ROW) - 1)
+        last = min(len(files), int((view_top + height - y) // ROW) + 2)
+        for index in range(first, last):
+            file, top = self._files[index]
+            middle = top + ROW / 2
             if index == self._hover:
                 c.create_rectangle(0, top, width, top + ROW, fill=C["row_hover"], outline="")
                 c.create_text(width - self.PAD_X, middle, anchor=tk.E, text="dwuklik porównaj",
@@ -552,6 +566,4 @@ class CommitView(tk.Frame):
             if extra and room - after > folder_font.measure("x…x"):
                 c.create_text(x + after, middle, anchor=tk.W, text=elide_middle(extra, folder_font, int(room - after)),
                               font=folder_font, fill=C["dim"])
-            self._files.append((file, top))
-            y += ROW
-        return y
+        return y + len(files) * ROW
