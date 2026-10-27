@@ -645,3 +645,5 @@ Następne kroki:
 11. DEC-VCS-132: kolumny +/− w plikach commita wdrożone (specyfikacja `524052f`). Wspólny renderer z główną listą; jeden dodatkowy odczyt numstat na commit, bez Git per plik. TDD: brak mapy statystyk odtworzony przed kodem; testy obejmują root, merge, rename, binarne, nietypowe nazwy, brak danych i przewijanie 3000 plików. Kopia indeksu: **689 passed in 81.36s**, w tym pomiary topmost (`/private/tmp/vcs-count-index-tests.log`). Użytkownik: ocena kolumn w nowym oknie byte-brewery, krok 29.
 
 12. 2026-10-27: na prośbę użytkownika do prawej kolumny nagłówka plików commita dodano kompaktową sumę `+N −N` (DEC-VCS-132); każdy wiersz nadal ma własne +/−. Test 3000 plików potwierdza sumowanie i renderowanie w wirtualizowanej liście.
+
+13. Doprecyzowanie użytkownika: zbiorcze `+N −N` ma być również ostatnią kolumną każdego wiersza lewej listy commitów. Git odczytuje numstat zbiorczo dla strony w istniejącym Workerze, według pierwszego rodzica; nieznany wynik pokazuje „—”.

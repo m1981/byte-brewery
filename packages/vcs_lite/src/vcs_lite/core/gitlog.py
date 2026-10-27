@@ -126,6 +126,28 @@ class GitLog:
             lines = {}  # keep the file list; missing counts are displayed as unknown
         return CommitDetails(commit, body, parse_name_status(files), lines)
 
+    def commit_totals(self, repo: Path, commits: tuple[Commit, ...]) -> dict[str, tuple[int, int]]:
+        """One Git process for all commits on a page, compared with the first parent."""
+        if not commits:
+            return {}
+        result = self._git.run(repo, "log", "--no-walk", "--first-parent", "-m", "-z",
+                               "--format=%x1e%H", "--numstat", "--no-ext-diff", "--no-textconv",
+                               *(c.hash for c in commits), "--", read_only=True)
+        if not result.ok:
+            return {}
+        totals = {}
+        for record in result.stdout.split(b"\x1e"):
+            hash_, sep, data = record.partition(b"\0")
+            if not sep or len(hash_) != 40:
+                continue
+            try:
+                values = parse_numstat(data.lstrip(b"\n"))
+            except ValueError:
+                continue
+            totals[hash_.decode()] = (sum(v.added for v in values.values()),
+                                      sum(v.removed for v in values.values()))
+        return totals
+
     def remote_url(self, repo: Path) -> str | None:
         """The remote's address as https, for the commit's address (REQ-VCS-035, H-47); None without one."""
         try:

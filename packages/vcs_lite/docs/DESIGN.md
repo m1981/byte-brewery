@@ -210,3 +210,5 @@ DES-VCS-036–039 wchodzą do v1. Od DEC-VCS-102 porównanie odbywa się w przeg
 ## Pytania projektowe
 
 Rozstrzygnięte: Q-VCS-012b, 012c, 015–019, 024–028. Q-VCS-029 rozstrzygnięte (DEC-VCS-044). Brak otwartych pytań projektowych.
+
+Lista commitów pokazuje po prawej sumy linii dla każdego commita. `GitLog.commit_totals` odczytuje je zbiorczo jednym procesem na stronę, w wątku historii; przy błędzie pokazuje brak danych.

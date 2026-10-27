@@ -382,13 +382,18 @@ class CommitList(tk.Frame):
         row = session.rows[index] if session.rows else None
         middle = index * ROW + ROW / 2
         self._draw_dot(row, commit, middle, selected=index == session.selected)
-        right = width - RIGHT_PAD - DATE_WIDTH - AUTHOR_WIDTH
+        totals_width = 120
+        right = width - RIGHT_PAD - totals_width - DATE_WIDTH - AUTHOR_WIDTH
         self._draw_title(commit, text_x, middle, right - 12, unpushed=commit.hash in session.unpushed)
         author_font = theme.font("history_meta")
         c.create_text(right, middle, anchor=tk.W, text=elide(commit.author, author_font, AUTHOR_WIDTH - 8),
                       font=author_font, fill=C["dim"])
-        c.create_text(width - RIGHT_PAD - DATE_WIDTH, middle, anchor=tk.W, font=author_font, fill=C["dim"],
+        c.create_text(width - RIGHT_PAD - totals_width - DATE_WIDTH, middle, anchor=tk.W, font=author_font, fill=C["dim"],
                       text=date_label(commit.time, datetime.now()))
+        totals = session.commit_totals.get(commit.hash)
+        label = (f"+{totals[0]:,} −{totals[1]:,}".replace(",", "\u202f") if totals else "—")
+        c.create_text(width - RIGHT_PAD, middle, anchor=tk.E, text=label,
+                      font=theme.font("line_count"), fill=C["dim"], tags=("commit_totals",))
 
     def _draw_dot(self, row: GraphRow | None, commit: Commit, middle: float, *, selected: bool) -> None:
         column, style = dot_style(row, commit)

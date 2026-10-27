@@ -81,6 +81,7 @@ class HistorySession:
         self.rows: list[GraphRow] = []          # empty while filtering: no lines then (H-34)
         self.more = False
         self.count = 0
+        self.commit_totals: dict[str, tuple[int, int]] = {}
         self.unpushed: set[str] = set()
         self.paths: dict[str, CommitFile] = {}  # a file's history: its change in each commit (H-55)
         self.selected = -1
@@ -184,7 +185,7 @@ class HistorySession:
             return
         self._loading_more = True
         repo, query, generation, skip = self._repo, self.query, self._generation, len(self.commits)
-        self._executor.submit(f"history:{generation}:more:{skip}", lambda: self._reader.page(repo, query, skip),
+        self._executor.submit(f"history:{generation}:more:{skip}", lambda: self._page_with_totals(repo, query, skip),
                               lambda outcome: self._more_read(generation, outcome))
 
     # ---------- reading ----------
@@ -218,10 +219,15 @@ class HistorySession:
                               lambda outcome: self._read_done(generation, outcome))
         self._changed()
 
+    def _page_with_totals(self, repo: Path, query: LogQuery, skip: int):
+        page = self._reader.page(repo, query, skip)
+        read = getattr(self._reader, "commit_totals", None)
+        return page, read(repo, page.commits) if read else {}
+
     def _read_all(self, repo: Path, query: LogQuery):
-        page = self._reader.page(repo, query, 0)
+        page, totals = self._page_with_totals(repo, query, 0)
         count = len(page.commits) if query.flat else self._reader.count(repo, query)
-        return page, count, self._reader.unpushed(repo), self._reader.remote_url(repo)
+        return page, count, self._reader.unpushed(repo), self._reader.remote_url(repo), totals
 
     def _read_done(self, generation: int, outcome: Outcome) -> None:
         if generation != self._generation:
@@ -235,7 +241,7 @@ class HistorySession:
         elif outcome.error is not None:
             raise outcome.error
         else:
-            page, self.count, self.unpushed, self._remote = outcome.value
+            page, self.count, self.unpushed, self._remote, self.commit_totals = outcome.value
             self.commits, self.more, self.paths = list(page.commits), page.more, dict(page.paths)
             self._layout = GraphLayout()
             self.rows = [] if self.query.flat else self._layout.extend(self.commits)
@@ -261,7 +267,8 @@ class HistorySession:
         elif outcome.error is not None:
             raise outcome.error
         else:
-            page = outcome.value
+            page, totals = outcome.value
+            self.commit_totals.update(totals)
             self.commits.extend(page.commits)
             self.more = page.more
             if not self.query.flat:
