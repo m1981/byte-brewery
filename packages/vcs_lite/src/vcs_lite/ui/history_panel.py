@@ -20,7 +20,7 @@ from vcs_lite.core.log import Commit, CommitFile, RefKind, Scope
 from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
 from vcs_lite.core.changes import LineStats
-from vcs_lite.ui.widgets import draw_line_counts, SegmentedControl, elide, elide_middle, hint_over, rounded_rect
+from vcs_lite.ui.widgets import draw_compact_counts, SegmentedControl, elide, elide_middle, hint_over, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 GRIP = (36, 3)            # the handle under the sash, width × height (UI-REFERENCE §12)
@@ -391,9 +391,8 @@ class CommitList(tk.Frame):
         c.create_text(width - RIGHT_PAD - totals_width - DATE_WIDTH, middle, anchor=tk.W, font=author_font, fill=C["dim"],
                       text=date_label(commit.time, datetime.now()))
         totals = session.commit_totals.get(commit.hash)
-        label = (f"+{totals[0]:,} −{totals[1]:,}".replace(",", "\u202f") if totals else "—")
-        c.create_text(width - RIGHT_PAD, middle, anchor=tk.E, text=label,
-                      font=theme.font("line_count"), fill=C["dim"], tags=("commit_totals",))
+        draw_compact_counts(c, LineStats(*totals) if totals else LineStats(kind="unknown"),
+                            width - RIGHT_PAD, middle, tags=("commit_totals",))
 
     def _draw_dot(self, row: GraphRow | None, commit: Commit, middle: float, *, selected: bool) -> None:
         column, style = dot_style(row, commit)
@@ -599,8 +598,8 @@ class CommitView(tk.Frame):
                                    fill=C["accent_soft"] if selected else C["row_hover"], outline="",
                                    tags=("selected_commit_file",) if selected else ())
             right = width - self.PAD_X
-            draw_line_counts(c, lines.get(file.path, LineStats(kind="unknown")), right, middle)
-            right -= S["line_counts_width"] + S["hint_gap"]
+            draw_compact_counts(c, lines.get(file.path, LineStats(kind="unknown")), right, middle, tags=("line_count",))
+            right -= 120 + S["hint_gap"]
             show_hint = index == self._hover and width >= S["inline_hint_min_width"]
             if show_hint:
                 c.create_text(right, middle, anchor=tk.E, text="dwuklik porównaj",

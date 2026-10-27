@@ -647,3 +647,5 @@ Następne kroki:
 12. 2026-10-27: na prośbę użytkownika do prawej kolumny nagłówka plików commita dodano kompaktową sumę `+N −N` (DEC-VCS-132); każdy wiersz nadal ma własne +/−. Test 3000 plików potwierdza sumowanie i renderowanie w wirtualizowanej liście.
 
 13. Doprecyzowanie użytkownika: zbiorcze `+N −N` ma być również ostatnią kolumną każdego wiersza lewej listy commitów. Git odczytuje numstat zbiorczo dla strony w istniejącym Workerze, według pierwszego rodzica; nieznany wynik pokazuje „—”.
+
+14. Użytkownik: „w obu oknach chce wersji kompaktowej z lewego okna ale z kolorami (ciasno i kolorowo)”. Listy commitów i plików commita mają wspólny kompaktowy zapis +/−, zielony/czerwony, z szarym zerem.
