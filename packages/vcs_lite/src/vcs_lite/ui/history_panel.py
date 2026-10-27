@@ -5,7 +5,7 @@ view, with their piece of the graph (P. Vigier: drawing only the visible part is
 fast). Lanes beyond the eighth are not drawn and their commits get a hollow dot in the eighth column (H-33);
 a filtered list has dots only (H-34). The details show the selected commit and its files.
 
-Trace: DES-VCS-078, REQ-VCS-045, DES-VCS-077, REQ-VCS-044, DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
+Trace: DES-VCS-079, REQ-VCS-040, DES-VCS-078, REQ-VCS-045, DES-VCS-077, REQ-VCS-044, DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
 """
 
 from __future__ import annotations
@@ -19,7 +19,8 @@ from vcs_lite.core.graph import Edge, GraphRow
 from vcs_lite.core.log import Commit, CommitFile, RefKind, Scope
 from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import SegmentedControl, elide, elide_middle, hint_over, rounded_rect
+from vcs_lite.core.changes import LineStats
+from vcs_lite.ui.widgets import draw_line_counts, SegmentedControl, elide, elide_middle, hint_over, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 GRIP = (36, 3)            # the handle under the sash, width × height (UI-REFERENCE §12)
@@ -539,7 +540,7 @@ class CommitView(tk.Frame):
                                  fill=theme.TYPE["details_body"].color)
             y = c.bbox(body)[3] + 8
         if details:
-            y = self._draw_files(details.files, x, y + 4, width)
+            y = self._draw_files(details.files, x, y + 4, width, details.lines)
         c.configure(scrollregion=(0, 0, width, max(y + self.PAD_Y, c.winfo_height())))
 
     def _draw_meta(self, commit: Commit, x: float, y: float, room: float) -> float:
@@ -561,12 +562,15 @@ class CommitView(tk.Frame):
             x += w + 10
         return y + line_height
 
-    def _draw_files(self, files: tuple[CommitFile, ...], x: float, y: float, width: int) -> float:
+    def _draw_files(self, files: tuple[CommitFile, ...], x: float, y: float, width: int,
+                    lines: dict[str, LineStats]) -> float:
         c = self.canvas
         header_font = theme.font("group_header")
         c.create_text(x, y, anchor=tk.NW, text="PLIKI", font=header_font, fill=theme.TYPE["group_header"].color)
         c.create_text(x + header_font.measure("PLIKI") + 8, y, anchor=tk.NW, text=str(len(files)),
                       font=theme.font("group_count"), fill=theme.TYPE["group_count"].color)
+        c.create_text(width - self.PAD_X, y, anchor=tk.NE, text="Linie + / −",
+                      font=theme.font("group_count"), fill=C["dim"])
         y += header_font.metrics("linespace") + 6
         name_font, folder_font = theme.font("file_name"), theme.font("file_folder")
         self._files = [(file, int(y + index * ROW)) for index, file in enumerate(files)]
@@ -582,12 +586,16 @@ class CommitView(tk.Frame):
                 c.create_rectangle(0, top, width, top + ROW,
                                    fill=C["accent_soft"] if selected else C["row_hover"], outline="",
                                    tags=("selected_commit_file",) if selected else ())
-            if index == self._hover:
-                c.create_text(width - self.PAD_X, middle, anchor=tk.E, text="dwuklik porównaj",
+            right = width - self.PAD_X
+            draw_line_counts(c, lines.get(file.path, LineStats(kind="unknown")), right, middle)
+            right -= S["line_counts_width"] + S["hint_gap"]
+            show_hint = index == self._hover and width >= S["inline_hint_min_width"]
+            if show_hint:
+                c.create_text(right, middle, anchor=tk.E, text="dwuklik porównaj",
                               font=theme.font("hint"), fill=C["dim"])
             folder, _, name = file.path.rpartition("/")
             role = "file_name_del" if file.status == "D" else "file_name"
-            room = width - 2 * self.PAD_X - (110 if index == self._hover else 0)
+            room = max(0, right - x - (110 if show_hint else 0))
             shown = elide(name, theme.font(role), int(room))
             c.create_text(x, middle, anchor=tk.W, text=shown, font=theme.font(role), fill=C[FILE_COLORS.get(file.status, "file_mod")])
             after = name_font.measure(shown) + 8

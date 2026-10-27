@@ -1,6 +1,6 @@
 """Small drawn widgets of the reference: rounded pills (chip, badge, kbd) and hover tooltips.
 
-Trace: DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-042, DES-VCS-051, DES-VCS-057, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
+Trace: DES-VCS-079, REQ-VCS-040, DES-VCS-074, REQ-VCS-042, REQ-VCS-043, DES-VCS-042, DES-VCS-051, DES-VCS-057, DEC-VCS-047, DEC-VCS-049, DEC-VCS-071, DEC-VCS-092
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from collections.abc import Callable, Sequence
 from tkinter import font as tkfont
 
 from vcs_lite.ui import theme
+from vcs_lite.core.changes import LineStats
 
 
 def elide(text: str, font: tkfont.Font, width: int) -> str:
@@ -275,3 +276,25 @@ def hint_over(entry: tk.Entry, var: tk.StringVar, text: str) -> tk.Label:
     var.trace_add("write", update)
     update()
     return hint
+
+
+def draw_line_counts(canvas: tk.Canvas, lines: LineStats, right: float, middle: float) -> None:
+    """Shared right-aligned +/− columns for working changes and commit files."""
+    C, S = theme.COLORS, theme.SPACE
+    tags = ("row", "line_count")
+    if lines.kind != "text":
+        label = {"binary": "binarne", "conflict": "konflikt", "loading": "…"}.get(lines.kind, "—")
+        canvas.create_text(right, middle, text=label, anchor=tk.E, font=theme.font("file_folder"),
+                                fill=C["dim"], tags=tags)
+        return
+    for value, sign, color, x in ((lines.added, "+", C["add"], right - S["line_count_width"] - S["line_count_gap"]),
+                                  (lines.removed, "−", C["del"], right)):
+        font = theme.font("line_count")
+        text = sign + f"{value:,}".replace(',', '\u202f')
+        if font.measure(text) > S["line_count_width"]:
+            for divisor, suffix in ((10**3, 'k'), (10**6, 'M'), (10**9, 'G'), (10**12, 'T')):
+                text = f"{sign}{value / divisor:.1f}{suffix}"
+                if font.measure(text) <= S["line_count_width"]:
+                    break
+        canvas.create_text(x, middle, text=text, anchor=tk.E, font=font,
+                                fill=color if value else C["dim"], tags=tags)

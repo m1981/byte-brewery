@@ -4,7 +4,7 @@ The reader is a port, like TextSearcher for the search window, so the session an
 on git directly. Records of `git log -z` are separated by NUL and their fields by US (0x1f), which no
 name, label or subject contains.
 
-Trace: DES-VCS-064, DES-VCS-071, REQ-VCS-041, REQ-VCS-037, REQ-VCS-040, DEC-VCS-116, DEC-VCS-120
+Trace: DES-VCS-079, REQ-VCS-040, DES-VCS-064, DES-VCS-071, REQ-VCS-041, REQ-VCS-037, REQ-VCS-040, DEC-VCS-116, DEC-VCS-120
 """
 
 from __future__ import annotations
@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Protocol
+
+from vcs_lite.core.changes import LineStats
 
 FIELD = "\x1f"
 FORMAT = FIELD.join(["%H", "%P", "%an", "%ae", "%at", "%D", "%s"])   # hash, parents, author, e-mail, time, labels, subject
@@ -63,6 +65,7 @@ class CommitDetails:
     commit: Commit
     body: str              # the message without its subject line
     files: tuple[CommitFile, ...]
+    lines: dict[str, LineStats] = field(default_factory=dict)
 
 
 class Scope(Enum):

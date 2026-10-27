@@ -95,7 +95,8 @@ def test_des_vcs_075_commit_with_3000_files_only_draws_visible_names(tk_root):
     from vcs_lite.ui.history_panel import CommitView
     commit = Commit("abcdef", (), "Demo", "d@x", 0, (), "Large commit")
     files = tuple(CommitFile("A", f"file_{i:04}.py") for i in range(3000))
-    session = SimpleNamespace(repo_path=None, selected_commit=commit, details=CommitDetails(commit, "", files))
+    session = SimpleNamespace(repo_path=None, selected_commit=commit,
+                              details=CommitDetails(commit, "", files, {f.path: LineStats(i + 1, 2) for i, f in enumerate(files)}))
     opened, histories = [], []
     top = tk.Toplevel(tk_root)
     top.geometry("500x300")
@@ -106,11 +107,13 @@ def test_des_vcs_075_commit_with_3000_files_only_draws_visible_names(tk_root):
         top.update()
         details.render()
         c = details.canvas
+        assert "+1" in text_items(c) and "−2" in text_items(c)
         assert len(details.file_rows()) == 3000
         assert len(c.find_all()) < 100
         assert "file_0000.py" in text_items(c) and "file_2999.py" not in text_items(c)
         c.yview_moveto(1)
         top.update()
+        assert "+3\u202f000" in text_items(c)
         assert "file_2999.py" in text_items(c) and "file_0000.py" not in text_items(c)
         y = int(details.file_rows()[-1][1] + 5 - c.canvasy(0))
         details.double_click(y)

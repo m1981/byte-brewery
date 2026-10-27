@@ -21,7 +21,7 @@ from vcs_lite.core.changes import TimeGroup, relative_time, time_groups, time_ra
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import Tooltip, elide, elide_middle, rounded_rect
+from vcs_lite.ui.widgets import draw_line_counts, Tooltip, elide, elide_middle, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 
@@ -873,23 +873,7 @@ class FileList(tk.Frame):
 
     def _draw_counts(self, row: ListRow, right: float, middle: float) -> None:
         lines = self._model.change_details(row.change).lines
-        tags = ("row", "line_count")
-        if lines.kind != "text":
-            label = {"binary": "binarne", "conflict": "konflikt", "loading": "…"}.get(lines.kind, "—")
-            self.canvas.create_text(right, middle, text=label, anchor=tk.E, font=theme.font("file_folder"),
-                                    fill=C["dim"], tags=tags)
-            return
-        for value, sign, color, x in ((lines.added, "+", C["add"], right - S["line_count_width"] - S["line_count_gap"]),
-                                      (lines.removed, "−", C["del"], right)):
-            font = theme.font("line_count")
-            text = sign + f"{value:,}".replace(',', '\u202f')
-            if font.measure(text) > S["line_count_width"]:
-                for divisor, suffix in ((10**3, 'k'), (10**6, 'M'), (10**9, 'G'), (10**12, 'T')):
-                    text = f"{sign}{value / divisor:.1f}{suffix}"
-                    if font.measure(text) <= S["line_count_width"]:
-                        break
-            self.canvas.create_text(x, middle, text=text, anchor=tk.E, font=font,
-                                    fill=color if value else C["dim"], tags=tags)
+        draw_line_counts(self.canvas, lines, right, middle)
 
     def _draw_pieces(self, row: ListRow, x: float, middle: float, right: float | None = None) -> None:
         pieces = row.pieces if right is None else fit_pieces(row.pieces, right - x)

@@ -155,12 +155,16 @@ def test_at_vcs_060_files_of_a_commit_a_merge_and_the_root(repo, log):
     repo.git("merge", "-q", "--no-ff", "-m", "merge feature", "feature")
     page = {c.hash: c for c in log.page(repo.path, LogQuery(), skip=0).commits}
     details = log.details(repo.path, page[changes])
+    from vcs_lite.core.changes import LineStats
+    assert details.lines == {"a.py": LineStats(1, 1), "stary.md": LineStats(0, 1), "imie.py": LineStats()}
     assert details.body == "Dłuższy opis\nw dwóch liniach."
     assert set(details.files) == {CommitFile("M", "a.py"), CommitFile("D", "stary.md"),
                                   CommitFile("R", "imie.py", "nazwa.py")}
     merge = log.details(repo.path, page[head(repo)])
     assert merge.files == (CommitFile("A", "f.txt"),) and merge.body == ""      # against the first parent
+    assert merge.lines == {"f.txt": LineStats(1, 0)}
     first = log.details(repo.path, page[root])
+    assert first.lines == {"a.py": LineStats(1, 0), "stary.md": LineStats(1, 0), "nazwa.py": LineStats(20, 0)}
     assert {f.status for f in first.files} == {"A"} and len(first.files) == 3
     assert log.details(repo.path, page[feature]).files == (CommitFile("A", "f.txt"),)
 
@@ -200,3 +204,31 @@ def test_des_vcs_071_special_characters_in_a_path_are_literal(repo, log):
     repo.write("d/[x].txt", "1\n"); commit(repo, "nawiasy", file="d/[x].txt")
     repo.write("d/x.txt", "1\n"); commit(repo, "bez nawiasów", file="d/x.txt")
     assert subjects(log.page(repo.path, LogQuery(path="d/[x].txt"), skip=0)) == ["nawiasy"]
+
+
+def test_req_vcs_040_commit_counts_binary_unusual_paths_and_failure(repo, log, monkeypatch):
+    from vcs_lite.core.changes import LineStats
+    name = 'żółw\tlinie\n.txt'
+    repo.write(name, 'one\ntwo\n')
+    (repo.path / 'binary.dat').write_bytes(b'\0binary')
+    commit(repo, 'counts')
+    selected = log.page(repo.path, LogQuery(), 0).commits[0]
+    read, calls = log._read, []
+
+    def tracked(path, *args):
+        calls.append(args)
+        return read(path, *args)
+
+    monkeypatch.setattr(log, '_read', tracked)
+    details = log.details(repo.path, selected)
+    assert details.lines[name] == LineStats(2, 0)
+    assert details.lines['binary.dat'].kind == 'binary'
+    assert len(calls) == 3  # message, names and one batch of counts, never per-file Git
+    assert '--no-ext-diff' in calls[-1] and '--no-textconv' in calls[-1]
+
+    def malformed(path, *args):
+        return b'invalid\0' if '--numstat' in args else read(path, *args)
+
+    monkeypatch.setattr(log, '_read', malformed)
+    fallback = log.details(repo.path, selected)
+    assert fallback.files == details.files and fallback.lines == {}

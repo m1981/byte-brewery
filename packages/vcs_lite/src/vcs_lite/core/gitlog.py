@@ -4,7 +4,7 @@
 named only when it exists, because a fresh repository makes git fail on it (H-04). `--grep` and `--author`
 together keep only commits matching both, so the filter runs them apart and joins the results (H-44).
 
-Trace: DES-VCS-065, DES-VCS-071, REQ-VCS-041, REQ-VCS-037, REQ-VCS-039, REQ-VCS-040, OBS-VCS-015, DEC-VCS-120
+Trace: DES-VCS-079, REQ-VCS-040, DES-VCS-065, DES-VCS-071, REQ-VCS-041, REQ-VCS-037, REQ-VCS-039, REQ-VCS-040, OBS-VCS-015, DEC-VCS-120
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 from vcs_lite.core.gitcli import GitCli
+from vcs_lite.core.gitdetails import parse_numstat
 from vcs_lite.core.log import (FORMAT, Commit, CommitDetails, LogPage, LogQuery, Scope, parse_log,
                                parse_name_status)
 from vcs_lite.core.repo import GitError, GitRepo
@@ -117,7 +118,13 @@ class GitLog:
         body = message.strip().partition("\n")[2].strip()
         sides = [commit.parents[0], commit.hash] if commit.parents else ["--root", commit.hash]
         files = self._read(repo, "diff-tree", "-r", "-z", "-M", "--name-status", "--no-commit-id", *sides, "--")
-        return CommitDetails(commit, body, parse_name_status(files))
+        try:
+            raw = self._read(repo, "diff-tree", "-r", "-z", "-M", "--numstat", "--no-commit-id",
+                             "--no-ext-diff", "--no-textconv", *sides, "--")
+            lines = parse_numstat(raw)
+        except (GitError, ValueError):
+            lines = {}  # keep the file list; missing counts are displayed as unknown
+        return CommitDetails(commit, body, parse_name_status(files), lines)
 
     def remote_url(self, repo: Path) -> str | None:
         """The remote's address as https, for the commit's address (REQ-VCS-035, H-47); None without one."""
