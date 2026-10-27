@@ -120,7 +120,7 @@ class HistoryPanel(tk.Frame):
                  on_open_file: Callable[[Commit, CommitFile], None] = lambda commit, file: None,
                  clipboard: Callable[[str], None] = lambda text: None,
                  open_url: Callable[[str], None] = lambda url: None):
-        super().__init__(master, bg=C["bg"])
+        super().__init__(master, bg=C["bg"], cursor="arrow")
         self.session = session
         self.grip_color = C["seg_thumb_edge"]
         self._grip = tk.Canvas(self, height=GRIP[1] + 2, bg=C["panel"], highlightthickness=0, bd=0)
@@ -154,7 +154,7 @@ class HistoryPanel(tk.Frame):
         if self.session is None:
             self.filter, self.scope, self._count, self._path = tk.StringVar(self), None, None, None
             return
-        field = tk.Frame(header, bg=C["bg"], highlightthickness=1, highlightbackground=C["control_border"])
+        field = tk.Frame(header, bg=C["bg"], cursor="arrow", highlightthickness=1, highlightbackground=C["control_border"])
         field.pack(side=tk.LEFT, padx=(10, 0))
         theme.label(field, "placeholder", "⌕", bg=C["bg"]).pack(side=tk.LEFT, padx=(6, 4))
         self.filter = tk.StringVar(self)
@@ -163,14 +163,15 @@ class HistoryPanel(tk.Frame):
         entry.pack(side=tk.LEFT, pady=2, padx=(0, 6))
         hint_over(entry, self.filter, "Filtr: wiadomość, hash albo autor")
         self.filter.trace_add("write", lambda *_a: self.session.set_text(self.filter.get()))
-        theme.label(header, "history_meta", "Gałęzie", bg=C["panel"]).pack(side=tk.LEFT, padx=(10, S["seg_label_gap"]))
+        theme.label(header, "history_meta", "Gałęzie", bg=C["panel"], cursor="arrow").pack(side=tk.LEFT, padx=(10, S["seg_label_gap"]))
         self.scope = SegmentedControl(header, SCOPES, self.session.query.scope.value,
                                       lambda value: self.session.set_scope(Scope(value)), parent_bg=C["panel"])
+        self.scope.configure(cursor="arrow")
         self.scope.pack(side=tk.LEFT)
         self._path = tk.Label(header, text="", font=theme.font("history_meta"), bg=C["accent_soft"],
                               fg=C["ref_local_ink"], padx=8, pady=1, cursor="hand2")   # „Plik: … ✕” (DEC-VCS-124)
         self._path.bind("<Button-1>", lambda _e: self.clear_path())
-        self._count = theme.label(header, "history_meta", "", bg=C["panel"])
+        self._count = theme.label(header, "history_meta", "", bg=C["panel"], cursor="arrow")
         self._count.pack(side=tk.RIGHT)
 
     def handles(self) -> list[tk.Misc]:

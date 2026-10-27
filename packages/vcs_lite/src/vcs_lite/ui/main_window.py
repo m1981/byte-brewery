@@ -160,7 +160,8 @@ class MainWindow(tk.Frame):
         return bar
 
     def _build_middle(self, parent: tk.Misc) -> tk.Frame:
-        middle = tk.Frame(parent, bg=C["bg"])
+        # PanedWindow temporarily sets its own resize cursor; pane children must not inherit it.
+        middle = tk.Frame(parent, bg=C["bg"], cursor="arrow")
         sidebar = tk.Frame(middle, bg=C["sidebar"], width=S["sidebar_width"])
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
         sidebar.pack_propagate(False)
