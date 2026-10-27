@@ -68,4 +68,4 @@ Oczekuje na użytkownika. Agent uruchamia osobne demo z 3000 zmian (repo `duzy`,
 
 ### 26. Miejsce przeglądu plików commita (REQ-VCS-044)
 
-Oczekuje na użytkownika. W byte-brewery wybierz commit z kilkunastoma plikami, przewiń prawą dolną listę, kliknij plik i odsuń kursor. Wiersz pozostaje niebieski. Otwórz diff dwuklikiem, wróć do vcs-lite i odśwież: ten sam plik i to samo przewinięcie, bez skoku do nagłówka. Menu innego pliku zmienia wybór. Zmiana commita/repo zaczyna nowy przegląd. Podeślij zrzut z zaznaczonym plikiem po powrocie fokusu. Paski przewijania: następny etap, Q-VCS-067.
+Potwierdzone 2026-10-27: użytkownik „jest super!” po próbie poprawki `767852b` w byte-brewery. W byte-brewery wybierz commit z kilkunastoma plikami, przewiń prawą dolną listę, kliknij plik i odsuń kursor. Wiersz pozostaje niebieski. Otwórz diff dwuklikiem, wróć do vcs-lite i odśwież: ten sam plik i to samo przewinięcie, bez skoku do nagłówka. Menu innego pliku zmienia wybór. Zmiana commita/repo zaczyna nowy przegląd. Podeślij zrzut z zaznaczonym plikiem po powrocie fokusu. Paski przewijania: następny etap, Q-VCS-067.
