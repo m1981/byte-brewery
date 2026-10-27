@@ -522,6 +522,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
   Scenario: Pliki commita, diff i menu commita
     Given zaznaczony merge M z rodzicami B i F2, zdalny origin "git@github.com:m1981/app.git"
     Then pliki M to zmiany względem B
+    And każdy plik ma prawe kolumny +/− względem B; binarny pokazuje „binarne”, brak danych „—”
     When użytkownik klika dwukrotnie plik "a.py" z listy plików M
     Then w przeglądarce otwiera się diff "a.py" z B po lewej i z M po prawej
     When użytkownik wybiera z menu M „Kopiuj adres commita”
