@@ -95,7 +95,7 @@ def test_des_vcs_075_commit_with_3000_files_only_draws_visible_names(tk_root):
     from vcs_lite.ui.history_panel import CommitView
     commit = Commit("abcdef", (), "Demo", "d@x", 0, (), "Large commit")
     files = tuple(CommitFile("A", f"file_{i:04}.py") for i in range(3000))
-    session = SimpleNamespace(selected_commit=commit, details=CommitDetails(commit, "", files))
+    session = SimpleNamespace(repo_path=None, selected_commit=commit, details=CommitDetails(commit, "", files))
     opened, histories = [], []
     top = tk.Toplevel(tk_root)
     top.geometry("500x300")

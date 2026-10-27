@@ -5,7 +5,7 @@ view, with their piece of the graph (P. Vigier: drawing only the visible part is
 fast). Lanes beyond the eighth are not drawn and their commits get a hollow dot in the eighth column (H-33);
 a filtered list has dots only (H-34). The details show the selected commit and its files.
 
-Trace: DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
+Trace: DES-VCS-077, REQ-VCS-044, DES-VCS-075, REQ-VCS-105, DES-VCS-070, DES-VCS-071, REQ-VCS-041, DEC-VCS-124, DEC-VCS-123, DES-VCS-069, REQ-VCS-036, REQ-VCS-037, REQ-VCS-038, REQ-VCS-039, REQ-VCS-040, DEC-VCS-118, DEC-VCS-121, E-06
 """
 
 from __future__ import annotations
@@ -425,6 +425,8 @@ class CommitView(tk.Frame):
         self.canvas = c = tk.Canvas(self, bg=C["bg"], highlightthickness=0, bd=0)
         c.pack(fill=tk.BOTH, expand=True)
         self.title_text = ""
+        self.selected_path: str | None = None
+        self._shown_context: tuple | None = None
         self._files: list[tuple[CommitFile, int]] = []
         self._parents: list[tuple[str, tuple[int, int, int, int]]] = []
         self._hover = -1
@@ -450,6 +452,7 @@ class CommitView(tk.Frame):
                 ("Pokaż historię", True, lambda: self._on_show_history(file.path))]
 
     def open_file_menu(self, y: int, x_root: int, y_root: int) -> None:
+        self._select_file(self.file_index_at(y))
         entries = self.prepare_file_menu(y)
         if not entries:
             return
@@ -469,10 +472,20 @@ class CommitView(tk.Frame):
         index = self.file_index_at(y)
         commit = self.session.selected_commit if self.session else None
         if index >= 0 and commit:
+            self._select_file(index)
             self._on_open_file(commit, self._files[index][0])
+
+    def _select_file(self, index: int) -> None:
+        if 0 <= index < len(self._files):
+            self.selected_path = self._files[index][0].path
+            self.render()
 
     def click(self, x: int, y: int) -> None:
         """A parent's hash goes to that commit when it is in the list."""
+        index = self.file_index_at(y)
+        if index >= 0:
+            self._select_file(index)
+            return
         x, y = self.canvas.canvasx(x), self.canvas.canvasy(y)
         for parent, (x1, y1, x2, y2) in self._parents:
             if x1 <= x <= x2 and y1 <= y <= y2:
@@ -493,10 +506,15 @@ class CommitView(tk.Frame):
 
     def render(self) -> None:
         c, session = self.canvas, self.session
+        commit = session.selected_commit if session else None
+        context = (session.repo_path, commit.hash) if commit else None
+        if context != self._shown_context:
+            self._shown_context = context
+            self.selected_path, self._hover = None, -1
+            c.yview_moveto(0)
         self._painted_top = c.canvasy(0)
         c.delete("all")
         self._files, self._parents = [], []
-        commit = session.selected_commit if session else None
         self.title_text = commit.subject if commit else ""
         width = c.winfo_width() if c.winfo_ismapped() else max(c.winfo_reqwidth(), 400)
         if commit is None:
@@ -552,8 +570,12 @@ class CommitView(tk.Frame):
         for index in range(first, last):
             file, top = self._files[index]
             middle = top + ROW / 2
+            selected = file.path == self.selected_path
+            if selected or index == self._hover:
+                c.create_rectangle(0, top, width, top + ROW,
+                                   fill=C["accent_soft"] if selected else C["row_hover"], outline="",
+                                   tags=("selected_commit_file",) if selected else ())
             if index == self._hover:
-                c.create_rectangle(0, top, width, top + ROW, fill=C["row_hover"], outline="")
                 c.create_text(width - self.PAD_X, middle, anchor=tk.E, text="dwuklik porównaj",
                               font=theme.font("hint"), fill=C["dim"])
             folder, _, name = file.path.rpartition("/")

@@ -593,7 +593,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And na Canvas są tylko obiekty widocznego obszaru z niewielkim zapasem
     And interakcje i przerwy pętli zdarzeń mieszczą się w 0,5 s, odświeżenie w 2 s, pamięć w 100 MiB
 
-  @AT_VCS_068 @proposal @REQ_VCS_044 @VER_VCS_023
+  @AT_VCS_068 @confirmed @REQ_VCS_044 @VER_VCS_023
   Scenario: Kontynuowanie przeglądu plików commita po powrocie do aplikacji
     Given przewinięta lista plików wybranego commita
     When użytkownik klika plik i otwiera jego diff

@@ -6,12 +6,13 @@ its refreshes finishes (H-41), so it reads exactly when the status is read and n
 read carries a number; a result with an older number is dropped (H-43). Jobs run under their own keys, so
 the repository stays free for commit, pull and stage.
 
-Trace: DES-VCS-067, DES-VCS-071, REQ-VCS-041, DEC-VCS-123, REQ-VCS-037, REQ-VCS-039, REQ-VCS-101, DEC-VCS-116, DEC-VCS-120
+Trace: DES-VCS-077, REQ-VCS-044, DES-VCS-067, DES-VCS-071, REQ-VCS-041, DEC-VCS-123, REQ-VCS-037, REQ-VCS-039, REQ-VCS-101, DEC-VCS-116, DEC-VCS-120
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Protocol
@@ -105,6 +106,10 @@ class HistorySession:
             listener()
 
     # ---------- what the panel shows ----------
+
+    @property
+    def repo_path(self) -> Path | None:
+        return self._repo
 
     @property
     def selected_commit(self) -> Commit | None:
@@ -223,6 +228,7 @@ class HistorySession:
             return
         self.loading = False
         keep = self.selected_commit.hash if self.selected_commit else None
+        previous_details = self.details
         if isinstance(outcome.error, GitError):
             self.error = str(outcome.error)
             self.commits, self.rows, self.more, self.count, self.selected, self.details = [], [], False, 0, -1, None
@@ -236,7 +242,14 @@ class HistorySession:
             index = next((i for i, c in enumerate(self.commits) if c.hash == keep), 0 if self.commits else -1)
             self.selected, self.details = -1, None
             if index >= 0:
-                self.select(index)
+                commit = self.commits[index]
+                if previous_details and previous_details.commit.hash == commit.hash:
+                    # The content of a commit is immutable. Retain it across refresh so the
+                    # details canvas never shrinks to its header and loses its scroll position.
+                    self.selected = index
+                    self.details = replace(previous_details, commit=commit)
+                else:
+                    self.select(index)
         self._changed()
 
     def _more_read(self, generation: int, outcome: Outcome) -> None:
