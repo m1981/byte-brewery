@@ -569,8 +569,15 @@ class CommitView(tk.Frame):
         c.create_text(x, y, anchor=tk.NW, text="PLIKI", font=header_font, fill=theme.TYPE["group_header"].color)
         c.create_text(x + header_font.measure("PLIKI") + 8, y, anchor=tk.NW, text=str(len(files)),
                       font=theme.font("group_count"), fill=theme.TYPE["group_count"].color)
-        c.create_text(width - self.PAD_X, y, anchor=tk.NE, text="Linie + / −",
-                      font=theme.font("group_count"), fill=C["dim"])
+        known = [lines.get(file.path, LineStats(kind="unknown")) for file in files]
+        if all(line.kind in {"text", "binary"} for line in known):
+            added = sum(line.added for line in known)
+            removed = sum(line.removed for line in known)
+            summary = f"+{added:,} −{removed:,}".replace(",", "\u202f")
+        else:
+            summary = "—"
+        c.create_text(width - self.PAD_X, y, anchor=tk.NE, text=summary,
+                      font=theme.font("group_count"), fill=C["dim"], tags=("commit_line_totals",))
         y += header_font.metrics("linespace") + 6
         name_font, folder_font = theme.font("file_name"), theme.font("file_folder")
         self._files = [(file, int(y + index * ROW)) for index, file in enumerate(files)]

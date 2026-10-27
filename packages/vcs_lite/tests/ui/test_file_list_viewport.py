@@ -108,6 +108,7 @@ def test_des_vcs_075_commit_with_3000_files_only_draws_visible_names(tk_root):
         details.render()
         c = details.canvas
         assert "+1" in text_items(c) and "−2" in text_items(c)
+        assert "+4\u202f501\u202f500 −6\u202f000" in text_items(c)
         assert len(details.file_rows()) == 3000
         assert len(c.find_all()) < 100
         assert "file_0000.py" in text_items(c) and "file_2999.py" not in text_items(c)
