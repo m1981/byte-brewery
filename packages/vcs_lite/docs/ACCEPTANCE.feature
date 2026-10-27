@@ -592,3 +592,13 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then wszystkie 3000 plików są dostępne, wybór i kolumna liczb pozostają poprawne
     And na Canvas są tylko obiekty widocznego obszaru z niewielkim zapasem
     And interakcje i przerwy pętli zdarzeń mieszczą się w 0,5 s, odświeżenie w 2 s, pamięć w 100 MiB
+
+  @AT_VCS_068 @proposal @REQ_VCS_044 @VER_VCS_023
+  Scenario: Kontynuowanie przeglądu plików commita po powrocie do aplikacji
+    Given przewinięta lista plików wybranego commita
+    When użytkownik klika plik i otwiera jego diff
+    Then plik pozostaje zaznaczony także po odejściu kursora
+    When użytkownik wraca do aplikacji i historia jest odświeżana
+    Then zaznaczenie i przewinięcie pozostają przez wszystkie etapy odświeżenia
+    When użytkownik wybiera inny commit lub repo
+    Then wybór pliku i przewinięcie zaczynają się od nowa
