@@ -438,6 +438,8 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then historia ma 120 pt
     When użytkownik ustawia historię na 300 pt i uruchamia vcs-lite ponownie
     Then historia ma 300 pt
+    When kursor przechodzi z granicy lub uchwytu na treść panelu albo kontrolkę
+    Then natychmiast ma zwykły kształt właściwy dla kontrolki, także po puszczeniu przeciągania
 
   @AT_VCS_050 @confirmed @UC_VCS_09 @REQ_VCS_038 @VER_VCS_020
   Scenario: Historia liniowa to jedna prosta linia
