@@ -602,3 +602,11 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     Then zaznaczenie i przewinięcie pozostają przez wszystkie etapy odświeżenia
     When użytkownik wybiera inny commit lub repo
     Then wybór pliku i przewinięcie zaczynają się od nowa
+
+  @AT_VCS_069 @planned @REQ_VCS_045 @VER_VCS_024
+  Scenario: Niezależne paski i stałe granice paneli
+    Given długie listy i teksty w oknie głównym oraz oknach Repozytoria i Szukaj
+    When użytkownik przeciąga suwak, przewija stronami lub kółkiem i zmienia rozmiar
+    Then pasek i treść pokazują tę samą pozycję, a nagłówki i akcje pozostają nieruchome
+    And krótka treść zachowuje szerokość panelu i nie przewija się w pustkę
+    And przy 3000 plików rysowane są tylko widoczne wiersze, bez utraty zaznaczenia

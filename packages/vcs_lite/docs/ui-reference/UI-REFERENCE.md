@@ -1,3 +1,7 @@
+## P20 — paski przewijania (zaakceptowane 2026-10-27)
+
+Wiążąca [makieta P20](../ui-mockups/p20-paski-przewijania.html), DEC-VCS-130, REQ-VCS-045. Natywne ttk.Scrollbar ze stale zarezerwowanym miejscem i odstępem toru 6 px. Nagłówki górnych list 28 px, poza przewijaniem. Historia: wspólny obrys, ciągła linia pod nagłówkiem i pojedynczy podział kolumn. Wszystkie listy i długie teksty przewijają się niezależnie.
+
 # vcs-lite — wzorzec wyglądu okna E-01 (wariant A)
 
 Wzorzec wybrany przez użytkownika 2026-10-21 (DEC-VCS-045). Obowiązuje zamiast szkicu ASCII E-01 w SPEC.md. Źródła, w kolejności ważności:
