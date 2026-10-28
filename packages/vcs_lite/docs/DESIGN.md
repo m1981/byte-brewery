@@ -212,3 +212,7 @@ DES-VCS-036–039 wchodzą do v1. Od DEC-VCS-102 porównanie odbywa się w przeg
 Rozstrzygnięte: Q-VCS-012b, 012c, 015–019, 024–028. Q-VCS-029 rozstrzygnięte (DEC-VCS-044). Brak otwartych pytań projektowych.
 
 Lista commitów pokazuje po prawej sumy linii dla każdego commita. `GitLog.commit_totals` odczytuje je zbiorczo jednym procesem na stronę, w wątku historii; przy błędzie pokazuje brak danych.
+
+| ID | Decyzja | REQ |
+|---|---|---|
+| DES-VCS-080 | NoteStore identyfikuje repo skrótem SHA-256 jego pełnej ścieżki. Zapis UTF-8 przez plik tymczasowy i os.replace. NotesPanel przechowuje niezapisane szkice i stan edycji per repo, timer tylko po edycji; nie zapisuje po błędzie odczytu. Zamknięcie blokowane przy błędzie zapisu. Górny PanedWindow reguluje szerokość notatnika i dolnego panelu szczegółów. | REQ-VCS-046, DEC-VCS-133 |

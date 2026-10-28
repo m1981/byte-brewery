@@ -642,3 +642,11 @@ Następne kroki:
 16. 2026-10-28: korekta P21 na prośbę użytkownika: D całkowicie pod B, C styka się z F. Wspólna prawa kolumna C/F, nagłówek historii tylko nad E; szerokość C/F regulowana razem. Dodano wspólny [słownik](SLOWNIK.md), zastępujący dotychczasową tabelę języka domeny. Makieta pozostaje propozycją przed wdrożeniem notatnika.
 
 17. 2026-10-28: użytkownik doprecyzował P21: nagłówek „Historia” ma sięgać do końca okna, jak na zrzucie PyCharma. Pasek wspólny nad E i F; D nadal wyłącznie pod B, pionowe krawędzie C i F pozostają wyrównane. Aktualizacja makiety i słownika.
+
+## Notatnik P21 — przyjęte 2026-10-28
+
+| ID | Treść | Powiązanie |
+|---|---|---|
+| DEC-VCS-133 | Użytkownik po korektach makiety P21: „switnie, wykonaj”. Notatnik przy liście zmian, D pod B, C wyrównane z F, nagłówek historii pełnej szerokości. | REQ-VCS-046 |
+| REQ-VCS-046 | Osobna notatka dla pełnej ścieżki każdego repo, dostępna domyślnie. Tekst przechowywany w notes obok używanego settings.json; zapis po 700 ms i opuszczeniu pola, przed zmianą repo i zamknięciem. Brak pliku przed edycją. Kopiowanie całości lub zaznaczenia; zachowanie kursora i przewinięcia. Błąd zapisu widoczny, tekst zachowany. Regulowana i zwijana prawa kolumna wyrównana z F; kompaktowe +/− także w B. | DEC-VCS-133, DES-VCS-080, AT-VCS-070, VER-VCS-025 |
+| VER-VCS-025 | Testy zapisu i izolacji repo, błędu oraz przełączeń notatnika; regresja UI i próba ręczna P21. | REQ-VCS-046, AT-VCS-070 |
