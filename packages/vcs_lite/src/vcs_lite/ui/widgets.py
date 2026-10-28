@@ -308,8 +308,15 @@ def draw_compact_counts(canvas: tk.Canvas, lines: LineStats, right: float, middl
                            fill=theme.COLORS["dim"], tags=tags)
         return
     font = theme.font("line_count")
-    removed = "−" + f"{lines.removed:,}".replace(",", "\u202f")
-    added = "+" + f"{lines.added:,}".replace(",", "\u202f")
+    def count(value, sign):
+        text = sign + f"{value:,}".replace(",", "\u202f")
+        if font.measure(text) > theme.SPACE["line_count_width"]:
+            for divisor, suffix in ((10**3, 'k'), (10**6, 'M'), (10**9, 'G'), (10**12, 'T')):
+                text = f"{sign}{value / divisor:.1f}{suffix}"
+                if font.measure(text) <= theme.SPACE["line_count_width"]:
+                    break
+        return text
+    removed, added = count(lines.removed, "−"), count(lines.added, "+")
     canvas.create_text(right, middle, text=removed, anchor=tk.E, font=font,
                        fill=theme.COLORS["del"] if lines.removed else theme.COLORS["dim"], tags=tags)
     canvas.create_text(right - font.measure(removed) - 5, middle, text=added, anchor=tk.E, font=font,

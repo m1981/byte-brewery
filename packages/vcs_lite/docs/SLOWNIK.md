@@ -1,6 +1,6 @@
 # Wspólny język vcs-lite — ubiquitous language
 
-Wspólny słownik rozmów, makiet, wymagań i kodu. Używamy nazw poniżej zamiast niejednoznacznych „lewe okno” i „historia zmian”. Litery A–F oznaczają obszary makiety P21, nie identyfikatory wymagań. Notatnik jest na etapie projektu; definicja pojęcia nie oznacza wdrożenia funkcji.
+Wspólny słownik rozmów, makiet, wymagań i kodu. Używamy nazw poniżej zamiast niejednoznacznych „lewe okno” i „historia zmian”. Litery A–F oznaczają obszary makiety P21, nie identyfikatory wymagań. Notatnik P21 wdrożony 2026-10-28; wygląd czeka na próbę ręczną użytkownika.
 
 ## Obszary aplikacji
 
@@ -9,7 +9,7 @@ Wspólny słownik rozmów, makiet, wymagań i kodu. Używamy nazw poniżej zamia
 | Okno główne | Całe okno vcs-lite, z repozytoriami, bieżącą pracą i historią. | `MainWindow` |
 | Lista repozytoriów | Repo obserwowane i ich bieżący stan. Kliknięcie wybiera repo. | A / `RepoSidebar` |
 | Lista zmian | Pliki bieżącego repo, pogrupowane według statusu Git. Może też pokazywać Foldery lub Projekt. | B / `FileList` |
-| Notatnik repo | Edytor notatki bieżącego repo, domyślnie dostępny przy liście zmian. | C / projekt P21 |
+| Notatnik repo | Edytor notatki bieżącego repo, domyślnie dostępny przy liście zmian. | C / `NotesPanel` |
 | Panel commita | Pole wiadomości i przyciski tworzenia commita. Należy wyłącznie do listy zmian; nie obejmuje notatnika. | D |
 | Lista commitów | Chronologiczna/topologiczna historia, graf, autor, data i sumy linii commitów. | E / `CommitList` |
 | Szczegóły commita | Opis, metadane i lista plików wybranego commita. | F / `CommitView` |

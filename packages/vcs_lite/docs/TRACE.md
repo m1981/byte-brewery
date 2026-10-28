@@ -51,6 +51,7 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | REQ-VCS-043 | DES-VCS-072, DES-VCS-073, DES-VCS-074 | AT-VCS-065, AT-VCS-066 | VER-VCS-021 | test_at_vcs_065_counts_each_diff_side_and_preserves_index, test_at_vcs_066_sorted_rows_headers_counts_and_nonselectable_separators, test_des_vcs_073_external_diff_and_textconv_are_not_executed, test_des_vcs_073_model_publishes_details_with_status_only_after_worker, test_des_vcs_073_numstat_handles_tabs_newlines_renames_and_binary, test_des_vcs_074_large_counts_fit_cells_with_full_value_in_tooltip, test_req_vcs_043_columns_stay_aligned_and_narrow_hints_move_to_tooltip, test_req_vcs_043_conflicts_and_errors_are_never_zero, test_req_vcs_043_disappearing_untracked_file_keeps_other_results, test_req_vcs_043_initial_repo_binary_attributes_mode_and_intent_to_add | vcs_lite/app/model.py, vcs_lite/core/changes.py, vcs_lite/core/gitdetails.py, vcs_lite/ui/file_list.py, vcs_lite/ui/theme.py, vcs_lite/ui/widgets.py |
 | REQ-VCS-044 | DES-VCS-077 | AT-VCS-068 | VER-VCS-023 | test_at_vcs_068_clicked_file_survives_hover_diff_and_redraw, test_req_vcs_044_refresh_never_collapses_details_or_scroll, test_req_vcs_044_selection_survives_refresh_but_new_context_resets | vcs_lite/app/history.py, vcs_lite/ui/history_panel.py |
 | REQ-VCS-045 | DES-VCS-078 | AT-VCS-069 | VER-VCS-024 | test_at_vcs_069_req_vcs_045_scrollbar_repaints_virtual_rows_and_keeps_header, test_des_vcs_078_two_way_native_scroll_and_stable_gutter, test_req_vcs_045_all_panels_share_native_scroll_contract | vcs_lite/ui/file_list.py, vcs_lite/ui/history_panel.py, vcs_lite/ui/main_window.py, vcs_lite/ui/scrolling.py, vcs_lite/ui/search_dialog.py, vcs_lite/ui/settings_dialog.py, vcs_lite/ui/sidebar.py |
+| REQ-VCS-046 | DES-VCS-080 | AT-VCS-070 | VER-VCS-025 | test_at_vcs_070_notes_save_switch_and_reopen, test_req_vcs_046_atomic_save_and_repo_identity, test_req_vcs_046_bad_encoding_does_not_overwrite_note, test_req_vcs_046_notes_keep_text_on_save_failure | vcs_lite/ui/notes.py |
 | REQ-VCS-100 | DES-VCS-008, DES-VCS-034, DES-VCS-062, DES-VCS-076 | AT-VCS-016 | VER-VCS-006 | test_at_vcs_016_vcs_lite_stays_within_60_mb_with_an_open_compare, test_des_vcs_062_a_missing_or_broken_icon_never_stops_the_start, test_des_vcs_062_the_icon_is_set_on_the_window, test_des_vcs_062_the_window_icon_ships_with_the_package_small_and_shaped | vcs_lite/core/filekind.py, vcs_lite/core/textpage.py, vcs_lite/ui/main.py |
 | REQ-VCS-101 | DES-VCS-017, DES-VCS-035, DES-VCS-047, DES-VCS-053 | — | VER-VCS-006 | test_des_vcs_017_nothing_is_pending_while_idle_so_the_ui_stops_polling, test_des_vcs_017_pump_polls_only_while_work_is_pending, test_des_vcs_017_results_are_delivered_only_by_drain_on_the_calling_thread, test_des_vcs_017_the_key_stays_busy_until_drained_and_then_frees, test_des_vcs_035_every_call_is_counted, test_des_vcs_047_each_call_is_logged_as_a_json_line_without_paths, test_des_vcs_047_lines_from_parallel_calls_never_interleave, test_des_vcs_047_nothing_is_written_without_the_variable, test_des_vcs_053_errors_keep_the_exit_code_and_stderr, test_des_vcs_053_leaving_early_stops_git, test_des_vcs_053_missing_git_is_a_result_not_an_exception, test_des_vcs_053_stream_gives_lines_as_git_writes_them, test_des_vcs_053_stream_has_a_time_limit, test_des_vcs_053_stream_is_logged_like_any_call, test_des_vcs_053_stream_reads_without_optional_locks, test_req_vcs_101_no_git_calls_while_idle_with_an_open_compare, test_req_vcs_101_the_model_makes_no_git_calls_while_idle | vcs_lite/app/history.py, vcs_lite/app/search.py, vcs_lite/app/worker.py, vcs_lite/core/gitcli.py, vcs_lite/ui/pump.py |
 | REQ-VCS-102 | DES-VCS-034, DES-VCS-076 | — | VER-VCS-006 | test_req_vcs_102_refreshing_300_changes_takes_under_a_second | vcs_lite/ui/main.py |
@@ -139,6 +140,7 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | AT-VCS-067 | confirmed | REQ-VCS-105 |
 | AT-VCS-068 | confirmed | REQ-VCS-044 |
 | AT-VCS-069 | confirmed | REQ-VCS-045 |
+| AT-VCS-070 | confirmed | REQ-VCS-046 |
 
 ## Wstecz: decyzja projektowa → wymagania
 
@@ -223,6 +225,7 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | DES-VCS-077 | REQ-VCS-044 |
 | DES-VCS-078 | REQ-VCS-045 |
 | DES-VCS-079 | REQ-VCS-040 |
+| DES-VCS-080 | REQ-VCS-046 |
 
 ## Wstecz: test → ID
 
@@ -326,6 +329,7 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `test_at_vcs_067_topmost_3000_changes_remain_responsive` | test_large_changes_performance.py | AT-VCS-067 |
 | `test_at_vcs_068_clicked_file_survives_hover_diff_and_redraw` | test_commit_file_selection.py | AT-VCS-068 |
 | `test_at_vcs_069_req_vcs_045_scrollbar_repaints_virtual_rows_and_keeps_header` | test_scrollbars.py | AT-VCS-069 |
+| `test_at_vcs_070_notes_save_switch_and_reopen` | test_repo_notes.py | AT-VCS-070 |
 | `test_des_vcs_001_input_goes_to_stdin` | test_gitcli.py | DES-VCS-001 |
 | `test_des_vcs_001_output_is_bytes_and_errors_are_decoded` | test_gitcli.py | DES-VCS-001 |
 | `test_des_vcs_002_git_never_prompts_in_a_hidden_terminal` | test_gitcli.py | DES-VCS-002 |
@@ -810,6 +814,9 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `test_req_vcs_044_refresh_never_collapses_details_or_scroll` | test_commit_file_selection.py | REQ-VCS-044 |
 | `test_req_vcs_044_selection_survives_refresh_but_new_context_resets` | test_commit_file_selection.py | REQ-VCS-044 |
 | `test_req_vcs_045_all_panels_share_native_scroll_contract` | test_scrollbars.py | REQ-VCS-045 |
+| `test_req_vcs_046_atomic_save_and_repo_identity` | test_repo_notes.py | REQ-VCS-046 |
+| `test_req_vcs_046_bad_encoding_does_not_overwrite_note` | test_repo_notes.py | REQ-VCS-046 |
+| `test_req_vcs_046_notes_keep_text_on_save_failure` | test_repo_notes.py | REQ-VCS-046 |
 | `test_req_vcs_101_no_git_calls_while_idle_with_an_open_compare` | test_footprint.py | REQ-VCS-101 |
 | `test_req_vcs_101_the_model_makes_no_git_calls_while_idle` | test_model.py | REQ-VCS-101 |
 | `test_req_vcs_102_refreshing_300_changes_takes_under_a_second` | test_footprint.py | REQ-VCS-102 |
@@ -893,6 +900,7 @@ Plik generowany przez `tests/test_traceability.py` (REQ-VCS-207). Nie edytować 
 | `vcs_lite/ui/keys.py` | DEC-VCS-097, DES-VCS-057, REQ-VCS-033 |
 | `vcs_lite/ui/main.py` | DEC-VCS-112, DES-VCS-028, DES-VCS-029, DES-VCS-034, DES-VCS-036, DES-VCS-041, DES-VCS-055, DES-VCS-062, DES-VCS-067, DES-VCS-069, DES-VCS-070, REQ-VCS-033, REQ-VCS-103, REQ-VCS-104 |
 | `vcs_lite/ui/main_window.py` | DEC-VCS-059, DEC-VCS-064, DEC-VCS-068, DEC-VCS-083, DEC-VCS-091, DEC-VCS-092, DEC-VCS-097, DEC-VCS-102, DEC-VCS-106, DEC-VCS-107, DEC-VCS-118, DES-VCS-018, DES-VCS-022, DES-VCS-024, DES-VCS-026, DES-VCS-042, DES-VCS-043, DES-VCS-045, DES-VCS-051, DES-VCS-057, DES-VCS-063, DES-VCS-069, DES-VCS-071, DES-VCS-078, REQ-VCS-002, REQ-VCS-015, REQ-VCS-021, REQ-VCS-022, REQ-VCS-025, REQ-VCS-027, REQ-VCS-031, REQ-VCS-032, REQ-VCS-033, REQ-VCS-035, REQ-VCS-036, REQ-VCS-041, REQ-VCS-045 |
+| `vcs_lite/ui/notes.py` | DES-VCS-080, REQ-VCS-046 |
 | `vcs_lite/ui/pump.py` | DES-VCS-017, DES-VCS-055, REQ-VCS-016, REQ-VCS-033, REQ-VCS-101 |
 | `vcs_lite/ui/scrolling.py` | DES-VCS-078, REQ-VCS-045 |
 | `vcs_lite/ui/search_dialog.py` | DEC-VCS-097, DEC-VCS-109, DES-VCS-042, DES-VCS-057, DES-VCS-078, REQ-VCS-033, REQ-VCS-045 |

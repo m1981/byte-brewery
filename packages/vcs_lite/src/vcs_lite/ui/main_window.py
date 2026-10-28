@@ -14,6 +14,7 @@ from vcs_lite.app.history import HistorySession
 from vcs_lite.app.search import SearchSession
 from vcs_lite.core.browser import open_url
 from vcs_lite.ui.scrolling import ScrollPane
+from vcs_lite.ui.notes import NotesPanel
 from vcs_lite.ui import theme
 from vcs_lite.ui.file_list import FileList, file_color
 from vcs_lite.ui.history_panel import HistoryPanel
@@ -51,9 +52,11 @@ def button(parent: tk.Misc, text: str, parent_bg: str, **options) -> tk.Button:
 class MainWindow(tk.Frame):
     def __init__(self, master: tk.Misc, model: AppModel, *, reduce_motion: bool = False,
                  search: SearchSession | None = None, history: HistorySession | None = None,
-                 clipboard: Callable[[str], None] | None = None, open_url: Callable[[str], None] = open_url):
+                 notes_store=None, clipboard: Callable[[str], None] | None = None, open_url: Callable[[str], None] = open_url):
         super().__init__(master, bg=C["bg"])
         self.model = model
+        self._notes_store = notes_store
+        self._notes_hidden = False
         self._clipboard = clipboard or self._to_clipboard  # tests pass a fake, so the user's clipboard stays
         self._history_session, self._open_url = history, open_url   # None: the panel stays empty (DES-VCS-070)
         self._search = search                  # None: no search window (REQ-VCS-033)
@@ -104,6 +107,25 @@ class MainWindow(tk.Frame):
             handle.bind("<Enter>", lambda _e: self.history.highlight(True))
             handle.bind("<Leave>", lambda _e: self.history.highlight(self._drag is not None))
 
+    def _align_notes(self):
+        if not hasattr(self, 'history') or self._notes_hidden or not self.notes.winfo_ismapped():
+            return
+        width = self.notes.winfo_width()
+        self.history.body.columnconfigure(0, weight=1, uniform='')
+        self.history.body.columnconfigure(1, weight=0, uniform='', minsize=width)
+        self.history.details.configure(width=width)
+        self.history.details.grid_propagate(False)
+        self.history.details.pack_propagate(False)
+
+    def toggle_notes(self):
+        self.notes.flush()
+        if self._notes_hidden:
+            self.notes_split.add(self.notes, minsize=270, width=400, stretch='never')
+        else:
+            self.notes_split.forget(self.notes)
+        self._notes_hidden = not self._notes_hidden
+        self.after_idle(self._align_notes)
+
     def _show_history(self, path: str, folder: bool) -> None:
         """„Pokaż historię” in the file list (DEC-VCS-124)."""
         self._history_session.show_path(path, folder=folder)
@@ -149,6 +171,7 @@ class MainWindow(tk.Frame):
         self.busy_bar = tk.Canvas(bar, height=S["busy_bar_height"], bg=C["panel"], highlightthickness=0, bd=0)
         self.refresh_button = button(bar, "⟳ Odśwież", C["panel"], command=self.model.refresh_all)
         self.refresh_button.pack(side=tk.RIGHT)
+        button(bar, "Notatki", C["panel"], command=self.toggle_notes).pack(side=tk.RIGHT, padx=6)
         self.pull_button = button(bar, "⇣ Pull", C["panel"], command=self.model.pull)
         self.pull_button.pack(side=tk.RIGHT, padx=(0, S["toolbar_gap"]))
         self.view_switch = SegmentedControl(bar, LIST_VIEWS, self.model.list_view, self.set_list_view, parent_bg=C["panel"])
@@ -167,8 +190,17 @@ class MainWindow(tk.Frame):
         sidebar.pack_propagate(False)
         tk.Frame(middle, width=S["line"], bg=C["line"]).pack(side=tk.LEFT, fill=tk.Y)
         self._build_repo_list(sidebar)
-        files = self.file_column = tk.Frame(middle, bg=C["bg"])
-        files.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.notes_split = tk.PanedWindow(middle, orient=tk.HORIZONTAL, sashwidth=5,
+                                         bd=0, bg=C["line"], opaqueresize=True, sashcursor="sb_h_double_arrow")
+        self.notes_split.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        files = self.file_column = tk.Frame(self.notes_split, bg=C["bg"], cursor="arrow")
+        self.notes_split.add(files, minsize=300, stretch="always")
+        self.notes = NotesPanel(self.notes_split, self._notes_store, clipboard=self._clipboard,
+                               on_hide=self.toggle_notes)
+        self.notes_split.add(self.notes, minsize=270, width=400, stretch="never")
+        self.notes_split.bind("<Configure>", lambda e: self.after_idle(self._align_notes))
+        self.notes_split.bind("<B1-Motion>", lambda e: self.after_idle(self._align_notes))
+        self.notes_split.bind("<ButtonRelease-1>", lambda e: self.after_idle(self._align_notes))
         self._build_commit_panel(files).pack(side=tk.BOTTOM, fill=tk.X)
         hline(files).pack(side=tk.BOTTOM, fill=tk.X)
         self._build_banner(files)
@@ -481,6 +513,7 @@ class MainWindow(tk.Frame):
     # ---------- drawing the model ----------
 
     def render(self) -> None:
+        self.notes.select_repo(self.model.selected_path)
         self.winfo_toplevel().title(self.model.window_title)
         self._render_toolbar()
         self.sidebar.render(self.model)

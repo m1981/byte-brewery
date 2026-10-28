@@ -1,3 +1,7 @@
+## P21 — notatnik repo
+
+Zaakceptowany wzorzec: [P21](../ui-mockups/p21-notatki-repo.html), DEC-VCS-133. D pod B, C nad F, wspólny nagłówek Historii przez całą szerokość. Notatnik domyślnie widoczny dla każdego repo; granica przesuwana i panel zwijany. Kompaktowe kolorowe +/− w B, E i F. Nazwy obszarów: [słownik](../SLOWNIK.md).
+
 ## P20 — paski przewijania (zaakceptowane 2026-10-27)
 
 Wiążąca [makieta P20](../ui-mockups/p20-paski-przewijania.html), DEC-VCS-130, REQ-VCS-045. Natywne ttk.Scrollbar ze stale zarezerwowanym miejscem i odstępem toru 6 px. Nagłówki górnych list 28 px, poza przewijaniem. Historia: wspólny obrys, ciągła linia pod nagłówkiem i pojedynczy podział kolumn. Wszystkie listy i długie teksty przewijają się niezależnie.

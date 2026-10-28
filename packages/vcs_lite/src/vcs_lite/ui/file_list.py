@@ -21,7 +21,7 @@ from vcs_lite.core.changes import TimeGroup, relative_time, time_groups, time_ra
 from vcs_lite.core.status import FileChange, Group
 from vcs_lite.ui.scrolling import ScrollPane
 from vcs_lite.ui import theme
-from vcs_lite.ui.widgets import draw_line_counts, Tooltip, elide, elide_middle, rounded_rect
+from vcs_lite.ui.widgets import draw_compact_counts, Tooltip, elide, elide_middle, rounded_rect
 
 C, S = theme.COLORS, theme.SPACE
 
@@ -873,7 +873,7 @@ class FileList(tk.Frame):
 
     def _draw_counts(self, row: ListRow, right: float, middle: float) -> None:
         lines = self._model.change_details(row.change).lines
-        draw_line_counts(self.canvas, lines, right, middle)
+        draw_compact_counts(self.canvas, lines, right, middle, tags=("row", "line_count"))
 
     def _draw_pieces(self, row: ListRow, x: float, middle: float, right: float | None = None) -> None:
         pieces = row.pieces if right is None else fit_pieces(row.pieces, right - x)

@@ -614,7 +614,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And krótka treść zachowuje szerokość panelu i nie przewija się w pustkę
     And przy 3000 plików rysowane są tylko widoczne wiersze, bez utraty zaznaczenia
 
-  @AT_VCS_070 @planned @REQ_VCS_046 @VER_VCS_025
+  @AT_VCS_070 @confirmed @REQ_VCS_046 @VER_VCS_025
   Scenario: Notatka pozostaje przypisana do repo
     Given dwa repo z różnymi notatkami
     When użytkownik edytuje notatkę i zmienia repo lub opuszcza edytor

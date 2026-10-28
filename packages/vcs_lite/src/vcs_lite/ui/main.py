@@ -21,6 +21,7 @@ from vcs_lite.core.gitgrep import GitGrepSearcher
 from vcs_lite.core.gitlog import GitLog
 from vcs_lite.core.settings import SettingsStore, default_settings_path
 from vcs_lite.ui.main_window import MainWindow
+from vcs_lite.ui.notes import NoteStore
 from vcs_lite.ui.pump import TkPump, tk_later
 from vcs_lite.ui.tkenv import prepare_tk
 
@@ -49,7 +50,18 @@ def build(settings_path: Path) -> tuple[tk.Tk, AppModel, TkPump]:
     search = SearchSession(GitGrepSearcher(git), pump, later=tk_later(root), repo=lambda: model.selected_path,
                            open_match=model.open_match)
     history = HistorySession(GitLog(git), pump, later=tk_later(root), model=model)
-    MainWindow(root, model, reduce_motion=reduce_motion(), search=search, history=history).pack(fill=tk.BOTH, expand=True)
+    window = MainWindow(root, model, reduce_motion=reduce_motion(), search=search, history=history,
+                        notes_store=NoteStore(settings_path.parent / "notes"))
+    window.pack(fill=tk.BOTH, expand=True)
+    def close():
+        if window.notes.flush():
+            root.destroy()
+        else:
+            if window._notes_hidden:
+                window.toggle_notes()
+            window.notes.editor.focus_set()
+    root.protocol("WM_DELETE_WINDOW", close)
+    root.createcommand("::tk::mac::Quit", close)
     return root, model, pump
 
 

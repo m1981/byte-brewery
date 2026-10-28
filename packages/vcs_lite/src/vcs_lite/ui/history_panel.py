@@ -130,7 +130,7 @@ class HistoryPanel(tk.Frame):
         tk.Frame(self, height=S["line"], bg=C["line"]).pack(side=tk.TOP, fill=tk.X)
         self._build_header()
         tk.Frame(self, height=S["line"], bg=C["line"]).pack(fill=tk.X)
-        body = tk.Frame(self, bg=C["line"])
+        body = self.body = tk.Frame(self, bg=C["line"])
         tk.Frame(self, height=S["line"], bg=C["line"]).pack(side=tk.BOTTOM, fill=tk.X)
         body.pack(fill=tk.BOTH, expand=True)
         body.columnconfigure(0, weight=62, uniform="split")
