@@ -20,7 +20,7 @@ Wspólny słownik rozmów, makiet, wymagań i kodu. Używamy nazw poniżej zamia
 | Pasek przewijania | Kontrolka przesuwania treści wewnątrz panelu. Suwak to jej ruchoma część. | scrollbar |
 | Nagłówek panelu | Stały pasek z nazwą, sterowaniem lub opisami kolumn. | header |
 
-Układ P21: **D pod B; C nad F; E pod B i D oraz pod listą repozytoriów**. Nagłówek historii znajduje się nad E. C i F mają tę samą prawą kolumnę i wspólną granicę poziomą.
+Układ P21: **D pod B; C nad F; E pod B i D oraz pod listą repozytoriów**. Nagłówek historii biegnie przez całą szerokość okna nad E i F. C i F mają tę samą prawą kolumnę, rozdzieloną wspólnym nagłówkiem historii.
 
 ## Repo i Git
 
