@@ -1,6 +1,6 @@
 # Przegląd SDLC — założenia i plan pilotażu
 
-Data: 2026-10-28. Wersja: 0.3. Status: etapy 1–2 zakończone; etapy 3–6 niewykonane.
+Data: 2026-10-28. Wersja: 0.4. Status: etapy 1–3 zakończone; etapy 4–6 niewykonane.
 
 Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewane korzysci do pliku (md) oraz drugi plik (md) jako rejestr zmian”. Metodę zaproponował agent; użytkownik zaakceptował pilotaż 2026-10-28. Dokument nie zmienia obowiązujących wymagań produktu ani zasad współpracy.
 
@@ -60,7 +60,7 @@ Ocena każdego kryterium: **spełnione / niespełnione / brak dowodu / nie dotyc
 
 - [x] Zidentyfikowano badany stan i źródła; wyniki można odnieść do konkretnej wersji.
 - [x] Mapa źródeł odróżnia obowiązujące reguły, historię i propozycje, wskazuje odpowiedzialność oraz wyzwalacze aktualizacji.
-- [ ] Zachowano wynik kontroli struktury, zakres checkera i ewentualną różnicę TRACE.
+- [x] Zachowano wynik kontroli struktury, zakres checkera i ewentualną różnicę TRACE.
 - [ ] Każda z trzech zmian ma ocenę wszystkich sześciu kryteriów z dowodami albo jawnie wskazanym ich brakiem.
 - [ ] Wszystkie ustalenia wymagające działania mają wpis, priorytet, właściciela, następny krok i warunek zamknięcia w rejestrze.
 - [ ] Wynik rozróżnia: wdrożone, zweryfikowane i zaakceptowane. Nie przypisano użytkownikowi nieudzielonej akceptacji.
@@ -231,9 +231,74 @@ Trzy wskazane logi w `/private/tmp` istnieją: `vcs-85-tests.log`, `vcs-notes-fu
 Cztery otwarte ustalenia PIL-U-001–004 zapisano bez zmiany reguł wejściowych. Priorytety są wstępne; etap 5 może je zmienić po sprawdzeniu ścieżek dowodowych. Etap 2 zakończony; następny jest etap 3. DoD całego pilotażu nadal niespełnione.
 
 
+### Etap 3 — kontrola struktury (wykonany)
+
+Wykonano 2026-10-28 od 22:49:45 CET na izolowanym `git archive` bazy `c19208dd4ce797ec5183c3127e832c5282a30aba`. Zmiany użytkownika oraz późniejsze dokumenty pilotażu nie weszły do badanego korpusu. Python 3.12.11, pytest 9.0.2, macOS 26.2 arm64; środowisko i dokładne polecenia są w [result.json](experiments/sdlc-stage3-20261028/result.json). Nie uruchamiano aplikacji, testów GUI ani pełnej suity produktu.
+
+#### Dowód i odtworzenie
+
+- [Pełny log przebiegu bazowego](experiments/sdlc-stage3-20261028/pytest-baseline.log): **22 passed in 0.53s**, kod wyjścia 0. Osiem testów sprawdza rzeczywisty korpus, czternaście zachowanie checkera na danych syntetycznych. To nie jest wykonanie 22 scenariuszy produktu.
+- [Różnica TRACE](experiments/sdlc-stage3-20261028/TRACE.diff): plik ma **0 bajtów**. SHA-256 przed i po: `0fa788b69cb793c08aac7893df4f927d54592e8d748a0173022aa4bc728495be`. Zapisany TRACE jest aktualny względem generatora tej bazy.
+- Po przebiegu bazowym żadna istniejąca zawartość pliku pakietu z archiwum nie uległa zmianie (porównano SHA-256). Utworzone przez interpreter cache nie są artefaktami wejściowymi.
+- [Skrypt odtwarzający](experiments/sdlc-stage3-20261028/run.py) pobiera stały commit, zapisuje logi, różnicę i wynik JSON, a następnie wykonuje próbę kontrolną wyłącznie w katalogu tymczasowym. Dowody zapisano w repo, nie tylko w `/private/tmp`.
+
+Odtworzenie z katalogu pakietu, z zapisem nowego przebiegu poza dowodami pierwotnymi:
+
+```sh
+../../.venv/bin/python docs/experiments/sdlc-stage3-20261028/run.py --repo ../.. --output /private/tmp/vcs-stage3-recheck
+```
+
+Polecenie właściwego testu, wykonywane w odizolowanym korzeniu repo: `.venv` z oryginalnego środowiska uruchamia `python -m pytest -p no:cacheprovider -vv packages/vcs_lite/tests/test_traceability.py`. Skrypt wymaga dostępności badanego commita w lokalnym Git i środowiska z pytest; nie pobiera zależności ani nie zmienia ustawień użytkownika.
+
+#### Faktyczny zakres wejść
+
+| Wejście | Co odczytuje checker na bazie |
+|---|---|
+| SPEC i DESIGN | Definicje z rozpoznanych wierszy tabel i nagłówków oraz odwołania pasujące do regexów ID. Nie analizuje logicznego znaczenia tekstu. |
+| ACCEPTANCE.feature | Scenariusze z tagami bezpośrednio nad nagłówkiem; pierwszy tag AT, tagi REQ/DEC/UC/VER i `@confirmed`. Nie wykonuje kroków Given/When/Then. |
+| MANUAL-UI, UI-REFERENCE | Odwołania do ID i niedozwolone skróty. Brak pliku referencyjnego jest pomijany przez `path.exists()`, nie zgłaszany jako błąd. |
+| `tests/**/test_*.py` | Nazwy funkcji `test_*` z AST, także zagnieżdżonych; to nie wynik kolekcji/wykonania całej suity pytest. |
+| `src/vcs_lite/**/*.py` | Pierwsza rozpoznana linia `Trace:` w docstringu każdego modułu. Nie śledzi zależności poszczególnych funkcji ani przepływu wywołań. |
+| Poza korpusem dokumentów | WSPOLPRACA, PROMPT-STARTOWY, SLOWNIK, RETROSPEKTYWA, teksty PROPOZYCJA, makiety HTML, dokumenty pilotażu, logi wykonania i rozmowa. |
+
+Rozmiar rozpoznanego korpusu: **473 unikalne ID**, w tym 60 REQ (59 bez statusu ZASTĄPIONE), 134 DEC, 80 DES, 70 AT, 25 VER. Pozostałe: 4 NEED, 18 OBS, 71 Q, 9 UC, 1 S, 1 T. **70 scenariuszy ma `@confirmed`; 631 nazw funkcji testowych w 54 plikach; 42 moduły src**. Liczba funkcji AST nie jest liczbą wykonanych testów (m.in. parametryzacja pytest może ją zmieniać).
+
+#### Reguły i wynik
+
+| Reguła | Faktyczne kryterium | Wynik na bazie |
+|---|---|---|
+| REQ-VCS-200 | Brak wielokrotnych definicji rozpoznanego ID. | 0 błędów |
+| REQ-VCS-201 | Rozpoznane odwołania istnieją; brak skrótów wykrywanych przez SHORTHAND_RE. | 0 błędów |
+| REQ-VCS-202 | REQ bez statusu ZASTĄPIONE ma powiązanie AT lub VER i DES albo jawny wyjątek „bez DES:”. | 0 błędów |
+| REQ-VCS-203 | Każdy rozpoznany AT ma tag REQ; VER/DES wskazuje REQ lub DEC. | 0 błędów |
+| REQ-VCS-204 | Nazwa odczytanej funkcji testowej zaczyna się od rozpoznanego, istniejącego ID. | 0 błędów |
+| REQ-VCS-205 | Każdy confirmed AT ma nazwę funkcji testowej z tym AT; `TDD_STARTED=True`, więc brak oblewa. | 0 błędów |
+| REQ-VCS-206 | Każdy moduł src ma `Trace:` z co najmniej jednym istniejącym ID. | 0 błędów |
+| REQ-VCS-207 | Wygenerowanie macierzy i sprawdzenie obecności wiersza REQ-VCS-001. | Test przeszedł; niezależne porównanie potwierdziło brak różnicy TRACE. |
+
+Dodatkowa inspekcja mapy: wszystkie 59 REQ bez statusu ZASTĄPIONE mają co najmniej jedno wyliczone powiązanie do nazwy testu. Osiem z nich (REQ-VCS-200–207) nie ma powiązania do modułu `src`; dotyczą kontroli procesu w `tests/`, więc nie klasyfikujemy tych pustych pól jako usterki. Relacja do modułu nie jest wymagana przez check_202. Powiązania mogą być pośrednie przez DES/AT i nie dowodzą pokrycia zachowania.
+
+#### Próba kontrolna i ograniczenia wyniku
+
+Po zakończeniu pomiaru bazowego, w tej samej kopii tymczasowej zastąpiono TRACE pojedynczym celowo nieaktualnym nagłówkiem. Uruchomiono wyłącznie test REQ-VCS-207: **1 passed, 21 deselected**, a plik został odtworzony do poprzedniej wygenerowanej zawartości. [Pełny log próby](experiments/sdlc-stage3-20261028/pytest-stale-trace-probe.log). Nie zmieniano checkera, wymagań ani TRACE w repo roboczym.
+
+To potwierdza, że zielony wynik generatora nie dowodzi aktualności TRACE przed uruchomieniem. Na rzeczywistej bazie TRACE był aktualny, więc nie znaleziono tu zaległej macierzy. Wymaganie REQ-VCS-207 nakazuje generowanie, nie wymaga błędu przy nieaktualnym pliku; zachowanie jest ograniczeniem kontroli, a ewentualny tryb bez zapisu to propozycja usprawnienia, nie zgłoszenie niespełnienia tego wymagania (PIL-U-005).
+
+Pozostałe granice wynikają z odczytu implementacji: parser rozpoznaje określony format, nie dowolny tekst; nie sprawdza treści asercji, skip/xfail, rezultatów wykonania testów produktu, kompletności warunków wymagania, zgodności cytatu z intencją, aktualności statusu ani uprawnień do akceptacji. Wycofanie/zastąpienie rozpoznaje po szczególnych słowach w komórce opisu. Brak komunikatu checkera nie jest uniwersalnym dowodem braku błędnych odwołań we wszystkich plikach.
+
+#### Korzyści, koszt i dalszy krok
+
+- **Wiarygodniejsze „gotowe”:** oddzielono poprawność struktury, aktualność pliku generowanego i poprawność zachowania. Pierwsze dwie potwierdzono dla konkretnej bazy; trzecia pozostaje do etapu 4.
+- **Łatwiejszy powrót i niższy koszt:** zachowano powtarzalne polecenie, pełne logi i dane w repo. Następny recenzent nie musi odtwarzać wyniku z rozmowy lub plików tymczasowych. Cały przebieg skryptu (archiwum, kontrola, inwentaryzacja i próba) trwał 2,119 s; nie jest to czas całego przeglądu ani dowód oszczędności względem dawnego procesu.
+- **Mniej błędnej interpretacji:** cztery ustalenia etapu 2 nie znikają po zielonych testach; są poza zakresem checkera albo dotyczą znaczenia treści. Nie wymagamy rozszerzania regexów na każdy dokument zamiast przeglądu semantycznego.
+- **Skuteczniejsze naprawy:** dodano jedno ustalenie PIL-U-005 z mierzalnym warunkiem, bez automatycznej zmiany generatora. Brak danych o skuteczności napraw, bo nie były wykonywane.
+
+Nakład aktywnej analizy i dokumentowania: około 5 minut (szacunek); tokenów nie zmierzono. Etap 3 zakończony. Następny: etap 4 — trzy ścieżki dowodowe. Kontrola dokumentów nowego przyrostu przed commitem jest oddzielna od powyższego przebiegu bazowego.
+
+
 ## Otwarte
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| Etap 3 — kontrola struktury | Agent | Uruchomić na ustalonej bazie po zleceniu kontynuacji. |
-| PIL-U-001–004 | Agent | Przygotować rozwiązania po dalszej weryfikacji; warunki zamknięcia w rejestrze. |
+| Etap 4 — trzy ścieżki dowodowe | Agent | Sprawdzić treść wymagań, kod, asercje i dowody wykonania po zleceniu kontynuacji. |
+| PIL-U-001–005 | Agent | Przygotować rozwiązania po dalszej weryfikacji; warunki zamknięcia w rejestrze. |

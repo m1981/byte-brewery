@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-9.0.2, pluggy-1.6.0 -- /Users/michal/PycharmProjects/byte-brewery/.venv/bin/python
+rootdir: /private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/vcs-sdlc-stage3-ye4xthd8/packages/vcs_lite
+configfile: pyproject.toml
+plugins: anyio-4.12.0, cov-7.0.0
+collecting ... collected 22 items
+
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_200_each_id_defined_once PASSED [  4%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_201_references_are_full_and_resolve PASSED [  9%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_202_forward_req_to_verification_and_design PASSED [ 13%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_203_backward_from_documents PASSED [ 18%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_204_test_names_carry_ids PASSED [ 22%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_205_confirmed_scenarios_have_tests PASSED [ 27%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_206_modules_carry_trace PASSED [ 31%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_207_matrix_is_generated PASSED [ 36%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_201_checker_expands_en_dash_ranges PASSED [ 40%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_201_checker_rejects_bare_number_lists PASSED [ 45%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_201_checker_reports_undefined_reference PASSED [ 50%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_200_checker_reports_duplicate_definition PASSED [ 54%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_202_checker_accepts_full_coverage PASSED [ 59%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_202_checker_reports_req_without_design PASSED [ 63%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_202_checker_ignores_withdrawn_design PASSED [ 68%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_203_checker_reports_design_without_link PASSED [ 72%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_204_checker_rejects_test_without_id PASSED [ 77%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_205_checker_reports_confirmed_scenario_without_test PASSED [ 81%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_206_checker_requires_trace_line PASSED [ 86%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_202_checker_reads_status_only_from_description_start PASSED [ 90%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_207_matrix_links_tests_through_referenced_ids PASSED [ 95%]
+packages/vcs_lite/tests/test_traceability.py::test_req_vcs_201_checker_resolves_ids_cited_in_the_manual_checklist PASSED [100%]
+
+============================== 22 passed in 0.53s ==============================

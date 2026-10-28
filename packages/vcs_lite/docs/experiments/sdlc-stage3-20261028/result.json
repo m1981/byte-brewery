@@ -1,0 +1,85 @@
+{
+  "baseline": "c19208dd4ce797ec5183c3127e832c5282a30aba",
+  "started": "2026-10-28T22:49:45.915263+01:00",
+  "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]",
+  "executable": "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "command": [
+    "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+    "-m",
+    "pytest",
+    "-p",
+    "no:cacheprovider",
+    "-vv",
+    "packages/vcs_lite/tests/test_traceability.py"
+  ],
+  "cwd": "isolated git archive at baseline",
+  "exit_code": 0,
+  "trace_before_sha256": "0fa788b69cb793c08aac7893df4f927d54592e8d748a0173022aa4bc728495be",
+  "trace_after_sha256": "0fa788b69cb793c08aac7893df4f927d54592e8d748a0173022aa4bc728495be",
+  "trace_diff_bytes": 0,
+  "changed_existing_package_files_after_baseline_test": [],
+  "checker_sha256": "80a7177b65eff808401d09a16eeec63b45b84141651d347117e83ac66adecf34",
+  "test_module_sha256": "a53a39f7377ebc5c3c430b255fe2a20f7d8164086783fc1505084f40615e2e49",
+  "definitions_by_prefix": {
+    "AT": 70,
+    "DEC": 134,
+    "DES": 80,
+    "NEED": 4,
+    "OBS": 18,
+    "Q": 71,
+    "REQ": 60,
+    "S": 1,
+    "T": 1,
+    "UC": 9,
+    "VER": 25
+  },
+  "definition_count": 473,
+  "scenario_count": 70,
+  "confirmed_scenarios": 70,
+  "ast_test_functions": 631,
+  "test_files": 54,
+  "source_modules": 42,
+  "checks_200_to_206": {
+    "200": [],
+    "201": [],
+    "202": [],
+    "203": [],
+    "204": [],
+    "205": [],
+    "206": []
+  },
+  "non_superseded_requirements": 59,
+  "non_superseded_reqs_without_named_test_link": [],
+  "non_superseded_reqs_without_module_link": [
+    "REQ-VCS-200",
+    "REQ-VCS-201",
+    "REQ-VCS-202",
+    "REQ-VCS-203",
+    "REQ-VCS-204",
+    "REQ-VCS-205",
+    "REQ-VCS-206",
+    "REQ-VCS-207"
+  ],
+  "reference_only_docs": [
+    "MANUAL-UI.md",
+    "ui-reference/UI-REFERENCE.md"
+  ],
+  "stale_trace_probe": {
+    "deliberately_modified": "docs/TRACE.md only in disposable copy",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-vv",
+      "packages/vcs_lite/tests/test_traceability.py",
+      "-k",
+      "test_req_vcs_207_matrix_is_generated"
+    ],
+    "exit_code": 0,
+    "restored_generated_trace": true
+  },
+  "elapsed_seconds": 2.119
+}

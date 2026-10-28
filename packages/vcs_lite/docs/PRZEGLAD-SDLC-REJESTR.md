@@ -14,11 +14,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-003 | 2026-10-28 | Plan v0.3: wykonany etap 2, mapa źródeł i ról, próba nawigacji trzech zmian, ocena korzyści; otwarte PIL-U-001–004. | Polecenie użytkownika wykonania etapu 2 z uwzględnieniem korzyści. | Agent | Odczyt bazy c19208d i roboczego promptu; sumy źródeł zgodne z etapem 1. Szczegóły i ograniczenia w planie. |
 
+| PIL-Z-004 | 2026-10-28 | Plan v0.4: etap 3 wykonany na bazie c19208d; pełne dowody w experiments, aktualność TRACE i granice checkera. Dodano PIL-U-005. | Użytkownik: „wykonaj 3 rzetelnie”. | Agent | 22 testy bazowe przeszły; różnica TRACE pusta; próba nieaktualnego TRACE: 1 test przeszedł i odtworzył plik w kopii tymczasowej. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–2 mają wyniki w planie. Cztery otwarte ustalenia poniżej wynikają z analizy dokumentów; nie są oceną poprawności implementacji. Nie wykonano napraw.
+Etapy 1–3 mają wyniki w planie. Pięć otwartych ustaleń poniżej wynika z analizy dokumentów i kontroli struktury; nie są oceną poprawności implementacji. Nie wykonano napraw.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -85,3 +87,15 @@ Wspólne metadane: autor agent, data 2026-10-28, baza `c19208dd4ce797ec5183c3127
 - **Skutek / priorytet:** średni; ponowne pomylenie sumy commita ze statystyką pliku albo uznanie potwierdzenia jednego obszaru za potwierdzenie wszystkich.
 - **Propozycja / następny krok:** etap 4 najpierw sprawdzi istniejące decyzje, testy i akceptacje; dopiero wtedy wskazać wymagane uzupełnienie REQ/DES lub statusu ręcznej weryfikacji. Nie dodawać nowych ID wyłącznie dla wypełnienia tabeli.
 - **Warunek zamknięcia:** jeden wskazany zapis zakresu odsyła do B/E/F, właściwych dowodów i jawnych braków; status nie wykracza poza dowód. Weryfikacja: porównanie tego zapisu z decyzjami, testami i ręcznymi wynikami na oznaczonej wersji.
+
+
+### PIL-U-005 — sukces generatora nie dowodzi aktualności zapisanego TRACE
+
+- **Metadane:** 2026-10-28, agent; baza c19208dd4ce797ec5183c3127e832c5282a30aba. Właściciel agent, status otwarte, działanie proponowane. Historia: wykryto i odtworzono w etapie 3; bez zmiany generatora.
+- **Rodzaj / kryterium:** usprawnienie kontroli dowodów, nie stwierdzone naruszenie REQ-VCS-207. Kryterium pilotażu: odróżnić stan wejściowy od artefaktu naprawionego podczas testu.
+- **Dowód:** `test_req_vcs_207_matrix_is_generated` zapisuje plik przed asercją. [Próba](experiments/sdlc-stage3-20261028/pytest-stale-trace-probe.log) celowo nieaktualnego TRACE zakończyła się sukcesem i odtworzeniem pliku; [wynik bazowy](experiments/sdlc-stage3-20261028/result.json) potwierdza, że oryginalny TRACE był aktualny.
+- **Oczekiwane / zaobserwowane:** aby deklarować aktualność wersji zapisanej, trzeba porównać ją z wynikiem generatora. Sam dotychczasowy test dopuszcza sukces po samonaprawie.
+- **Skutek / priorytet:** średni, wstępny; możliwość uznania nieaktualnego artefaktu za wcześniej zgodny, zwłaszcza przy testowaniu kopii indeksu, której zmian nie przeniesiono do commita.
+- **Propozycja / następny krok:** w etapie 5 rozważyć tani warunek porównania TRACE po generacji albo osobny tryb weryfikacji bez zapisu. Zachować możliwość jawnego generowania. Nie zmieniać automatycznie REQ ani testu w ramach tego etapu.
+- **Warunek zamknięcia:** po przyjęciu rozwiązania celowo nieaktualna macierz jest jawnie raportowana jako różnica stanu wejściowego (lub powoduje błąd weryfikacji), a aktualna przechodzi bez zmian. Oba wyniki mają SHA, polecenie i log; generowanie nadal możliwe osobno. Przy odrzuceniu propozycji zapisać uzasadnienie i sposób uwzględniania ograniczenia przy deklarowaniu zgodności.
+- **Dowód zamknięcia:** brak; dotychczasowa próba potwierdza ograniczenie, nie jego naprawę. Termin/wyzwalacz: ocena usprawnień w etapie 5; nie blokuje etapu 4.
