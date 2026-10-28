@@ -4,6 +4,8 @@ Przyjęta 2026-10-22 (użytkownik: „D1: tak D2: do docs/WSPOPLRACA.md”). Wz�
 
 Zastępuje regułę promptu startowego „najpierw wypisz pytania”: na starcie sesji agent podaje rozumienie zadania w BLUF i tylko pytania z listy CCIR, każde z rekomendacją.
 
+Wspólny język rozmów, makiet i kodu: [SLOWNIK.md](SLOWNIK.md). Dla paneli używamy nazw i oznaczeń A–F zamiast „lewe/prawe okno”.
+
 ## Zasady
 
 1. **Zamiar użytkownika** to `SPEC.md`, `DESIGN.md`, `ui-reference/` i „Punkt wznowienia”. W ich granicach agent sam ustala szczegóły (nazwy, kształt testów, kolejność drobnych zmian) i zapisuje każdą taką decyzję w dokumentach jako „decyzja agenta”, żeby użytkownik mógł ją później podważyć.

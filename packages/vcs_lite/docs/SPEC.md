@@ -28,20 +28,7 @@ Wszystkie pozycje są potwierdzone.
 
 ## Język domeny
 
-| Termin | Znaczenie |
-|---|---|
-| **rootdir** | Katalog, w którym narzędzie szuka repozytoriów: `~/PycharmProjects`, DEC-VCS-003. |
-| **Repo obserwowane** | Repozytorium zaznaczone checkboxem w Settings. |
-| **HEAD** | Ostatni commit bieżącej gałęzi. W repo bez commitów HEAD nie istnieje. |
-| **Indeks** | Stan przygotowany do następnego commita (staging area). |
-| **Kopia robocza** | Pliki na dysku. |
-| **Staged** | Plik, którego stan w indeksie różni się od HEAD. |
-| **Changes** | Plik śledzony, którego kopia robocza różni się od indeksu. |
-| **Unversioned** | Plik nieśledzony i nieignorowany. |
-| **Conflicts** | Plik w stanie niescalonym po merge, rebase lub cherry-pick. |
-| **Upstream** | Gałąź zdalna skonfigurowana do pusha bieżącej gałęzi. |
-
-Jeden plik może jednocześnie należeć do grup Staged i Changes, np. kod `MM`.
+Wspólne definicje: [SLOWNIK.md — ubiquitous language](SLOWNIK.md). Obejmuje Git, obszary A–F, notatki, zaznaczenie i liczby zmian.
 
 ## Decyzje
 
@@ -651,3 +638,5 @@ Następne kroki:
 14. Użytkownik: „w obu oknach chce wersji kompaktowej z lewego okna ale z kolorami (ciasno i kolorowo)”. Listy commitów i plików commita mają wspólny kompaktowy zapis +/−, zielony/czerwony, z szarym zerem.
 
 15. 2026-10-28: koncepcja notatek repo — użytkownik chce notatnik domyślnie przy górnej liście zmian, zamiast osobnego okna. Makieta do oceny: [P21](ui-mockups/p21-notatki-repo.html). Podział: repozytoria; zmiany + notatka bieżącego repo; wspólny panel commita; historia commitów + pliki commita. Notatka przełącza się z repo, a wybór commita jej nie zmienia. Ujednolicone kompaktowe, kolorowe +/− we wszystkich trzech listach. Propozycja agenta: notatnik 32% obszaru roboczego, minimum 270 px, regulowany i zwijany; plik tworzony przy pierwszej edycji w notes obok settings.json; zapis po przerwie, utracie fokusu, zmianie repo i zamknięciu. HTML działa wyłącznie w pamięci strony, nie zapisuje plików. Właściciel użytkownik: ocena układu; potem agent: specyfikacja i wdrożenie.
+
+16. 2026-10-28: korekta P21 na prośbę użytkownika: D całkowicie pod B, C styka się z F. Wspólna prawa kolumna C/F, nagłówek historii tylko nad E; szerokość C/F regulowana razem. Dodano wspólny [słownik](SLOWNIK.md), zastępujący dotychczasową tabelę języka domeny. Makieta pozostaje propozycją przed wdrożeniem notatnika.
