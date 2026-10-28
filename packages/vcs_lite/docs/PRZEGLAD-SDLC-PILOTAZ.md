@@ -1,8 +1,8 @@
 # Przegląd SDLC — założenia i plan pilotażu
 
-Data: 2026-10-28. Wersja: 0.1. Status: plan przygotowany; pilotaż niewykonany.
+Data: 2026-10-28. Wersja: 0.2. Status: pilotaż zaakceptowany; etap 1 zakończony, etapy 2–6 niewykonane.
 
-Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewane korzysci do pliku (md) oraz drugi plik (md) jako rejestr zmian”. Szczegóły metody poniżej są propozycją agenta. Dokument nie zmienia obowiązujących wymagań produktu ani zasad współpracy.
+Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewane korzysci do pliku (md) oraz drugi plik (md) jako rejestr zmian”. Metodę zaproponował agent; użytkownik zaakceptował pilotaż 2026-10-28. Dokument nie zmienia obowiązujących wymagań produktu ani zasad współpracy.
 
 Historia zmian i rejestr działań: [PRZEGLAD-SDLC-REJESTR.md](PRZEGLAD-SDLC-REJESTR.md).
 
@@ -58,7 +58,7 @@ Ocena każdego kryterium: **spełnione / niespełnione / brak dowodu / nie dotyc
 
 ## Definition of Done pilotażu
 
-- [ ] Zidentyfikowano badany stan i źródła; wyniki można odnieść do konkretnej wersji.
+- [x] Zidentyfikowano badany stan i źródła; wyniki można odnieść do konkretnej wersji.
 - [ ] Mapa źródeł odróżnia obowiązujące reguły, historię i propozycje, wskazuje odpowiedzialność oraz wyzwalacze aktualizacji.
 - [ ] Zachowano wynik kontroli struktury, zakres checkera i ewentualną różnicę TRACE.
 - [ ] Każda z trzech zmian ma ocenę wszystkich sześciu kryteriów z dowodami albo jawnie wskazanym ich brakiem.
@@ -83,10 +83,92 @@ To hipotezy korzyści. Pierwszy przebieg ustala punkt odniesienia; sam nie dowod
 
 ## Wyniki pilotażu
 
-Jeszcze nie wykonano. Przy wykonaniu uzupełnić: badany stan, mapę źródeł, ocenę trzech przypadków, dowody, nakład pracy, ograniczenia i rekomendacje. Do tego czasu pola DoD pozostają nieodhaczone.
+### Etap 1 — ustalenie podstawy (wykonany)
+
+Akceptacja użytkownika 2026-10-28: „akceptuje pilotarz wykonaj etap 1 (chyba ze cos przeoczylem)”. Zatwierdzono pilotaż; bieżące wykonanie ograniczono do etapu 1. Nie stwierdzono brakującego warunku uniemożliwiającego ustalenie podstawy.
+
+**Moment zapisu:** 2026-10-28T22:39:22+01:00. Repozytorium: `/Users/michal/PycharmProjects/byte-brewery`; pakiet: `packages/vcs_lite`; gałąź: `main`.
+
+**Badana wersja bazowa:** `c19208dd4ce797ec5183c3127e832c5282a30aba`. To commit zawierający plan v0.1. Późniejsze commity z wynikami przeglądu nie przesuwają automatycznie tej podstawy. Ewentualna zmiana podstawy wymaga wpisu w rejestrze.
+
+**Rozdzielenie stanów (decyzja wykonawcza agenta):** kod i testy badamy z powyższego commita. Dwie zastane zmiany użytkownika stanowią osobną warstwę kontekstu: robocza wersja PROMPT-STARTOWY będzie uwzględniona przy mapie instrukcji, a zmiana `.gitignore` jest zarejestrowana, lecz nie wpływa na wybrane trzy przypadki. Nie włączamy tych zmian do commita dokumentującego przegląd. Dokumenty wynikowe tego przeglądu nie są dowodem wcześniejszego działania procesu.
+
+Status przed edycją dokumentów wynikowych (`git status --short`, ścieżki od korzenia repo):
+
+```text
+M  .gitignore
+ M packages/vcs_lite/docs/PROMPT-STARTOWY.md
+```
+
+Indeks: dodano jedną regułę ignorowania `.DS_Store`. Katalog roboczy: usunięto pięć końcowych wierszy starej listy następnych kroków z PROMPT-STARTOWY. Poza tym `git status` nie wykazał zmian śledzonych ani plików nieśledzonych; pliki ignorowane nie są objęte tym stwierdzeniem.
+
+Zachowane różnice pozwalające odtworzyć obie warstwy na bazie badanego commita (diff promptu bez kontekstu; przy odtwarzaniu przez `git apply` wymaga `--unidiff-zero`):
+
+```diff
+diff --git a/.gitignore b/.gitignore
+index 8df88a7..cecf2e3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -41,3 +41,4 @@ frontend/.streamlit/secrets.toml
+ /bin/node_modules/.package-lock.json
+ /bin/package-lock.json
+ /my-chats/
++/packages/vcs_lite/assets/.DS_Store
+```
+
+```diff
+diff --git a/packages/vcs_lite/docs/PROMPT-STARTOWY.md b/packages/vcs_lite/docs/PROMPT-STARTOWY.md
+index 431f809..f1aee40 100644
+--- a/packages/vcs_lite/docs/PROMPT-STARTOWY.md
++++ b/packages/vcs_lite/docs/PROMPT-STARTOWY.md
+@@ -32,5 +31,0 @@ Ustalenia techniczne:
+-Następny krok według „Punktu wznowienia”:
+-1. „Szukaj w plikach” (REQ-VCS-033) i przeglądarka zamiast Beyond Compare (REQ-VCS-023, REQ-VCS-034) gotowe i potwierdzone na ekranie (kroki 16, 6, 17).
+-2. Adres zdalnego repo do schowka prawym przyciskiem na kafelku (REQ-VCS-035): gotowe i potwierdzone (krok 19). Katalog packages/vcs_lite/assets/ nie pochodzi od agenta; nie ruszaj bez pytania.
+-3. Panel „Historia” (DEC-VCS-116–119): plan kroków 0–7 i reguły H-01–H-49 w docs/PROPOZYCJA-historia.md (czytaj przed pracą nad historią); stan w „Punkcie wznowienia” 2d.
+-4. Na przyszłość (bez terminu): własne okno podglądu plików (Q-VCS-056).
+```
+
+Sumy SHA-256 policzono z surowych bajtów, bez normalizacji końców linii:
+
+| Artefakt | Stan | Bajty | SHA-256 |
+|---|---|---:|---|
+| `.gitignore` | HEAD | 659 | `514ef5a422b5c4a71673e5f2eea1dfcc2284edc17c7c38724a3ad1869c3a38ab` |
+| `.gitignore` | indeks | 695 | `48081f997efa8330588dc573cca7ddb9c18bff7d452936eb561f4477260484af` |
+| `.gitignore` | katalog roboczy | 695 | `48081f997efa8330588dc573cca7ddb9c18bff7d452936eb561f4477260484af` |
+| `packages/vcs_lite/docs/PROMPT-STARTOWY.md` | HEAD | 5658 | `c2829cb55771c177cf1b55aedf4d7f6d310e43a94838417a073a91a0d9a4f732` |
+| `packages/vcs_lite/docs/PROMPT-STARTOWY.md` | indeks | 5658 | `c2829cb55771c177cf1b55aedf4d7f6d310e43a94838417a073a91a0d9a4f732` |
+| `packages/vcs_lite/docs/PROMPT-STARTOWY.md` | katalog roboczy | 4990 | `0cfbbea494aa9c8b9b17c249a763c51bbdd7057c1fa8637c5167f9053be0e76a` |
+
+### Środowisko i źródła
+
+| Element | Zaobserwowany stan |
+|---|---|
+| System / architektura | macOS 26.2 / arm64 |
+| Python | 3.12.11; `/Users/michal/PycharmProjects/byte-brewery/.venv/bin/python` |
+| pytest | 9.0.2 |
+| Tcl | 8.6.14 (`tkinter.Tcl().eval('info patchlevel')`) |
+| Tk | 8.6 — wartość `tkinter.TkVersion`; nie ustalano wersji poprawkowej załadowanego GUI |
+| Git | 2.47.1 |
+
+Nie uruchamiano pomiarów produktu ani testów GUI w etapie 1. Przed późniejszym pomiarem pamięci należy zapisać rzeczywiste warunki wykonania i wersję Tk uruchomionego okna; same powyższe wersje nie gwarantują odtworzenia wyniku pamięci.
+
+| Plik | Bajty | SHA-256 |
+|---|---:|---|
+| `/Users/michal/PycharmProjects/docs/sources/swe052.txt` | 99323 | `0d74fda4cb26ba7e01324efee9de9c963b40e6a187fe67cff901338b7c9f0006` |
+| `/Users/michal/PycharmProjects/docs/sources/SWE-054.txt` | 46830 | `6528f5f2ef46faaa7fa3589331cc4f3394f84d3e81a5748c3fd196b0343d1894` |
+| `/Users/michal/PycharmProjects/byte-brewery/uv.lock` | 228132 | `84a637ed71004c0f8591981c5fcf3f8626307a774030d397c4560e7cd32c06ea` |
+| `/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/pyproject.toml` | 440 | `d651e154aa4ebeed4fbf4b5dc18f7369eda163a29ae33a3b60d2c337731afa47` |
+
+Wersje źródeł SWE identyfikuje tu zawartość lokalnych kopii, nie numer aktualnego wydania internetowego. SWE-052 ma nagłówek „SW Engineering Handbook Ver D”; SWE-054 zawiera adnotację redakcyjną z 2024-06-24, która nie dowodzi daty publikacji całej kopii. Nie sprawdzano autentyczności ani aktualności względem serwisu NASA. Źródła pozostają w sąsiednim repozytorium; przed kolejnym etapem należy porównać ich sumy, a przy zmianie zachować dostęp do tej wersji lub jawnie zmienić podstawę.
+
+### Zakres zakończony i ograniczenia
+
+Etap 1 zakończony: zapisano bazę, kontekst roboczy, różnice, środowisko i identyfikację źródeł. Etapy 2–6 pozostają niewykonane. Nie wydano ocen trzech przypadków ani ocen zgodności procesu. Nakład etapu 1: około 5 minut aktywnej pracy agenta (szacunek, bez pomiaru tokenów). Kontrola dokumentacji przed commitem służy weryfikacji tego przyrostu i nie zastępuje etapu 3 na ustalonej bazie.
+
 
 ## Otwarte
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| Wykonanie pilotażu | Agent | Po zleceniu wykonania ustalić badaną wersję i rozpocząć etap 1. |
+| Etap 2 — mapa źródeł | Agent | Następny etap po zakończonym etapie 1; wykonanie po zleceniu kontynuacji. |
