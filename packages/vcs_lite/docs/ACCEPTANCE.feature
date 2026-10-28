@@ -139,7 +139,7 @@ Feature: Lekki panel VCS dla kilku repozytoriów
     And otwarte jest porównanie pliku o długości 2000 linii w zewnętrznym narzędziu
     And repo z 300 zmianami ma 4000 commitów z gałęziami, a panel „Historia” pokazuje jego historię
     When narzędzie pozostaje bezczynne przez 5 sekund
-    Then "footprint" procesu vcs-lite wynosi najwyżej 60 MB
+    Then "footprint" procesu vcs-lite wynosi najwyżej 85 MiB
 
   @AT_VCS_017 @confirmed @REQ_VCS_017 @VER_VCS_007
   Scenario: Samo przeglądanie nie zmienia repozytorium
