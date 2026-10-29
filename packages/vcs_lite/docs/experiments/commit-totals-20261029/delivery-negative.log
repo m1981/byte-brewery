@@ -1,0 +1,38 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_req_vcs_040_history_passes_whole_commit_totals_to_E[False] ________
+
+root = <tkinter.Frame object .!frame>
+world = <world.World object at 0x108cca3f0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108cca5d0>
+missing = False
+
+    @pytest.mark.parametrize('missing', [False, True])
+    def test_req_vcs_040_history_passes_whole_commit_totals_to_E(root, world, monkeypatch, missing):
+        from vcs_lite.core.gitlog import GitLog
+        alpha = world.repo('alpha')
+        alpha.write('a.txt', 'old\n'); alpha.commit('before')
+        alpha.write('a.txt', 'new\nextra\n')
+        alpha.write('b.txt', 'other\n'); alpha.commit('after')
+        if missing:
+            monkeypatch.setattr(GitLog, 'commit_totals', lambda *args: {})
+        world.start('alpha'); world.select('alpha')
+        window = window_with_history(root, world)
+        session = window.history.session
+        # A path-filtered history must still show whole-commit totals, including b.txt.
+        session.show_path('a.txt', folder=False); world.worker.settle()
+        listing = window.history.commit_list
+        listing.render()
+        c = listing.canvas
+        first = [i for i in c.find_withtag('commit_totals') if c.coords(i)[1] == 12]
+>       assert [c.itemcget(i, 'text') for i in first] == (['—'] if missing else ['−1', '+3'])
+E       AssertionError: assert ['—'] == ['−1', '+3']
+E
+E         At index 0 diff: '—' != '−1'
+E         Right contains one more item: '+3'
+E         Use -v to get more diff
+
+tests/ui/test_history_panel.py:255: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ui/test_history_panel.py::test_req_vcs_040_history_passes_whole_commit_totals_to_E[False]
+1 failed, 13 deselected in 0.60s

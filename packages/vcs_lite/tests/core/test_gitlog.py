@@ -232,3 +232,46 @@ def test_req_vcs_040_commit_counts_binary_unusual_paths_and_failure(repo, log, m
     monkeypatch.setattr(log, '_read', malformed)
     fallback = log.details(repo.path, selected)
     assert fallback.files == details.files and fallback.lines == {}
+
+
+def test_req_vcs_040_commit_totals_root_edit_merge_rename_empty_and_binary(repo, log):
+    # Expected totals are counted from these literals, not from another production parser.
+    repo.write('a.txt', 'one\ntwo\n')
+    repo.write('b.txt', 'three\n')
+    repo.commit('root'); first = head(repo)
+    repo.write('a.txt', 'one\nnew\nextra\n')
+    repo.git('rm', '-q', 'b.txt')
+    repo.commit('edit'); edit = head(repo)  # +2 -1 in a, -1 in b
+    repo.git('checkout', '-q', '-b', 'feature')
+    repo.write('feature.txt', 'f1\nf2\n'); repo.commit('feature')
+    repo.git('checkout', '-q', 'main')
+    repo.write('main.txt', 'm1\nm2\nm3\n'); repo.commit('main')
+    repo.git('merge', '-q', '--no-ff', '-m', 'merge', 'feature'); merge = head(repo)
+    (repo.path / 'a.txt').rename(repo.path / 'renamed.txt')
+    repo.commit('rename'); rename = head(repo)
+    repo.git('commit', '-q', '--allow-empty', '-m', 'empty'); empty = head(repo)
+    (repo.path / 'binary.dat').write_bytes(b'\0binary')
+    repo.commit('binary'); binary = head(repo)
+    repo.write('mixed.txt', 't1\nt2\nt3\n')
+    (repo.path / 'binary.dat').write_bytes(b'\0changed')
+    repo.commit('mixed'); mixed = head(repo)
+    commits = log.page(repo.path, LogQuery(), 0).commits
+    before = log._git.call_count
+    totals = log.commit_totals(repo.path, commits)
+    assert log._git.call_count == before + 1  # one batch, not a Git process per commit
+    for hash_, expected in {first: (3, 0), edit: (2, 2), merge: (2, 0),
+                            rename: (0, 0), empty: (0, 0), binary: (0, 0), mixed: (3, 0)}.items():
+        assert totals.get(hash_) == expected, hash_
+    assert log.commit_totals(repo.path, ()) == {}
+    assert log._git.call_count == before + 1
+
+
+@pytest.mark.parametrize('failure', ['git_error', 'malformed'])
+def test_req_vcs_040_commit_totals_failure_is_missing_not_zero(repo, log, monkeypatch, failure):
+    from vcs_lite.core.gitcli import GitResult
+    repo.write('a.txt', 'one\n'); repo.commit()
+    commits = log.page(repo.path, LogQuery(), 0).commits
+    output = b'\x1e' + commits[0].hash.encode() + b'\0invalid\0'
+    monkeypatch.setattr(log._git, 'run', lambda *a, **kw:
+                        GitResult((), 1 if failure == 'git_error' else 0, output, 'failure'))
+    assert log.commit_totals(repo.path, commits) == {}

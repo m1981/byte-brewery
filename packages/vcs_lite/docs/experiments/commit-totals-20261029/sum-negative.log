@@ -1,0 +1,45 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_req_vcs_040_commit_totals_root_edit_merge_rename_empty_and_binary ____
+
+repo = <conftest.Repo object at 0x1090a2f90>
+log = <vcs_lite.core.gitlog.GitLog object at 0x108b0a6c0>
+
+    def test_req_vcs_040_commit_totals_root_edit_merge_rename_empty_and_binary(repo, log):
+        # Expected totals are counted from these literals, not from another production parser.
+        repo.write('a.txt', 'one\ntwo\n')
+        repo.write('b.txt', 'three\n')
+        repo.commit('root'); first = head(repo)
+        repo.write('a.txt', 'one\nnew\nextra\n')
+        repo.git('rm', '-q', 'b.txt')
+        repo.commit('edit'); edit = head(repo)  # +2 -1 in a, -1 in b
+        repo.git('checkout', '-q', '-b', 'feature')
+        repo.write('feature.txt', 'f1\nf2\n'); repo.commit('feature')
+        repo.git('checkout', '-q', 'main')
+        repo.write('main.txt', 'm1\nm2\nm3\n'); repo.commit('main')
+        repo.git('merge', '-q', '--no-ff', '-m', 'merge', 'feature'); merge = head(repo)
+        (repo.path / 'a.txt').rename(repo.path / 'renamed.txt')
+        repo.commit('rename'); rename = head(repo)
+        repo.git('commit', '-q', '--allow-empty', '-m', 'empty'); empty = head(repo)
+        (repo.path / 'binary.dat').write_bytes(b'\0binary')
+        repo.commit('binary'); binary = head(repo)
+        repo.write('mixed.txt', 't1\nt2\nt3\n')
+        (repo.path / 'binary.dat').write_bytes(b'\0changed')
+        repo.commit('mixed'); mixed = head(repo)
+        commits = log.page(repo.path, LogQuery(), 0).commits
+        before = log._git.call_count
+        totals = log.commit_totals(repo.path, commits)
+        assert log._git.call_count == before + 1  # one batch, not a Git process per commit
+        for hash_, expected in {first: (3, 0), edit: (2, 2), merge: (2, 0),
+                                rename: (0, 0), empty: (0, 0), binary: (0, 0), mixed: (3, 0)}.items():
+>           assert totals.get(hash_) == expected, hash_
+E           AssertionError: 74076dc8bb6262628343c9146c68db18a928586a
+E           assert (4, 0) == (3, 0)
+E
+E             At index 0 diff: 4 != 3
+E             Use -v to get more diff
+
+tests/core/test_gitlog.py:264: AssertionError
+=========================== short test summary info ============================
+FAILED tests/core/test_gitlog.py::test_req_vcs_040_commit_totals_root_edit_merge_rename_empty_and_binary
+1 failed, 18 deselected in 0.42s

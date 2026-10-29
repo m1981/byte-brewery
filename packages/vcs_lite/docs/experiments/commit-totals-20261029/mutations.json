@@ -1,0 +1,56 @@
+[
+  {
+    "mutation": "sum",
+    "module": "core/gitlog.py",
+    "old": "sum(v.added for v in values.values())",
+    "new": "sum(v.added for v in values.values()) + 1",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/core/test_gitlog.py",
+      "-k",
+      "commit_totals_root"
+    ],
+    "result": "1 failed"
+  },
+  {
+    "mutation": "unknown",
+    "module": "ui/history_panel.py",
+    "old": "LineStats(*totals) if totals else LineStats(kind=\"unknown\")",
+    "new": "LineStats(*totals) if totals else LineStats()",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/ui/test_history_panel.py",
+      "-k",
+      "totals_to_E and True"
+    ],
+    "result": "1 failed"
+  },
+  {
+    "mutation": "delivery",
+    "module": "app/history.py",
+    "old": "self.commit_totals = outcome.value",
+    "new": "self.commit_totals = (*outcome.value[:-1], {})",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/ui/test_history_panel.py",
+      "-k",
+      "totals_to_E and False"
+    ],
+    "result": "1 failed"
+  }
+]

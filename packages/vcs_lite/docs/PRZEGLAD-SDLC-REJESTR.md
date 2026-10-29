@@ -24,11 +24,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-010 | 2026-10-29 | Dodano regresje niezależnego restartu, autozapisu i ochrony zamknięcia; zamknięto PIL-U-006. | Użytkownik zaakceptował opis wykonania: „ok wykonaj”. | Agent | 4/4 celowych uszkodzeń odrzucone; dobrane testy na kopii indeksu, dowody poniżej. |
 
+| PIL-Z-011 | 2026-10-29 | Skonsolidowano zakres B/E/F, dodano regresje sum i przekazania danych do E; zamknięto PIL-U-004. | Użytkownik: „wykonaj 004”. | Agent | Ręcznie policzone fixture, 3/3 negatywne kontrole odrzucone; log indeksu i wersja poniżej. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–003 i PIL-U-006–007. Otwarte: PIL-U-004–005.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Następny przyrost: zakres/sumy liczników (PIL-U-004), właściciel agent; potem kontrola aktualności TRACE (PIL-U-005). Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
+Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–004 i PIL-U-006–007. Otwarte: PIL-U-005.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Następny przyrost: kontrola aktualności TRACE (PIL-U-005), właściciel agent. Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -235,3 +237,16 @@ Dotychczasowy test nazwany „reopen” otrzymał nazwę „switch_back_in_same_
 Wersja i wynik dobranej regresji na kopii indeksu: [verification.json](experiments/notes-lifecycle-20261029/verification.json), [pełny log](experiments/notes-lifecycle-20261029/index-tests.log). TRACE wygenerowano jawnie przed stagingiem i porównano po testach indeksu. Nie zamyka to PIL-U-005, którego osobna kontrola negatywna/procedura pozostaje do wykonania.
 
 Korzyść potwierdzona: przyszłe odłączenie czterech badanych ścieżek powoduje niepowodzenie testu, zamiast pozostawić zielone sprawdzenie samych ID. Nie wykryto rzeczywistej utraty danych; nie deklarujemy zmierzonego spadku liczby usterek ani oszczędności czasu. Kopiowanie i pozycja edytora nie były zakresem tego minimalnego przyrostu; pozostają w próbie ręcznej 30 i historycznych próbach audytu. Następne działanie: PIL-U-004.
+
+
+## Zamknięcie PIL-U-004 — 2026-10-29
+
+Status: **zamknięte — zakres skonsolidowany, regresje dodane; odbiór wizualny osobno**. Właściciel i weryfikator agent, zlecenie „wykonaj 004”. Specyfikacja zakresu w `c3416f0`: REQ-VCS-040/043 oraz DES-VCS-079 łączą przyjęte doprecyzowania B (bieżący plik), E (cały commit) i F (plik/podsumowanie). MANUAL-UI 29 obejmuje teraz wszystkie trzy listy, nie oznacza automatycznie potwierdzenia wyglądu.
+
+Test `commit_totals_root_edit_merge_rename_empty_and_binary` sprawdza niezależne oczekiwane wartości: root +3 −0, edycja +2 −2, merge względem pierwszego rodzica +2 −0 (drugi rodzic dałby +3 −0), rename +0 −0, pusty commit +0 −0, wyłącznie binarny +0 −0 linii tekstowych oraz mieszany +3 −0. Sprawdza jedno wywołanie Git na paczkę i brak wywołań dla pustej paczki. Osobne warianty odrzucają pozorne zero po błędzie Git i wadliwym numstat.
+
+Test UI obejmuje rzeczywisty GitLog → HistorySession → Canvas E: po filtrowaniu do a.txt suma nadal uwzględnia b.txt (+3 −1), a brak statystyk daje szare —. Sprawdzono kolory E; wspólnych regresji odstępu/kolorów z U-007 nie kopiowano. Istniejące testy plików F i listy B włączono do dobranej regresji. Pierwsze 5 nowych przypadków przeszło bez zmian kodu produkcyjnego.
+
+Próby negatywne w usuwanych kopiach: dodanie 1 do sumy, odłączenie przekazania sum do sesji, zamiana unknown na zero. **3/3 zostały odrzucone przez właściwe asercje**. [Mutacje i polecenia](experiments/commit-totals-20261029/mutations.json), logi: [suma](experiments/commit-totals-20261029/sum-negative.log), [przekazanie](experiments/commit-totals-20261029/delivery-negative.log), [brak danych](experiments/commit-totals-20261029/unknown-negative.log). [Wersja i wynik indeksu](experiments/commit-totals-20261029/verification.json), [pełny log](experiments/commit-totals-20261029/index-tests.log).
+
+Korzyść: jedno wskazane wymaganie wyjaśnia zakres B/E/F, a przyszły błąd sumowania lub utrata danych w drodze do E powodują porażkę testu. Nie stwierdzono rzeczywistego błędu sumowania; nie deklarujemy zmierzonej oszczędności ani pełnego odbioru UI. Próby ręczne 29/30 nadal otwarte. Następne działanie: PIL-U-005.

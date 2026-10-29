@@ -232,3 +232,26 @@ def test_at_vcs_063_unversioned_has_no_history_and_files_of_a_commit_have_it(roo
     assert set(menu) == {"Porównaj", "Pokaż historię"}
     menu["Pokaż historię"][1](); world.worker.settle()
     assert window.history.session.query.path == "a.py" and window.history.path_text == "Plik: a.py ✕"
+
+
+@pytest.mark.parametrize('missing', [False, True])
+def test_req_vcs_040_history_passes_whole_commit_totals_to_E(root, world, monkeypatch, missing):
+    from vcs_lite.core.gitlog import GitLog
+    alpha = world.repo('alpha')
+    alpha.write('a.txt', 'old\n'); alpha.commit('before')
+    alpha.write('a.txt', 'new\nextra\n')
+    alpha.write('b.txt', 'other\n'); alpha.commit('after')
+    if missing:
+        monkeypatch.setattr(GitLog, 'commit_totals', lambda *args: {})
+    world.start('alpha'); world.select('alpha')
+    window = window_with_history(root, world)
+    session = window.history.session
+    # A path-filtered history must still show whole-commit totals, including b.txt.
+    session.show_path('a.txt', folder=False); world.worker.settle()
+    listing = window.history.commit_list
+    listing.render()
+    c = listing.canvas
+    first = [i for i in c.find_withtag('commit_totals') if c.coords(i)[1] == 12]
+    assert [c.itemcget(i, 'text') for i in first] == (['—'] if missing else ['−1', '+3'])
+    assert [c.itemcget(i, 'fill') for i in first] == (
+        [theme.COLORS['dim']] if missing else [theme.COLORS['del'], theme.COLORS['add']])

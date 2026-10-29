@@ -1,0 +1,23 @@
+{
+  "parent_commit": "c3416f0e2cf668fa1edb4c37408aba3f19f6f7ff",
+  "sha256": {
+    "tests/core/test_gitlog.py": "a7f2c8864d8f56cdc42c70f6dafe5e74328dba7babeeeb9543fce92822dd7a29",
+    "tests/ui/test_history_panel.py": "25808ef87df6b901b3ba8b88de976805b077c92bd9dce74081e50d7cc374b7a7",
+    "src/vcs_lite/core/gitlog.py": "151187c51d1eebc9cc05ecd9e573f840b1d3f86b0438bdd06b1720032dd0353b",
+    "src/vcs_lite/app/history.py": "b092997d2576000b311a600c3cae00ccec2751bb189bfd33dc8b80ac7f744ee2",
+    "src/vcs_lite/ui/history_panel.py": "369ce4b634718527469b499b235d37daa689c3cb8031945383b0b3358b76615e",
+    "docs/TRACE.md": "04f6230cc7c5ee10dc64e263e73d3370edae84aaabde524391af8be85949d99e",
+    "docs/SPEC.md": "6c3b1e98fc93a5f22a4c0f23767e1d566f53afdc5301c16c958705064d6d15d1",
+    "docs/DESIGN.md": "0d5e1e4297c0aca3105c2cff9cf7f727fbf12af6dd46bf21408f5508598eaae8",
+    "docs/MANUAL-UI.md": "087507cf9c38844807210133684e6dc9b0ca4c9d336d5bc3fdb6b50583a28562",
+    "docs/PRZEGLAD-SDLC-REJESTR.md": "005714328e0be51368b2188063565138b3ec31b726220224e505b16a0b548fbd",
+    "docs/PRZEGLAD-SDLC-PILOTAZ.md": "c785422dcca19f7db090122864d8f1dfa7be122cba7ccdd234d4737e3b44e828"
+  },
+  "result": "91 passed in 9.88s",
+  "command": "python -m pytest -p no:cacheprovider -q tests/core/test_gitlog.py tests/app/test_history_session.py tests/ui/test_history_panel.py tests/ui/test_recent_changes.py tests/ui/test_file_list_viewport.py tests/ui/test_widgets.py tests/test_traceability.py",
+  "location": "/private/tmp/vcs-u004-index/packages/vcs_lite",
+  "TRACE_unchanged_after_index_tests": true,
+  "negative_controls": "3/3 rejected for intended assertions; full logs retained",
+  "production_code_changed": false,
+  "manual_UI_29_30": "open"
+}

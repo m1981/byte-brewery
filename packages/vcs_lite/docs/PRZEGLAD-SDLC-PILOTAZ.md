@@ -6,7 +6,7 @@ Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewan
 
 Historia zmian i rejestr działań: [PRZEGLAD-SDLC-REJESTR.md](PRZEGLAD-SDLC-REJESTR.md).
 
-**Bieżący stan (2026-10-29):** pilotaż zakończony; [wynik końcowy i trzy rekomendacje](#etap-6--podsumowanie-i-zakończenie-pilotażu) poniżej. Po pilotażu zamknięto PIL-U-001–003 oraz PIL-U-006–007. Otwarte pozostają PIL-U-004–005; następny przyrost: zakres i regresje sum liczników (PIL-U-004). Dowody i kryteria w [rejestrze](PRZEGLAD-SDLC-REJESTR.md#ustalenia-i-działania). Dawne etapy są historią wyników.
+**Bieżący stan (2026-10-29):** pilotaż zakończony; [wynik końcowy i trzy rekomendacje](#etap-6--podsumowanie-i-zakończenie-pilotażu) poniżej. Po pilotażu zamknięto PIL-U-001–004 oraz PIL-U-006–007. Otwarte pozostaje PIL-U-005: kontrola aktualności TRACE. Dowody i kryteria w [rejestrze](PRZEGLAD-SDLC-REJESTR.md#ustalenia-i-działania). Dawne etapy są historią wyników.
 
 **Gdzie zajrzeć:** DoD poniżej określa odbiór całego przeglądu; [rejestr — etap 5](PRZEGLAD-SDLC-REJESTR.md#etap-5--plan-działań-po-ocenie-dowodów) zawiera kolejność, koszt i warunki zamknięcia działań. Szczegółowe logi czytać dopiero przy sprawdzaniu konkretnego dowodu.
 
@@ -480,4 +480,4 @@ Rekomendacja dalszego stosowania: przy przyszłym przyroście sprawdzać tylko z
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| PIL-U-004–005 — nadal otwarte | Agent | Realizacja według planu etapu 5 po zleceniu wdrożenia; sam przegląd nie zamyka ustaleń. |
+| PIL-U-005 — nadal otwarte | Agent | Realizacja według planu etapu 5 po zleceniu wdrożenia; sam przegląd nie zamyka ustaleń. |
