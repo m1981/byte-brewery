@@ -18,11 +18,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-007 | 2026-10-29 | Etap 6 zakończony; plan v1.0: trzy rekomendacje, ocena korzyści/kosztu i końcowe DoD. Przegląd zamknięty, wszystkie 7 ustaleń nadal otwarte. | Użytkownik: „wykonaj etap 6”. | Agent | Podsumowanie sprawdzone z dowodami etapów 3–4; koszt pracy jawnie szacunkowy. Napraw ani odbioru UI nie zadeklarowano jako wykonanych. |
 
+| PIL-Z-008 | 2026-10-29 | Naprawiono etykietę konfliktu i dodano regresje renderera oraz FileList; zamknięto PIL-U-007. | Użytkownik: „wykoanj maprawe wraz z testami”. | Agent | Przed poprawką 2 failed / 4 passed; po poprawce 44 testy na kopii indeksu. Dowody w experiments/conflict-label-20261029. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–6 zakończone; końcowa ocena i trzy rekomendacje są w [podsumowaniu](PRZEGLAD-SDLC-PILOTAZ.md#etap-6--podsumowanie-i-zakończenie-pilotażu). Przegląd zamknięty; wszystkie PIL-U-001–007 nadal otwarte, działania proponowane, brak dowodów zamknięcia. Najbliższy przyrost: PIL-U-007 — etykieta konfliktu i regresja; właściciel agent. Bieżąca kolejność i kryteria działań: [plan działań etapu 5](#etap-5--plan-działań-po-ocenie-dowodów). Siedem otwartych ustaleń obejmuje dokumentację, kontrolę struktury, lukę regresji notatek i odtworzoną wadę prezentacji konfliktu. Nie wykonano napraw.
+Etapy 1–6 zakończone; końcowa ocena i trzy rekomendacje są w [podsumowaniu](PRZEGLAD-SDLC-PILOTAZ.md#etap-6--podsumowanie-i-zakończenie-pilotażu). Przegląd zamknięty. PIL-U-007 naprawione i zweryfikowane 2026-10-29; PIL-U-001–006 pozostają otwarte. Następny proponowany przyrost: uporządkowanie instrukcji i stanu wznowienia (PIL-U-001–003), właściciel agent. Bieżąca kolejność i kryteria działań: [plan działań etapu 5](#etap-5--plan-działań-po-ocenie-dowodów). Pozostałe sześć otwartych ustaleń obejmuje dokumentację, kontrolę struktury oraz luki regresji notatek i statystyk zmian. Pierwsza naprawa: PIL-U-007; szczegóły zamknięcia na końcu rejestru.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -179,3 +181,14 @@ Nie kopiujemy wszystkich 29 prób audytu do suity; wybieramy brakujące zachowan
 Nie rozszerzamy checkera na wszystkie pliki, nie tworzymy nowych ID dla samych duplikatów i nie dopisujemy kolejnych dokumentów sterujących. Źródłem działań jest ten rejestr; plan zawiera tylko podsumowanie i odnośnik. Archiwalne dowody są niezmienne; dowód zamknięcia jest nowym zapisem, nie podmianą dawnej porażki. Ewentualny wspólny odbiór UI 29/30 można przygotować w jednym oknie po poprawkach, ale wynik i zakres każdego kroku zapisać osobno.
 
 Hipotezy przyczyn (bez udowodnionego związku przyczynowego): ręczne kopiowanie stanu sprzyja starzeniu promptu; dopisywanie kroniki w miejscu bieżących zadań utrudnia nawigację; współdzielenie renderera bez testu wszystkich stanów sprzyja regresji etykiety. Działania mają zmniejszać te mechanizmy, nie tylko poprawiać pojedynczy tekst. Ich skuteczność pozostaje do sprawdzenia po wdrożeniu.
+
+
+## Zamknięcie PIL-U-007 — 2026-10-29
+
+Decyzja: realizacja zlecona przez użytkownika („wykoanj maprawe wraz z testami”). Właściciel i weryfikator: agent. Status: **zamknięte — naprawione i zweryfikowane automatycznie**. Reguła REQ-VCS-043 / AT-VCS-065 pozostała bez zmian.
+
+Zmiana: `ui/widgets.py::draw_compact_counts` odróżnia konflikt od nieznanych danych; wyświetla szare „konflikt”. Test AT-VCS-065 w `test_recent_changes.py` tworzy prawdziwy konflikt w repo tymczasowym i sprawdza tekst/kolor w kolumnie FileList. Parametryzowany test REQ-VCS-043 w `test_widgets.py` sprawdza text/zero/binary/unknown/conflict, kolory i odstęp 5. [Dowód przed poprawką](experiments/conflict-label-20261029/red.log): dwa testy konfliktu oblały na oczekiwanym tekście (otrzymano „—”), cztery pozostałe przeszły.
+
+[Dowód po poprawce na kopii indeksu](experiments/conflict-label-20261029/index-tests.log): 44 testy przeszły (recent_changes, widgets, file_list_viewport, traceability). Obejmuje prezentację plików commita i wirtualizację 3000 plików; nie powtarzano pomiarów pamięci dla zmiany samej etykiety. TRACE wygenerowano po dodaniu testów. [Identyfikacja sprawdzonego kodu](experiments/conflict-label-20261029/version.json) zawiera SHA-256 modułu i testów oraz polecenie wykonania.
+
+Warunek zamknięcia spełniony: test odrzucał starą etykietę, teraz potwierdza „konflikt”, a binarne/brak danych i kompaktowe kolory pozostają poprawne. Zmiana nie jest dowodem zamknięcia PIL-U-004 ani pozostałych ustaleń. Ręczna ocena nowego zrzutu pozostaje opcjonalnym potwierdzeniem wyglądu; nie przypisano jej użytkownikowi. Historyczne raporty pilotażu zachowują wynik starej bazy.

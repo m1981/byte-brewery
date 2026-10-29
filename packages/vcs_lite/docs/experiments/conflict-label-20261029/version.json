@@ -1,0 +1,13 @@
+{
+  "parent_commit": "e21e9f8e27cd965f7c6221892f82a834daabaf17",
+  "version": "parent plus files identified below; committed with this record",
+  "sha256": {
+    "src/vcs_lite/ui/widgets.py": "cdcaf2241d7bdc304eaf39be028e086f2b730ce6e0fc141388d082bd88dd15e8",
+    "tests/ui/test_recent_changes.py": "d1098ce3fa33234100128b2c643da91c686ec3b1a6b77d941beb438679e4d654",
+    "tests/ui/test_widgets.py": "e299b2af4bf50178dc342c564a8a8e5f198961531e85241aee0442fef7051adc",
+    "docs/TRACE.md": "b93d9fa5282240c4de11df14fd2e31f52ece6d2f10c3930f43a71fce685a9736"
+  },
+  "command": "python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests/ui/test_recent_changes.py packages/vcs_lite/tests/ui/test_widgets.py packages/vcs_lite/tests/ui/test_file_list_viewport.py packages/vcs_lite/tests/test_traceability.py",
+  "result": "44 passed",
+  "logs": "Full pytest text; trailing whitespace normalized only."
+}

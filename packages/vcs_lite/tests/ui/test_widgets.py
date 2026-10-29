@@ -9,6 +9,31 @@ import pytest
 from vcs_lite.ui.widgets import rounded_rect
 
 
+@pytest.mark.parametrize('kind,added,removed,texts,colors', [
+    ('text', 334, 34, ['−34', '+334'], ['del', 'add']),
+    ('text', 0, 0, ['−0', '+0'], ['dim', 'dim']),
+    ('binary', 0, 0, ['binarne'], ['dim']),
+    ('unknown', 0, 0, ['—'], ['dim']),
+    ('conflict', 0, 0, ['konflikt'], ['dim']),
+])
+def test_req_vcs_043_compact_counts_preserve_labels_colors_and_spacing(
+        canvas, kind, added, removed, texts, colors):
+    from vcs_lite.core.changes import LineStats
+    from vcs_lite.ui import theme
+    from vcs_lite.ui.widgets import draw_compact_counts
+
+    canvas.delete('compact_probe')
+    draw_compact_counts(canvas, LineStats(added, removed, kind), 250, 20,
+                        tags=('compact_probe',))
+    drawn = canvas.find_withtag('compact_probe')
+    assert [canvas.itemcget(i, 'text') for i in drawn] == texts
+    assert [canvas.itemcget(i, 'fill') for i in drawn] == [theme.COLORS[c] for c in colors]
+    assert canvas.coords(drawn[0]) == [250, 20]
+    if kind == 'text':
+        gap = 250 - theme.font('line_count').measure(texts[0]) - canvas.coords(drawn[1])[0]
+        assert gap == 5
+
+
 @pytest.fixture(scope="module")
 def canvas(tk_root):
     c = tk.Canvas(tk_root)

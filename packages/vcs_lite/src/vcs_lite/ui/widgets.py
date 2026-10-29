@@ -303,7 +303,7 @@ def draw_line_counts(canvas: tk.Canvas, lines: LineStats, right: float, middle: 
 def draw_compact_counts(canvas: tk.Canvas, lines: LineStats, right: float, middle: float, *, tags=()):
     """Draw tightly spaced, individually coloured counts aligned to the right."""
     if lines.kind != "text":
-        label = "binarne" if lines.kind == "binary" else "—"
+        label = {"binary": "binarne", "conflict": "konflikt"}.get(lines.kind, "—")
         canvas.create_text(right, middle, text=label, anchor=tk.E, font=theme.font("line_count"),
                            fill=theme.COLORS["dim"], tags=tags)
         return

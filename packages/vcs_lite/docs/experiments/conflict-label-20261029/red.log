@@ -1,0 +1,59 @@
+F....F                                                                   [100%]
+=================================== FAILURES ===================================
+_______ test_at_vcs_065_conflict_line_count_is_descriptive_in_file_list ________
+
+root = <tkinter.Frame object .!frame>
+world = <world.World object at 0x108d7efc0>
+
+    def test_at_vcs_065_conflict_line_count_is_descriptive_in_file_list(root, world):
+        from test_main_window import conflicted
+        from vcs_lite.ui import theme
+
+        conflicted(world, 'alpha')
+        model = world.start('alpha')
+        window = MainWindow(root, model)
+        world.select('alpha')
+        fl = window.file_list
+        row = next(row for row in fl.rows() if row.group == Group.CONFLICTS)
+        labels = [i for i in fl.canvas.find_withtag('line_count')
+                  if abs(fl.canvas.coords(i)[1] - (row.top + row.height / 2)) < 1]
+>       assert [fl.canvas.itemcget(i, 'text') for i in labels] == ['konflikt']
+E       AssertionError: assert ['—'] == ['konflikt']
+E
+E         At index 0 diff: '—' != 'konflikt'
+E         Use -v to get more diff
+
+tests/ui/test_recent_changes.py:23: AssertionError
+_ test_req_vcs_043_compact_counts_preserve_labels_colors_and_spacing[conflict-0-0-texts4-colors4] _
+
+canvas = <tkinter.Canvas object .!canvas>, kind = 'conflict', added = 0
+removed = 0, texts = ['konflikt'], colors = ['dim']
+
+    @pytest.mark.parametrize('kind,added,removed,texts,colors', [
+        ('text', 334, 34, ['−34', '+334'], ['del', 'add']),
+        ('text', 0, 0, ['−0', '+0'], ['dim', 'dim']),
+        ('binary', 0, 0, ['binarne'], ['dim']),
+        ('unknown', 0, 0, ['—'], ['dim']),
+        ('conflict', 0, 0, ['konflikt'], ['dim']),
+    ])
+    def test_req_vcs_043_compact_counts_preserve_labels_colors_and_spacing(
+            canvas, kind, added, removed, texts, colors):
+        from vcs_lite.core.changes import LineStats
+        from vcs_lite.ui import theme
+        from vcs_lite.ui.widgets import draw_compact_counts
+
+        canvas.delete('compact_probe')
+        draw_compact_counts(canvas, LineStats(added, removed, kind), 250, 20,
+                            tags=('compact_probe',))
+        drawn = canvas.find_withtag('compact_probe')
+>       assert [canvas.itemcget(i, 'text') for i in drawn] == texts
+E       AssertionError: assert ['—'] == ['konflikt']
+E
+E         At index 0 diff: '—' != 'konflikt'
+E         Use -v to get more diff
+
+tests/ui/test_widgets.py:29: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ui/test_recent_changes.py::test_at_vcs_065_conflict_line_count_is_descriptive_in_file_list
+FAILED tests/ui/test_widgets.py::test_req_vcs_043_compact_counts_preserve_labels_colors_and_spacing[conflict-0-0-texts4-colors4]
+2 failed, 4 passed, 11 deselected in 3.77s

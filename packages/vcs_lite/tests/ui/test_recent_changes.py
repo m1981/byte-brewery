@@ -8,6 +8,22 @@ from vcs_lite.core.status import Group
 from vcs_lite.ui.main_window import MainWindow
 
 
+def test_at_vcs_065_conflict_line_count_is_descriptive_in_file_list(root, world):
+    from test_main_window import conflicted
+    from vcs_lite.ui import theme
+
+    conflicted(world, 'alpha')
+    model = world.start('alpha')
+    window = MainWindow(root, model)
+    world.select('alpha')
+    fl = window.file_list
+    row = next(row for row in fl.rows() if row.group == Group.CONFLICTS)
+    labels = [i for i in fl.canvas.find_withtag('line_count')
+              if abs(fl.canvas.coords(i)[1] - (row.top + row.height / 2)) < 1]
+    assert [fl.canvas.itemcget(i, 'text') for i in labels] == ['konflikt']
+    assert fl.canvas.itemcget(labels[0], 'fill') == theme.COLORS['dim']
+
+
 @pytest.fixture
 def recent(root, world):
     r=world.repo('alpha')
