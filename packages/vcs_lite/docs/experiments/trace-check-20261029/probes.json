@@ -1,0 +1,26 @@
+{
+  "method": "Execute Python block from staged WSPOLPRACA in independent disposable copies",
+  "checks": [
+    {
+      "case": "current",
+      "pytest": "22 passed",
+      "check_exit": 0,
+      "before_sha256": "04f6230cc7c5ee10dc64e263e73d3370edae84aaabde524391af8be85949d99e",
+      "after_sha256": "04f6230cc7c5ee10dc64e263e73d3370edae84aaabde524391af8be85949d99e"
+    },
+    {
+      "case": "stale",
+      "pytest": "22 passed",
+      "check_exit": 1,
+      "before_sha256": "1ca8e9607d4b87b05cc5957ba8b8af3bdbc7939cf31a0d2f8725193035011569",
+      "after_sha256": "04f6230cc7c5ee10dc64e263e73d3370edae84aaabde524391af8be85949d99e"
+    },
+    {
+      "case": "missing",
+      "pytest": "22 passed",
+      "check_exit": 1,
+      "before_sha256": null,
+      "after_sha256": "04f6230cc7c5ee10dc64e263e73d3370edae84aaabde524391af8be85949d99e"
+    }
+  ]
+}

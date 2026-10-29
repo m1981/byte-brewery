@@ -26,11 +26,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-011 | 2026-10-29 | Skonsolidowano zakres B/E/F, dodano regresje sum i przekazania danych do E; zamknięto PIL-U-004. | Użytkownik: „wykonaj 004”. | Agent | Ręcznie policzone fixture, 3/3 negatywne kontrole odrzucone; log indeksu i wersja poniżej. |
 
+| PIL-Z-012 | 2026-10-29 | Dodano kontrolę TRACE przed/po do procedury indeksu; zamknięto PIL-U-005 i zakończono pięć przyrostów. | Użytkownik: „wykoanj 005”. | Agent | Aktualny TRACE zaakceptowany, nieaktualny i brakujący odrzucone mimo zielonego pytest; wersja i logi poniżej. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–004 i PIL-U-006–007. Otwarte: PIL-U-005.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Następny przyrost: kontrola aktualności TRACE (PIL-U-005), właściciel agent. Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
+Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–007; wszystkie pięć przyrostów wykonane.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Nie ma kolejnego działania naprawczego pilotażu. Osobno pozostają ręczne próby UI 29/30; agent przygotowuje okno, użytkownik ocenia wygląd. Przy kolejnej zmianie agent sprawdza właściwe regresje i ewentualny nawrót, bez ponawiania pełnego pilotażu. Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -250,3 +252,22 @@ Test UI obejmuje rzeczywisty GitLog → HistorySession → Canvas E: po filtrowa
 Próby negatywne w usuwanych kopiach: dodanie 1 do sumy, odłączenie przekazania sum do sesji, zamiana unknown na zero. **3/3 zostały odrzucone przez właściwe asercje**. [Mutacje i polecenia](experiments/commit-totals-20261029/mutations.json), logi: [suma](experiments/commit-totals-20261029/sum-negative.log), [przekazanie](experiments/commit-totals-20261029/delivery-negative.log), [brak danych](experiments/commit-totals-20261029/unknown-negative.log). [Wersja i wynik indeksu](experiments/commit-totals-20261029/verification.json), [pełny log](experiments/commit-totals-20261029/index-tests.log).
 
 Korzyść: jedno wskazane wymaganie wyjaśnia zakres B/E/F, a przyszły błąd sumowania lub utrata danych w drodze do E powodują porażkę testu. Nie stwierdzono rzeczywistego błędu sumowania; nie deklarujemy zmierzonej oszczędności ani pełnego odbioru UI. Próby ręczne 29/30 nadal otwarte. Następne działanie: PIL-U-005.
+
+
+## Zamknięcie PIL-U-005 — 2026-10-29
+
+Status: **zamknięte — procedura kontroli wdrożona i sprawdzona**. Właściciel i weryfikator agent; polecenie użytkownika „wykoanj 005”. [WSPOLPRACA — kontrola TRACE](WSPOLPRACA.md#kontrola-aktualności-trace-na-kopii-indeksu) zawiera wykonany blok Python: zapamiętanie bajtów wejścia, istniejące testy/generator, porównanie bajtów i jawny kod wyjścia. Zapisuje SHA-256 przed/po; brak pliku jest niezgodnością. Nie zmieniano parsera, generatora ani wymagania REQ-VCS-207. To obowiązujący krok procedury agenta, nie nowy hook Git ani automatyczna blokada każdego commita poza tą procedurą.
+
+Odbiór na osobnych kopiach indeksu, tym samym blokiem wyjętym z dokumentu:
+
+| Stan wejściowy | Pytest | Kontrola aktualności | Dowód |
+|---|---|---|---|
+| Aktualny TRACE | 22 passed | TAK, kod 0, bajty i SHA bez zmian | [current.log](experiments/trace-check-20261029/current.log) |
+| Celowo nieaktualny TRACE | 22 passed, generator naprawił plik | NIE, kod 1, różne SHA | [stale.log](experiments/trace-check-20261029/stale.log) |
+| Brak TRACE | 22 passed, generator utworzył plik | NIE, kod 1, wejście MISSING | [missing.log](experiments/trace-check-20261029/missing.log) |
+
+[Wyniki i hashe przed/po](experiments/trace-check-20261029/probes.json); [identyfikacja wersji](experiments/trace-check-20261029/verification.json); [końcowa kontrola indeksu](experiments/trace-check-20261029/index-tests.log). W każdej próbie wynik generowania zgadzał się z aktualną macierzą, więc możliwość generowania pozostaje zachowana. Dokument podaje też osobne polecenie jawnej generacji oraz ponowny eksport i kontrolę nowego indeksu po poprawce. Kopie prób usunięto; roboczy TRACE nie był celowo uszkadzany.
+
+Korzyść wykazana: zielony generator nie pozwala już w tej procedurze przedstawić naprawionej kopii jako dowodu aktualności wejścia. Nie jest to dowód poprawności semantycznej wymagań, zachowania produktu ani automatycznego stosowania reguły przez każdy przyszły proces.
+
+**Zakończenie działań pilotażu:** 7/7 ustaleń i 5/5 przyrostów zamkniętych. Osiągnięte rezultaty: naprawiona etykieta, krótsza droga do stanu, regresje notatek i sum wykrywające celowe błędy oraz kontrola aktualności TRACE. Nie zmierzono oszczędności czasu/tokenów ani wzrostu satysfakcji. Próby wizualne 29/30 nadal pozostają otwarte; nie zastępujemy ich zielonymi testami. Przy kolejnej zmianie wracamy do zwykłego, proporcjonalnego przeglądu dotkniętego zakresu i kontroli nawrotów w tym rejestrze.

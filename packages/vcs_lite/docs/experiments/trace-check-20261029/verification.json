@@ -1,0 +1,18 @@
+{
+  "parent_commit": "5449de436a2cdd28881d10dceb805d4aa974de2b",
+  "sha256": {
+    "docs/WSPOLPRACA.md": "8bb4b5745db70dbe168ee0a5603886b74e3109d87c788683bebefc3ea43abc0a",
+    "docs/SPEC.md": "c5d5abc74f42e951f4485ea86abfc6154ba00b81c204569c260d91d68e993b16",
+    "docs/PRZEGLAD-SDLC-REJESTR.md": "341f01dca8f8297c941976e34eca2f458b798272f133de7cfe297fd1600c2deb",
+    "docs/PRZEGLAD-SDLC-PILOTAZ.md": "01d2704d89ab66c82ae5c471da3633a7d24642fb5a7ac2286045d6ae73c7b865",
+    "docs/TRACE.md": "04f6230cc7c5ee10dc64e263e73d3370edae84aaabde524391af8be85949d99e",
+    "tests/test_traceability.py": "a53a39f7377ebc5c3c430b255fe2a20f7d8164086783fc1505084f40615e2e49",
+    "tests/traceability.py": "80a7177b65eff808401d09a16eeec63b45b84141651d347117e83ac66adecf34"
+  },
+  "procedure_sha256": "ca460a26bad1d2bcd01f0362dfd63c4957a86f72034d88bdb19cfc6be1445a57",
+  "command": "Execute Python block from WSPOLPRACA in staged package directory using project .venv Python",
+  "result": "22 passed; TRACE unchanged; check exit 0",
+  "controls": "current exit 0; stale and missing exit 1 despite 22 passed each",
+  "generator_changed": false,
+  "scope": "documented index verification; no new Git hook or CI enforcement"
+}

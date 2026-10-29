@@ -30,7 +30,37 @@ Wspólny język rozmów, makiet i kodu: [SLOWNIK.md](SLOWNIK.md). Dla paneli uż
 
 - Język polski.
 - **Commit i push:** od 2026-10-26 obowiązuje polecenie użytkownika „rob commity po kazdym logicznym przyroscie”. Agent wykonuje commit po logicznym przyroście bez ponownego pytania. Push wykonuje użytkownik albo agent na wyraźne polecenie; zgoda na commit nie obejmuje pushowania. Ta reguła zastępuje dawną zasadę „commity i pushe robi użytkownik”.
-- Dodawaj i commituj tylko jawnie wskazane ścieżki (`git add <ścieżki>`, `git commit -- <ścieżki>`), nigdy cały katalog. Zachowuj niezwiązane zmiany użytkownika w indeksie i kopii roboczej. Przed commitem sprawdź przygotowaną wersję: `git checkout-index --all --prefix=<katalog tymczasowy>/`, dobrane testy w tej kopii i pełny log wyniku. Dla samej dokumentacji wystarczy kontrola odnośników/treści i istniejące testy śledzenia, bez pełnej suity produktu.
+- Dodawaj i commituj tylko jawnie wskazane ścieżki (`git add <ścieżki>`, `git commit -- <ścieżki>`), nigdy cały katalog. Zachowuj niezwiązane zmiany użytkownika w indeksie i kopii roboczej. Przed commitem sprawdź przygotowaną wersję: `git checkout-index --all --prefix=<katalog tymczasowy>/`, dobrane testy w tej kopii, [kontrola TRACE przed/po](#kontrola-aktualności-trace-na-kopii-indeksu) i pełny log wyniku. Dla samej dokumentacji wystarczy kontrola odnośników/treści i istniejące testy śledzenia, bez pełnej suity produktu.
 - Nowe wymagania: najpierw commit specyfikacji, potem kod z testami i wygenerowanym TRACE. Naprawa zachowania już wymaganego korzysta z istniejących ID.
 - TDD, nazwy testów od ID, linia `Trace:` w modułach.
 - Zrzuty robi użytkownik; agent uruchamia okno i porównuje zrzut ze wzorcem.
+
+## Kontrola aktualności TRACE na kopii indeksu
+
+Przy weryfikacji indeksu uruchom poniższy blok **w katalogu `packages/vcs_lite` wyeksportowanej kopii**, Pythonem z `.venv` repo głównego (`python` poniżej oznacza ten interpreter). Zachowaj pełne stdout/stderr w logu poza kopią, np. przez `> /private/tmp/vcs-trace-check.log 2>&1`, i przeczytaj log. Kontrola używa istniejącego testu/generatora; nie zmienia jego trybu pracy. Wynik zaliczony wymaga zarówno sukcesu pytest, jak i identycznych bajtów TRACE przed/po. Brak pliku przed próbą też jest błędem aktualności.
+
+```python
+from pathlib import Path
+import hashlib
+import subprocess
+import sys
+
+trace = Path('docs/TRACE.md')
+before = trace.read_bytes() if trace.exists() else None
+result = subprocess.run([
+    sys.executable, '-m', 'pytest', '-p', 'no:cacheprovider', '-q',
+    'tests/test_traceability.py',
+])
+after = trace.read_bytes() if trace.exists() else None
+fingerprint = lambda data: hashlib.sha256(data).hexdigest() if data is not None else 'MISSING'
+print('TRACE before SHA256:', fingerprint(before), flush=True)
+print('TRACE after  SHA256:', fingerprint(after), flush=True)
+current = before is not None and before == after
+print('TRACE aktualny w indeksie:', 'TAK' if current else 'NIE', flush=True)
+# Pytest może naprawić TRACE i przejść; kontrola nadal odrzuca nieaktualne wejście.
+sys.exit(result.returncode or (0 if current else 1))
+```
+
+Jeśli kontrola odrzuci aktualność, nie commituj na podstawie naprawionej kopii. W kopii roboczej wygeneruj TRACE jawnie: `python -m pytest -p no:cacheprovider -q tests/test_traceability.py -k test_req_vcs_207_matrix_is_generated`. Sprawdź różnicę, dodaj wyłącznie `docs/TRACE.md` oraz właściwe pliki przyrostu do indeksu, wyeksportuj **nową** kopię i ponów kontrolę. Jeśli pytest zgłosił inne błędy, usuń ich przyczynę przed ponowną weryfikacją. Generator pozostaje dostępny osobno; nie wolno uznać jego sukcesu za dowód aktualności wejścia.
+
+To kontrola wersji zapisanej i powiązań, nie dowód poprawności zachowania produktu. Dobierz osobno testy zmienionego zachowania. Nie trzeba powtarzać pełnej suity tylko z powodu aktualizacji TRACE.
