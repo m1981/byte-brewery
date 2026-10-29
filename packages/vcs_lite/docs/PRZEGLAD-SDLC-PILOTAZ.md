@@ -1,10 +1,14 @@
 # Przegląd SDLC — założenia i plan pilotażu
 
-Data: 2026-10-28. Wersja: 0.5. Status: etapy 1–4 zakończone; etapy 5–6 niewykonane.
+Data: 2026-10-28. Wersja: 0.6. Status: etapy 1–5 zakończone; etap 6 niewykonany.
 
 Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewane korzysci do pliku (md) oraz drugi plik (md) jako rejestr zmian”. Metodę zaproponował agent; użytkownik zaakceptował pilotaż 2026-10-28. Dokument nie zmienia obowiązujących wymagań produktu ani zasad współpracy.
 
 Historia zmian i rejestr działań: [PRZEGLAD-SDLC-REJESTR.md](PRZEGLAD-SDLC-REJESTR.md).
+
+**Bieżący stan (2026-10-29):** przegląd wykonany do etapu 5; następny krok to podsumowanie etapu 6. Siedem ustaleń pozostaje otwartych, napraw nie wdrożono. Etapy poniżej są historią wyników, nie bieżącymi poleceniami.
+
+**Gdzie zajrzeć:** DoD poniżej określa odbiór całego przeglądu; [rejestr — etap 5](PRZEGLAD-SDLC-REJESTR.md#etap-5--plan-działań-po-ocenie-dowodów) zawiera kolejność, koszt i warunki zamknięcia działań. Szczegółowe logi czytać dopiero przy sprawdzaniu konkretnego dowodu.
 
 ## Cel i granice
 
@@ -394,9 +398,25 @@ Nakład etapu 4: około 15 minut aktywnej analizy, prób i zapisu (szacunek, bez
 **Przekazanie:** etap 4 zakończony; wszystkie trzy zmiany oceniono według sześciu kryteriów. Etapy 5–6 pozostają otwarte. W kolejnym kroku należy ocenić łącznie PIL-U-001–007 i wybrać kolejność działań oraz najwyżej trzy rekomendacje; nie wykonywać napraw tylko po to, aby wynik przeglądu wyglądał na pozytywny.
 
 
+### Etap 5 — ocena i plan działań (wykonany)
+
+Wykonano 2026-10-29 na podstawie ustaleń etapów 2–4. Ponownie sprawdzono sumy dowodów etapu 4: bez zmian. Nie uruchamiano ponownie testów produktu ani pomiarów; nowe wykonanie nie zmieniłoby podstawy priorytetyzacji. Wynik szczegółowy zapisano raz, w [rejestrze działań](PRZEGLAD-SDLC-REJESTR.md#etap-5--plan-działań-po-ocenie-dowodów).
+
+**Kolejność proponowanej realizacji:** (1) etykieta konfliktu i minimalna regresja, (2) jednoznaczny punkt wejścia/status zamiast duplikatów, (3) regresje cyklu notatki, (4) zakres i regresje sum/kolorów, (5) porównanie TRACE w istniejącym sprawdzeniu indeksu. Każde z siedmiu ustaleń ma działanie, opiekuna, wyzwalacz i warunek zamknięcia. To plan realizacji, nie pięć nowych obowiązków przy każdej zmianie.
+
+Pierwszeństwo ma odtworzona wada o małym koszcie, następnie usprawnienie wznowienia pracy. Luka zapisu notatek pozostaje ważna, lecz udane próby nie uzasadniają twierdzenia o utracie danych. PIL-U-005 obniżono ze średniego wstępnego do niskiego: macierz bazowa była aktualna, a sprawdzenie porównawcze jest tanie. Pozostałe priorytety średnie; powody i niepewność jawne w rejestrze. Nie przypisywano sztucznych prawdopodobieństw.
+
+**Związek z celem:** krótsza droga do reguły/statusu/odpowiedzialności; rzeczywiste regresje zachowania zamiast samych ID; wynik z wersją zamiast ogólnego „gotowe”; usunięcie kopii zmiennych danych zamiast ich ciągłego przepisywania. Cel odbioru nawigacji: 3/3 próby bez rozmowy/kroniki; czas i liczba odczytów mierzone dopiero przy realizacji. Nie deklarujemy już osiągniętej oszczędności czasu ani tokenów.
+
+Szacowany koszt przyszłych działań: 120–200 minut aktywnej pracy w pięciu małych przyrostach; pierwsze dwa 40–65 minut. To koszt napraw/usprawnień, **nie** koszt zakończonego etapu 5 ani zwiększenie budżetu przeglądu. Nakład etapu 5: około 8 minut (szacunek). W etapie 6 ocenić całkowity koszt przeglądu i sens powtarzania metody; nie dodawać pełnego audytu do każdej drobnej zmiany.
+
+Sprawdzono także koszt samej dokumentacji: przed etapem 5 plan miał 402 wiersze, rejestr 127. Użytkownik zgłosił utratę orientacji mimo istnienia planu. To jakościowy sygnał, że samo utrzymywanie dokumentów nie wystarcza. Dodano krótki bieżący stan na początku planu; szczegółów działań nie powielono w obu plikach. Liczba wierszy nie mierzy użyteczności — odbiór ma polegać na odnalezieniu odpowiedzi, nie na osiągnięciu arbitralnej długości.
+
+**Odbiór etapu 5:** wszystkie 7 ustaleń sklasyfikowano; odróżniono potwierdzoną wadę, konflikt dokumentacji, lukę dowodu i usprawnienie; wskazano 5 przyrostów z kosztami i odbiorem; żaden wpis nie został zamknięty bez naprawy/dowodu ani uznany za zatwierdzony do wdrożenia. Wszystkie nadal otwarte. Następny etap 6 wybierze najwyżej trzy końcowe rekomendacje i oceni zakończenie pilotażu.
+
 ## Otwarte
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| Etap 5 — działania naprawcze | Agent | Ocenić wpływ, koszty i kolejność rozwiązań dla otwartych ustaleń. |
-| PIL-U-001–007 | Agent | Przygotować rozwiązania po dalszej weryfikacji; warunki zamknięcia w rejestrze. |
+| Etap 6 — podsumowanie pilotażu | Agent | Wybrać najwyżej trzy końcowe rekomendacje, ocenić koszt/korzyści i pełne DoD. |
+| PIL-U-001–007 — nadal otwarte | Agent | Realizacja według planu etapu 5 po zleceniu wdrożenia; sam przegląd nie zamyka ustaleń. |

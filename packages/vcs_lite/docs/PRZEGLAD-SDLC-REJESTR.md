@@ -14,11 +14,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 | PIL-Z-004 | 2026-10-28 | Plan v0.4: etap 3 wykonany na bazie c19208d; pełne dowody w experiments, aktualność TRACE i granice checkera. Dodano PIL-U-005. | Użytkownik: „wykonaj 3 rzetelnie”. | Agent | 22 testy bazowe przeszły; różnica TRACE pusta; próba nieaktualnego TRACE: 1 test przeszedł i odtworzył plik w kopii tymczasowej. |
 | PIL-Z-005 | 2026-10-29 | Plan v0.5: etap 4, oceny 18 kryteriów, dowody 64 testów i 29 prób. Uzupełniono PIL-U-004; dodano PIL-U-006–007. | Użytkownik potwierdził kontynuację rzetelnego przeglądu po wskazaniu etapu 4. | Agent | 64 testy przeszły; 28/29 prób zgodnych; odtworzona wada etykiety konfliktu. Kod/testy zgodne z bazą i niezmienione. |
 
+| PIL-Z-006 | 2026-10-29 | Etap 5: uporządkowano 7 ustaleń, dobrano 5 małych przyrostów, właścicieli, wyzwalacze i mierzalny odbiór korzyści. Priorytet PIL-U-005 obniżono do niskiego. | Użytkownik: „Wykonaj etap 5 rzetelnie i pamietaj o celu glownym”. | Agent | Zweryfikowano integralność dowodów etapu 4 i powiązanie każdego ustalenia z działaniem/odbiorem. Napraw nie wykonano. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–4 mają wyniki w planie. Siedem otwartych ustaleń obejmuje dokumentację, kontrolę struktury, lukę regresji notatek i odtworzoną wadę prezentacji konfliktu. Nie wykonano napraw.
+Etapy 1–5 mają wyniki w planie. Bieżąca kolejność i kryteria działań: [plan działań etapu 5](#etap-5--plan-działań-po-ocenie-dowodów). Siedem otwartych ustaleń obejmuje dokumentację, kontrolę struktury, lukę regresji notatek i odtworzoną wadę prezentacji konfliktu. Nie wykonano napraw.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -125,3 +127,53 @@ Agent sprawdził treść testów, a nie tylko ID. `test_gitlog.py` weryfikuje `d
 - **Propozycja / następny krok:** etap 5 — zaplanować przywrócenie etykiety i minimalną regresję obejmującą wywołanie w FileList oraz zachowanie text/zero/binary/unknown; nie osłabiać wymagania, aby dopasować je do renderera.
 - **Warunek zamknięcia:** test pokazuje niepowodzenie dla obecnej bazy i sukces po naprawie: konflikt ma właściwą etykietę, brak danych nadal „—”, zwykłe liczby zachowują kompaktowe kolory. Zachować commit, polecenie i wynik. Próba audytu nie jest jeszcze testem regresji produktu.
 - **Decyzja / dowód zamknięcia:** propozycja niezatwierdzona do wdrożenia; brak dowodu zamknięcia. Wyzwalacz: ocena działań etapu 5.
+
+## Etap 5 — plan działań po ocenie dowodów
+
+Ocena agenta z 2026-10-29, na bazie dowodów etapów 2–4 dla `c19208d`. Zlecenie dotyczy oceny i zaplanowania działań, nie ich wdrożenia. Poniższy stan jest bieżący; opisy i priorytety w sekcjach wcześniejszych są historią ustaleń. Wszystkie siedem ustaleń pozostaje otwarte; nie ma jeszcze dowodów zamknięcia. Właścicielem przygotowania, wdrożenia i weryfikacji automatycznej jest agent. Użytkownik ocenia wyłącznie przygotowane próby ręczne i zmiany zakresu, które wymagają jego decyzji; nie przenosimy na niego utrzymania rejestru.
+
+### Kolejność i minimalny zakres
+
+Koszty są szacunkami aktywnej pracy agenta wraz z dobranymi testami i zapisem wyniku, bez oczekiwania na użytkownika. Nie są limitem ani obietnicą terminu. Nie sumujemy osobno kosztu każdego ID, gdy jedna zmiana rozwiązuje kilka ustaleń.
+
+| Kolejność / ustalenia | Konkretne działanie i dotknięte miejsca | Odbiór przyrostu | Koszt / wyzwalacz |
+|---|---|---|---|
+| 1 — PIL-U-007 | W `widgets.draw_compact_counts` przywrócić etykietę konfliktu. W istniejących testach UI sprawdzić ścieżkę FileList → renderer, a wspólnym testem warianty text/zero/binary/unknown/conflict. Zachować kompaktowy odstęp i kolory. | Asercja „konflikt” oblewa na starej wersji, przechodzi po poprawce; „—” nadal oznacza brak danych. Dobraną regresję liczb B/F uruchomić raz po zmianie. Nie wymaga nowej makiety ani nowego wymagania: przywraca REQ-VCS-043 i AT-VCS-065. | 15–25 min. Pierwszy przyrost po zleceniu realizacji działań. |
+| 2 — PIL-U-001–003 | WSPOLPRACA uzgodnić z istniejącym poleceniem o commitach; prompt kierować do reguły zamiast ją kopiować. Usunąć z promptu kopie progów, liczby testów i zakresów ID, zachować praktyczne instrukcje. W SPEC dodać krótki bieżący stan dla trzech badanych zmian i oznaczyć dawną część jako historię. SLOWNIK ma definiować pojęcia; status P21 zastąpić odnośnikiem do stanu bieżącego. Zachować robocze usunięcia użytkownika w prompcie i osobny staging `.gitignore`. | Z promptu można znaleźć właściwy próg, stan i następny krok każdej próby bez czytania kroniki. Reguła commit/push jednoznaczna; odnośniki poprawne; dawne decyzje i pomiary pozostają dostępne. Samo powstanie tabeli nie wystarcza: wykonać próbę nawigacji opisaną niżej. | 25–40 min. Przed kolejnym wznowieniem rozwoju produktu; może być niezależnym przyrostem po naprawie etykiety. |
+| 3 — PIL-U-006 | Rozszerzyć `test_repo_notes.py` i integrację startu/zamykania: dwa niezależne uruchomienia z tym samym tymczasowym settings i repo, zapis/odczyt Unicode; osobno timer i FocusOut, błąd zamknięcia i udane ponowienie; istniejące próby kopiowania/pozycji przenieść tylko jeśli chronią zachowanie nieobjęte innym testem. Uściślić nazwę obecnego testu „reopen”, żeby nie obiecywała restartu. | Nowy proces odczytuje zapis bez wspólnego słownika drafts; błąd zapisu utrzymuje okno/tekst, późniejsze zamknięcie zapisuje. Atrapa schowka, izolowane ustawienia, timeout i sprzątanie procesów. Udowodnić, że odłączenie badanego zdarzenia lub ochrony zamknięcia powoduje niepowodzenie odpowiedniej asercji; nie pisać testu sprawdzającego wyłącznie istnienie bindingu. MANUAL-UI 30 pozostaje osobnym odbiorem wyglądu. | 40–65 min. Przed dalszą zmianą zapisu notatek lub deklaracją pełnego odbioru tej funkcji. |
+| 4 — PIL-U-004 | W istniejących REQ/DES ująć zakres: B/F liczby pliku, E suma commita; powiązać przyjęte doprecyzowania i P21. W `test_gitlog.py` dodać dedykowane asercje `commit_totals`, a w historii sprawdzić przekazanie sum do E. Uzupełnić krok 29 o B/E/F. Wspólnych testów kolorów z przyrostu 1 nie kopiować do każdej listy. | Oczekiwane sumy wyliczone ręcznie z małych fixture (nie wyłącznie porównanie z drugim parserem produkcyjnym): zwykła zmiana, root, merge według pierwszego rodzica, rename/zero, binary, brak danych po błędzie Git. Asercja sumy E oraz istniejące testy plików F; żaden stan unknown nie udaje +0 −0. Status oceny wizualnej zapisany oddzielnie. | 30–50 min. Po przyroście 1, przed kolejną zmianą liczenia/prezentacji lub deklaracją pełnego odbioru liczników. |
+| 5 — PIL-U-005 | W procedurze weryfikacji indeksu dopisać porównanie TRACE przed/po istniejącym generatorze, z jawnym wynikiem. Nie budować nowego parsera ani narzędzia do śledzenia wymagań. Gdy jest różnica, wygenerować TRACE w wersji przeznaczonej do commita, zaktualizować indeks i sprawdzić zmieniony stan. | Aktualny TRACE daje brak różnicy; celowo nieaktualny daje jawny błąd kontroli aktualności, nawet gdy sam pytest jest zielony. Próbę przeprowadzić na kopii, zachować obie wartości i wynik. Generowanie nadal działa. | 10–20 min. Przy najbliższym przyroście zmieniającym wejścia TRACE; można połączyć z weryfikacją przyrostu 3/4. |
+
+Łączny szacunek: **120–200 minut** aktywnej pracy, w małych przyrostach. W razie ograniczonego budżetu pierwsze dwa dają konkretną naprawę i prostsze wznowienie za około 40–65 minut; pozostałe pozostają jawnie otwarte. Nie przekładamy braku czasu na status „gotowe”. Realny koszt zapisać po wykonaniu; powyższe widełki nie są pomiarem.
+
+Przed wdrożeniem porównać właściwe pliki bieżącego HEAD z bazą przeglądu. Jeśli ustalenie zostało już naprawione innym commitem, sprawdzić jego warunek zamknięcia zamiast powtarzać zmianę. Uzgodnionych potrzeb nie zatwierdzać ponownie; nowe decyzje dotyczą tylko rzeczywistej zmiany zakresu. Etap 5 nie zmienia statusu propozycji na „przyjęte do wdrożenia”.
+
+### Priorytety i podstawa oceny
+
+| Ustalenie | Klasyfikacja po etapie 4 | Priorytet | Dlaczego / co pozostaje niepewne |
+|---|---|---|---|
+| PIL-U-007 | Potwierdzona wada produktu | średni, pierwsza naprawa | Odtworzona błędna etykieta, niewielka poprawka; brak dowodu błędnych operacji Git lub utraty danych. |
+| PIL-U-001 | Potwierdzony konflikt instrukcji | średni | Utrudnia samodzielną kontynuację; istniejący cytat rozstrzyga regułę, nie potrzeba nowej decyzji użytkownika. |
+| PIL-U-002 | Potwierdzona nieaktualna kopia informacji | średni | Może narzucić zły próg lub mylący stan; usuwać źródło duplikacji, nie tylko podmieniać liczby. |
+| PIL-U-003 | Potwierdzony problem bieżącego statusu | średni | Utrudnia wznowienie i sprzyja powtarzaniu pracy; sam przegląd także wymaga krótkiego widoku stanu. |
+| PIL-U-006 | Potwierdzona luka trwałej regresji; brak pełnego dowodu restartu/odbioru | średni | Potencjalny skutek utraty notatki istotny, ale próby ochrony zapisu przeszły; nie przedstawiamy ryzyka jako wykrytej utraty danych. |
+| PIL-U-004 | Rozproszony zakres i luka dedykowanych regresji | średni | Nowe próby sum i kolorów przeszły, lecz nie chronią kolejnych zmian; nie stwierdzono błędnego sumowania. |
+| PIL-U-005 | Ograniczenie kontroli aktualności, usprawnienie | niski (wcześniej średni, wstępny) | Rzeczywisty TRACE był aktualny; etap 3 pokazał tani sposób kontroli. Zmniejszony priorytet względem odtworzonej wady i braków regresji. |
+
+Nie stosowano liczbowego „wyniku ryzyka”: nie mamy danych o częstości zdarzeń ani stratach. Kolejność opiera się na odtwarzalności, skutku, koszcie i zależnościach. Przy rzeczywistym błędzie zapisu/utracie notatki lub błędnej operacji Git priorytet odpowiedniego ustalenia wymaga natychmiastowej ponownej oceny. Tego nie zaobserwowano w pilotażu.
+
+### Jak odbierzemy korzyść, nie samą dokumentację
+
+1. **Powrót do pracy:** po przyroście 2 wystartować od promptu i dla pamięci, notatek oraz liczników wskazać obowiązującą regułę, stan, dowód i następny krok. Cel: 3/3 odpowiedzi bez czytania rozmowy/kroniki, z nie więcej niż dwoma przejściami po odnośnikach do bieżącego stanu; odczyt szczegółowego dowodu liczyć osobno. Zapisać rzeczywisty czas i odczytane sekcje. Nie mamy porównywalnego wcześniejszego pomiaru czasu, więc nie deklarować procentowej oszczędności.
+2. **Mniej pomyłek:** poprawka PIL-U-007 ma przejść próbę negatywną → pozytywną; regresje sum/notatek muszą odrzucić celowo odłączoną badaną ścieżkę w kopii testowej. Potwierdzenie „test istnieje” nie jest kryterium sukcesu. Nie wymagać pełnego systemu mutation testing.
+3. **Mniej utrzymania:** prompt i słownik mają odsyłać do zmiennych statusów/progów zamiast je kopiować. Przy następnej zmianie progu lub wyniku testu sprawdzić, czy prompt wymaga edycji; cel: nie. SPEC, test i dowód nadal muszą być spójne — nie redukować dokumentacji kosztem kryteriów produktu.
+4. **Wiarygodne „gotowe”:** każdy zamykany wpis zawiera wersję, polecenie/metodę, wynik i odnośnik do dowodu. Osobno oznaczyć wdrożenie, testy i odbiór użytkownika. Po zakończeniu regresji nie odhaczać automatycznie kroków ręcznych 29/30.
+5. **Nawroty:** przy kolejnym dotknięciu danego obszaru sprawdzić warunek zamknięcia i ewentualny nawrót w tym samym wpisie. Nie wprowadzać cyklicznego raportowania ani nowego rejestru tylko do liczenia usterek.
+
+### Ograniczenie kosztu i zbędnych działań
+
+Nie kopiujemy wszystkich 29 prób audytu do suity; wybieramy brakujące zachowania i używamy istniejących fixture. Nie uruchamiamy całej suity po każdej zmianie dokumentu. Zmiana samej etykiety wymaga testów prezentacji, nie ponownego pomiaru pamięci. Wątek zapisu notatek wymaga integracji cyklu życia, a nie testowania każdego prywatnego pomocnika. Pełny przebieg lub pomiar wydajności rozszerzamy dopiero, gdy zakres zmiany albo wynik wskazuje taką potrzebę.
+
+Nie rozszerzamy checkera na wszystkie pliki, nie tworzymy nowych ID dla samych duplikatów i nie dopisujemy kolejnych dokumentów sterujących. Źródłem działań jest ten rejestr; plan zawiera tylko podsumowanie i odnośnik. Archiwalne dowody są niezmienne; dowód zamknięcia jest nowym zapisem, nie podmianą dawnej porażki. Ewentualny wspólny odbiór UI 29/30 można przygotować w jednym oknie po poprawkach, ale wynik i zakres każdego kroku zapisać osobno.
+
+Hipotezy przyczyn (bez udowodnionego związku przyczynowego): ręczne kopiowanie stanu sprzyja starzeniu promptu; dopisywanie kroniki w miejscu bieżących zadań utrudnia nawigację; współdzielenie renderera bez testu wszystkich stanów sprzyja regresji etykiety. Działania mają zmniejszać te mechanizmy, nie tylko poprawiać pojedynczy tekst. Ich skuteczność pozostaje do sprawdzenia po wdrożeniu.
