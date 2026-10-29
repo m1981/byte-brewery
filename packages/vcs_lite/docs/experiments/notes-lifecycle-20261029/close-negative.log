@@ -1,0 +1,41 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_req_vcs_046_close_failure_keeps_text_and_retry_saves ___________
+
+repo = <conftest.Repo object at 0x109861250>
+
+    def test_req_vcs_046_close_failure_keeps_text_and_retry_saves(repo):
+        settings = _notes_settings(repo)
+>       _notes_process(settings, 'failure')
+
+tests/ui/test_repo_notes.py:121:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+settings = PosixPath('/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/pytest-of-michal/pytest-562/test_req_vcs_046_close_failure0/settings.json')
+mode = 'failure'
+
+    def _notes_process(settings, mode):
+        import os
+        import subprocess
+        import sys
+        script = Path(__file__).resolve().parents[1] / 'notes_lifecycle.py'
+        env = {**os.environ, 'PYTHONPATH': str(script.parent.parent / 'src'),
+               'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}
+        result = subprocess.run([sys.executable, str(script), str(settings), mode],
+                                env=env, capture_output=True, text=True, timeout=15)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/vcs-u006-ez_1fuvo/tests/notes_lifecycle.py", line 50, in <module>
+E             run(Path(sys.argv[1]), sys.argv[2])
+E           File "/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/vcs-u006-ez_1fuvo/tests/notes_lifecycle.py", line 34, in run
+E             assert root.tk.call('info', 'commands', '.') != '', 'window closed despite failed save'
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError: window closed despite failed save
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/michal/PycharmProjects/byte-brewery/.venv/bin/python', '/private/var/folders/r4/9rd28l5...d save\'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: window closed despite failed save\n').returncode
+
+tests/ui/test_repo_notes.py:102: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ui/test_repo_notes.py::test_req_vcs_046_close_failure_keeps_text_and_retry_saves
+1 failed, 7 deselected in 0.49s

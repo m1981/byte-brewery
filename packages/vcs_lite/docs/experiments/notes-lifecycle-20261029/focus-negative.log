@@ -1,0 +1,60 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________ test_req_vcs_046_notes_autosave_from_editor_event[focus_out] _________
+
+tk_root = <tkinter.Tk object .>
+tmp_path = PosixPath('/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/pytest-of-michal/pytest-561/test_req_vcs_046_notes_autosav0')
+trigger = 'focus_out'
+
+    @pytest.mark.parametrize('trigger', ['timer', 'focus_out'])
+    def test_req_vcs_046_notes_autosave_from_editor_event(tk_root, tmp_path, trigger):
+        import time
+        from vcs_lite.ui.notes import NotesPanel, NoteStore
+        store = NoteStore(tmp_path / 'notes')
+        panel = NotesPanel(tk_root, store, clipboard=lambda text: None, on_hide=lambda: None)
+        repo = tmp_path / 'repo'
+        try:
+            panel.select_repo(repo)
+            tk_root.update()
+            panel.editor.insert('1.0', 'Żółw — szkic')
+            tk_root.update()  # deliver <<Modified>>, without calling changed/flush directly
+            assert not store.path(repo).exists()
+            if trigger == 'focus_out':
+                # Isolate FocusOut: the timer must not rescue a broken binding.
+                if panel.pending:
+                    panel.after_cancel(panel.pending)
+                    panel.pending = None
+                panel.editor.event_generate('<FocusOut>')
+            deadline = time.monotonic() + (2 if trigger == 'timer' else .3)
+            while not store.path(repo).exists() and time.monotonic() < deadline:
+                tk_root.update()
+                time.sleep(.01)
+>           assert store.path(repo).read_text(encoding='utf-8') == 'Żółw — szkic'
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/ui/test_repo_notes.py:87:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/Users/michal/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/pathlib.py:1027: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/pytest-of-michal/pytest-561/test_req_vcs_046_notes_autosav0/notes/757c39815010f6e53143553d0fa19ab8086c83e88fba5e9f3a6be23da6706230.md')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/pytest-of-michal/pytest-561/test_req_vcs_046_notes_autosav0/notes/757c39815010f6e53143553d0fa19ab8086c83e88fba5e9f3a6be23da6706230.md'
+
+/Users/michal/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/pathlib.py:1013: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/ui/test_repo_notes.py::test_req_vcs_046_notes_autosave_from_editor_event[focus_out]
+1 failed, 7 deselected in 0.58s

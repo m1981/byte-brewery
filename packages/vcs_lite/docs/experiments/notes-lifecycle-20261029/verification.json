@@ -1,0 +1,20 @@
+{
+  "parent_commit": "b78f35321cb84d51b96b5282f7061f49250f82bf",
+  "sha256": {
+    "tests/ui/test_repo_notes.py": "ad5cce83e4d2bef4890daa001b6c25d258513e6730aeb837a1f48fd77242e9d7",
+    "tests/notes_lifecycle.py": "9c6bdc0f357f9410bdbf88d8fef5d3b8cdb59fcf9537a8eef036af17bc99babf",
+    "src/vcs_lite/ui/notes.py": "2eae15f48b4193c892fdec7a4d6afb6b38760477eb54ee293dbeebd7c57fc103",
+    "src/vcs_lite/ui/main.py": "d424c9decf00a3d220538ef6cbc7d4edbbc2320caac448abbec505b69c8c981e",
+    "docs/TRACE.md": "03ca82fee05aafff292d116ce43a35c55b4686153cfc4d4c0a342da7d861cf20",
+    "docs/SPEC.md": "b74779d064e030f122fd547f5c112724faa4dab07f723465d9852b3de6be26a7",
+    "docs/PRZEGLAD-SDLC-REJESTR.md": "45dde9e46a2824d7079d9eb87a834577a8489c5f4e222ac103d4d56319e324cd",
+    "docs/PRZEGLAD-SDLC-PILOTAZ.md": "d9f6cf4b8a8eeef5241c7c43fc233e80648ee1f1b89dbc8a4b8c83a784d15337"
+  },
+  "result": "59 passed in 6.97s",
+  "command": "python -m pytest -p no:cacheprovider -q tests/ui/test_repo_notes.py tests/ui/test_main_window.py tests/ui/test_history_panel.py tests/test_traceability.py",
+  "location": "staged index copy /private/tmp/vcs-u006-index-20261029/packages/vcs_lite",
+  "TRACE_unchanged_after_index_tests": true,
+  "negative_controls": "4/4 failed for intended behavioral reasons; see mutations.json and full logs",
+  "production_code_changed": false,
+  "manual_UI_30": "still open"
+}

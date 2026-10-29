@@ -1,0 +1,42 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________ test_at_vcs_070_notes_survive_independent_application_restart _________
+
+repo = <conftest.Repo object at 0x10b375100>
+
+    def test_at_vcs_070_notes_survive_independent_application_restart(repo):
+        settings = _notes_settings(repo)
+        _notes_process(settings, 'write')
+>       _notes_process(settings, 'read')
+
+tests/ui/test_repo_notes.py:116:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+settings = PosixPath('/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/pytest-of-michal/pytest-563/test_at_vcs_070_notes_survive_0/settings.json')
+mode = 'read'
+
+    def _notes_process(settings, mode):
+        import os
+        import subprocess
+        import sys
+        script = Path(__file__).resolve().parents[1] / 'notes_lifecycle.py'
+        env = {**os.environ, 'PYTHONPATH': str(script.parent.parent / 'src'),
+               'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}
+        result = subprocess.run([sys.executable, str(script), str(settings), mode],
+                                env=env, capture_output=True, text=True, timeout=15)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/vcs-u006-97cqwj5k/tests/notes_lifecycle.py", line 50, in <module>
+E             run(Path(sys.argv[1]), sys.argv[2])
+E           File "/private/var/folders/r4/9rd28l515q59c0x7h1xwgbvc0000gn/T/vcs-u006-97cqwj5k/tests/notes_lifecycle.py", line 22, in run
+E             assert panel.editor.get('1.0', 'end-1c') == TEXT
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/michal/PycharmProjects/byte-brewery/.venv/bin/python', '/private/var/folders/r4/9rd28l5...panel.editor.get(\'1.0\', \'end-1c\') == TEXT\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n').returncode
+
+tests/ui/test_repo_notes.py:102: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ui/test_repo_notes.py::test_at_vcs_070_notes_survive_independent_application_restart
+1 failed, 7 deselected in 0.77s

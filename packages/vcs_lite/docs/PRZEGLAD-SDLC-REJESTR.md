@@ -22,11 +22,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-009 | 2026-10-29 | Uzgodniono commit/push, usunięto zmienne kopie z promptu i słownika, wydzielono bieżący stan SPEC. Zamknięto PIL-U-001–003. | Użytkownik: „Wykonaj z porzade zgodnie z plane i pamietaj o celu glownym”. | Agent | Próba nawigacji 3/3, kontrola odnośników i testy śledzenia na kopii indeksu; szczegóły zamknięcia poniżej. |
 
+| PIL-Z-010 | 2026-10-29 | Dodano regresje niezależnego restartu, autozapisu i ochrony zamknięcia; zamknięto PIL-U-006. | Użytkownik zaakceptował opis wykonania: „ok wykonaj”. | Agent | 4/4 celowych uszkodzeń odrzucone; dobrane testy na kopii indeksu, dowody poniżej. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–003 i PIL-U-007. Otwarte: PIL-U-004–006.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Następny przyrost: regresje cyklu notatki (PIL-U-006), właściciel agent; potem zakres/sumy liczników (PIL-U-004) i kontrola aktualności TRACE (PIL-U-005). Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
+Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–003 i PIL-U-006–007. Otwarte: PIL-U-004–005.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Następny przyrost: zakres/sumy liczników (PIL-U-004), właściciel agent; potem kontrola aktualności TRACE (PIL-U-005). Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -215,3 +217,21 @@ Realizacja przyrostu 2 zlecona przez użytkownika; właściciel i weryfikator: a
 **Mniej utrzymania:** zmiana progu lub wyniku testów nie wymaga aktualizacji ich kopii w prompcie; nie ma ich tam. Przy następnej rzeczywistej zmianie sprawdzić, czy ten warunek nadal jest spełniony. Nie deklarujemy jeszcze oszczędności czasu/tokenów ani wzrostu satysfakcji użytkownika. Mierzalny wynik tego przyrostu to 3/3 ścieżki w limicie dwóch przejść i usunięta sprzeczność commit/push.
 
 Weryfikacja przygotowanej wersji: [wersja i kontrola dokumentów](experiments/resume-cleanup-20261029/verification.json), [pełny log testów śledzenia](experiments/resume-cleanup-20261029/index-tests.log). Nie uruchamiano pełnej suity ani pomiarów UI dla zmian redakcyjnych. Kroki ręczne 29/30 pozostają niepotwierdzone. Kolejny przyrost: PIL-U-006.
+
+
+## Zamknięcie PIL-U-006 — 2026-10-29
+
+Status: **zamknięte — luka automatycznej regresji uzupełniona**. Właściciel i weryfikator: agent; zlecenie użytkownika „ok wykonaj” po przedstawieniu zakresu. Wykorzystano REQ-VCS-046 / AT-VCS-070, bez nowych wymagań i bez zmian kodu produkcyjnego. Pierwszy przebieg rozszerzonego modułu: 8 testów przeszło.
+
+Nowe testy obejmują:
+- zapis Unicode przez callback WM_DELETE_WINDOW i odczyt w drugim niezależnym procesie z prawdziwym `build(settings)`; wspólne są wyłącznie pliki tymczasowe, nie drafts/interpreter;
+- <<Modified>> uruchamiające rzeczywisty timer Tk oraz osobno wygenerowane FocusOut zapisujące plik (timer wyłączony w tej próbie, żeby nie maskował wadliwego bindingu);
+- błąd zapisu podczas zamykania: okno istnieje, ukryty notatnik zostaje pokazany, tekst i komunikat błędu pozostają; po przywróceniu zapisu ten sam callback zamyka okno, a nowy proces odczytuje tekst.
+
+Dotychczasowy test nazwany „reopen” otrzymał nazwę „switch_back_in_same_panel”. Repo i settings są tymczasowe, schowek jest atrapą. Procesy mają timeout 15 s, `subprocess.run` zabija i odbiera proces przy przekroczeniu limitu; okna sprzątane w finally. Repo wybierane przez `model.select` w obu uruchomieniach — test nie deklaruje automatycznego przywracania wyboru repo przez ustawienia. Testy nie imitują kliknięć pulpitu ani awarii zasilania. Odbiór wyglądu i pełna próba ręczna 30 pozostają otwarte.
+
+**Skuteczność ochrony:** w czterech osobnych kopiach odłączono timer, callback FocusOut, ochronę zamknięcia i odczyt dysku. Wszystkie 4 warianty odrzucił właściwy test: odpowiednio brak pliku, brak pliku, zamknięcie mimo błędu i brak tekstu po restarcie. [Zmiany i polecenia](experiments/notes-lifecycle-20261029/mutations.json); pełne logi: [timer](experiments/notes-lifecycle-20261029/timer-negative.log), [fokus](experiments/notes-lifecycle-20261029/focus-negative.log), [zamknięcie](experiments/notes-lifecycle-20261029/close-negative.log), [odczyt](experiments/notes-lifecycle-20261029/read-negative.log). Kopie usunięto; kod produktu pozostał bez zmian.
+
+Wersja i wynik dobranej regresji na kopii indeksu: [verification.json](experiments/notes-lifecycle-20261029/verification.json), [pełny log](experiments/notes-lifecycle-20261029/index-tests.log). TRACE wygenerowano jawnie przed stagingiem i porównano po testach indeksu. Nie zamyka to PIL-U-005, którego osobna kontrola negatywna/procedura pozostaje do wykonania.
+
+Korzyść potwierdzona: przyszłe odłączenie czterech badanych ścieżek powoduje niepowodzenie testu, zamiast pozostawić zielone sprawdzenie samych ID. Nie wykryto rzeczywistej utraty danych; nie deklarujemy zmierzonego spadku liczby usterek ani oszczędności czasu. Kopiowanie i pozycja edytora nie były zakresem tego minimalnego przyrostu; pozostają w próbie ręcznej 30 i historycznych próbach audytu. Następne działanie: PIL-U-004.

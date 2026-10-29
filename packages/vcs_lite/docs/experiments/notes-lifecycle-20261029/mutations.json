@@ -1,0 +1,74 @@
+[
+  {
+    "mutation": "timer",
+    "module": "notes.py",
+    "old": "self.pending = self.after(700, self.flush)",
+    "new": "self.pending = None",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/ui/test_repo_notes.py",
+      "-k",
+      "autosave_from_editor_event[timer]"
+    ],
+    "result": "1 failed; expected behavioral assertion"
+  },
+  {
+    "mutation": "focus",
+    "module": "notes.py",
+    "old": "self.editor.bind('<FocusOut>', lambda e: self.flush())",
+    "new": "self.editor.bind('<FocusOut>', lambda e: None)",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/ui/test_repo_notes.py",
+      "-k",
+      "autosave_from_editor_event[focus_out]"
+    ],
+    "result": "1 failed; expected behavioral assertion"
+  },
+  {
+    "mutation": "close",
+    "module": "main.py",
+    "old": "if window.notes.flush():",
+    "new": "if True:",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/ui/test_repo_notes.py",
+      "-k",
+      "close_failure"
+    ],
+    "result": "1 failed; expected behavioral assertion"
+  },
+  {
+    "mutation": "read",
+    "module": "notes.py",
+    "old": "return self.path(repo).read_text(encoding='utf-8')",
+    "new": "return ''",
+    "command": [
+      "/Users/michal/PycharmProjects/byte-brewery/packages/vcs_lite/../../.venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/ui/test_repo_notes.py",
+      "-k",
+      "independent_application_restart"
+    ],
+    "result": "1 failed; expected behavioral assertion"
+  }
+]
