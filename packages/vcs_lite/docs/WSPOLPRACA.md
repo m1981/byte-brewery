@@ -26,8 +26,11 @@ Wspólny język rozmów, makiet i kodu: [SLOWNIK.md](SLOWNIK.md). Dla paneli uż
 6. **Jeden temat na wiadomość** (użytkownik 2026-10-22: „Jeden tamtat na raz bo sie gubie”). Wiadomość dotyczy jednej sprawy: jednej decyzji albo jednej czynności użytkownika. Pełna tabela „Otwarte” tylko na prośbę albo na końcu etapu; poza tym na końcu jedna linia „Dalej: …”. Pozostałe tematy czekają w „Punkcie wznowienia” w `SPEC.md`, więc żaden nie ginie.
 7. **Test przed wysłaniem:** czy agent podpisałby proponowane działanie sam i postawił na nie swoją reputację? Szkic jest dozwolony, ale kompletny, a nie przerzucający pracę na użytkownika.
 
-## Bez zmian
+## Obowiązujące reguły wykonania
 
-- Język polski; commity i pushe robi użytkownik, agent o nie nie pyta.
+- Język polski.
+- **Commit i push:** od 2026-10-26 obowiązuje polecenie użytkownika „rob commity po kazdym logicznym przyroscie”. Agent wykonuje commit po logicznym przyroście bez ponownego pytania. Push wykonuje użytkownik albo agent na wyraźne polecenie; zgoda na commit nie obejmuje pushowania. Ta reguła zastępuje dawną zasadę „commity i pushe robi użytkownik”.
+- Dodawaj i commituj tylko jawnie wskazane ścieżki (`git add <ścieżki>`, `git commit -- <ścieżki>`), nigdy cały katalog. Zachowuj niezwiązane zmiany użytkownika w indeksie i kopii roboczej. Przed commitem sprawdź przygotowaną wersję: `git checkout-index --all --prefix=<katalog tymczasowy>/`, dobrane testy w tej kopii i pełny log wyniku. Dla samej dokumentacji wystarczy kontrola odnośników/treści i istniejące testy śledzenia, bez pełnej suity produktu.
+- Nowe wymagania: najpierw commit specyfikacji, potem kod z testami i wygenerowanym TRACE. Naprawa zachowania już wymaganego korzysta z istniejących ID.
 - TDD, nazwy testów od ID, linia `Trace:` w modułach.
 - Zrzuty robi użytkownik; agent uruchamia okno i porównuje zrzut ze wzorcem.

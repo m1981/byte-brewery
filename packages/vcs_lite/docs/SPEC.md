@@ -596,6 +596,20 @@ Rozpoznanie z 2026-10-21 na tym Macu, PyCharm 2025.3.4 (build 253.32098.74).
 
 ## Punkt wznowienia
 
+**Stan zweryfikowany 2026-10-29.** Poniżej jest bieżące przekazanie pracy; późniejsza kronika zachowuje dawne wyniki i polecenia, nie wyznacza dzisiejszej kolejności. Zasady wykonania: [WSPOLPRACA](WSPOLPRACA.md#obowiązujące-reguły-wykonania).
+
+| Obszar / obowiązująca reguła | Stan i dowód | Właściciel / następny krok |
+|---|---|---|
+| Pamięć — REQ-VCS-100 i REQ-VCS-105 w [wymaganiach jakościowych](#wymagania-jakościowe). Scenariusze mają odrębne progi; zmiana DEC-VCS-134 dotyczy podstawowego. | Podstawowy scenariusz zaliczony na bazie `c19208d`: [wynik z próbkami i wersją](experiments/sdlc-stage4-20261029/existing-tests.json). Scenariusz 3000 plików ma wcześniejszy wynik w historii wdrożenia; etap 4 go nie powtarzał. Żaden pomiar nie gwarantuje wszystkich warunków użycia. | Agent: powtórzyć właściwy pomiar przy zmianie wpływającej na pamięć/wydajność. Nie powtarzać dla samej dokumentacji. |
+| Notatnik — REQ-VCS-046, DES-VCS-080, AT-VCS-070; [przyjęte reguły P21](#notatnik-p21--przyjęte-2026-10-28). | Wdrożony; [próby etapu 4](experiments/sdlc-stage4-20261029/probes.json) potwierdzają sprawdzone ścieżki. Brak trwałej regresji pełnego restartu i cyklu zamykania: PIL-U-006. Wygląd/próba ręczna 30 w [MANUAL-UI](MANUAL-UI.md) pozostają otwarte. | Agent: następny przyrost — regresje notatek według [planu działań](PRZEGLAD-SDLC-REJESTR.md#kolejność-i-minimalny-zakres). Użytkownik: odbiór wyglądu po przygotowaniu próby przez agenta. |
+| Liczby zmian — REQ-VCS-040, REQ-VCS-043, przyjęte doprecyzowania B/E/F; [znaczenie liczb](SLOWNIK.md#liczby-zmian). | Kompaktowe kolory wdrożone. Konflikt naprawiony w `33a8bb7`, [44 testy na kopii indeksu](experiments/conflict-label-20261029/index-tests.log). PIL-U-004 nadal otwarte: zakres i dedykowane regresje sum E. Próba ręczna 29 w [MANUAL-UI](MANUAL-UI.md) nie jest pełnym odbiorem B/E/F. | Agent: po notatkach uzupełnić zakres, regresje sum i próbę 29 według planu działań. Użytkownik: późniejszy odbiór przygotowanej próby B/E/F. |
+
+Pozostałe działania procesu, ich kolejność i kryteria: [bieżący rejestr pilotażu](PRZEGLAD-SDLC-REJESTR.md#ustalenia-i-działania). Nie dopisuj tu dziennika każdego testu. Aktualizuj tylko zmieniony stan, dowód i kolejny krok; szczegóły historyczne pozostają poniżej lub w rejestrze.
+
+### Historia wznowień — zapis z kolejnych sesji
+
+Poniższe wpisy do końca tej sekcji zachowują stan z daty zapisu. Ich „następne kroki”, dawne progi i liczby testów nie są bieżącymi poleceniami. Obowiązujące wymagania pozostają w odpowiednich tabelach SPEC.
+
 2026-10-22: specyfikacja, projekt, wzorzec wyglądu (`ui-reference/`) i reguły śledzenia zaakceptowane (DEC-VCS-001–074). Gotowe i przetestowane: `core`, `app`, UI-1–UI-7 (szkielet, okno Repozytoria, pasek boczny, lista plików, spacja i dwuklik, skróty, konflikty, merge w toku P11, pasek błędu P3 z zaokrągleniem, wskaźnik P4, odświeżanie po fokusie, pomiar pamięci), podpowiedzi P12, przegląd plik po pliku (REQ-VCS-028), przewijanie kółkiem w oknie Repozytoria. 280 testów przechodzi. VER-VCS-013: `uv run vcs-lite` uruchomione 2026-10-22 (pakiet doinstalowany do `.venv`, `uv.lock` bez zmian).
 
 Kroki `MANUAL-UI.md` potwierdzone: 1–4, 10–15 oraz próby Beyond Compare (OBS-VCS-008); pomiary OBS-VCS-011 i OBS-VCS-012; merge OBS-VCS-010 rozwiązany (DEC-VCS-065) i sprawdzony. Potwierdzone zrzutami: chip P2, P11, pasek błędu z zaokrągleniem, P12, szary „Commit” przy otwartym oknie Repozytoria. Kroki 5–7 odhaczone 2026-10-23 na podstawie pracy w sesji (spacja, Beyond Compare, przyczyna „Wpisz wiadomość commita.” na zrzutach); kroki 8 i 9 potwierdzone 2026-10-23 na świeżym repo demo („wszystko działa”). Tym samym wszystkie kroki 1–15 `MANUAL-UI.md` są potwierdzone. Potwierdzone też na ekranie: przegląd plik po pliku (REQ-VCS-028), przewijanie kółkiem w oknie Repozytoria.
@@ -651,5 +665,7 @@ Następne kroki:
 | DEC-VCS-134 | Limit pamięci podstawowego scenariusza REQ-VCS-100 zwiększony do 85 MiB; limit 100 MiB dla 3000 plików pozostaje. Zastępuje próg z DEC-VCS-013; zakres procesu z DEC-VCS-042 pozostaje. | Użytkownik 2026-10-28: „zwiekszymy limit do 85MiB”. |
 | REQ-VCS-046 | Osobna notatka dla pełnej ścieżki każdego repo, dostępna domyślnie. Tekst przechowywany w notes obok używanego settings.json; zapis po 700 ms i opuszczeniu pola, przed zmianą repo i zamknięciem. Brak pliku przed edycją. Kopiowanie całości lub zaznaczenia; zachowanie kursora i przewinięcia. Błąd zapisu widoczny, tekst zachowany. Regulowana i zwijana prawa kolumna wyrównana z F; kompaktowe +/− także w B. | DEC-VCS-133, DES-VCS-080, AT-VCS-070, VER-VCS-025 |
 | VER-VCS-025 | Testy zapisu i izolacji repo, błędu oraz przełączeń notatnika; regresja UI i próba ręczna P21. | REQ-VCS-046, AT-VCS-070 |
+
+**Historyczny wynik wdrożenia, przed zmianą progu DEC-VCS-134.** Aktualny stan i dowód: [Punkt wznowienia](#punkt-wznowienia).
 
 Wdrożenie P21: NotesPanel, NoteStore, zapis atomowy UTF-8, szkice per repo i ochrona zamknięcia przy błędzie zapisu; wyrównanie C/F i kompaktowe liczby w B. Testy notatek najpierw oblały (brak modułu), następnie przeszły. Kopia indeksu: **692 passed, 1 failed**; porażka AT-VCS-016: 77,5 MiB przy limicie 60 MiB, ponowienie pomiaru 74,7 MiB. Limit niezmieniony, brak rozstrzygnięcia przyczyny; zgodnie z DEC-VCS-077 bez dalszego badania niestabilności tego pomiaru. Test 3000 plików i pozostałe testy przeszły. Logi `/private/tmp/vcs-notes-full.log`, `/private/tmp/vcs-notes-memory-repeat.log`. Następna czynność użytkownika: próba ręczna 30 i zrzut P21.

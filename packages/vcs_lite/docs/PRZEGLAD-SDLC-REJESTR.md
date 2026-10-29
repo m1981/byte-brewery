@@ -20,11 +20,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-008 | 2026-10-29 | Naprawiono etykietę konfliktu i dodano regresje renderera oraz FileList; zamknięto PIL-U-007. | Użytkownik: „wykoanj maprawe wraz z testami”. | Agent | Przed poprawką 2 failed / 4 passed; po poprawce 44 testy na kopii indeksu. Dowody w experiments/conflict-label-20261029. |
 
+| PIL-Z-009 | 2026-10-29 | Uzgodniono commit/push, usunięto zmienne kopie z promptu i słownika, wydzielono bieżący stan SPEC. Zamknięto PIL-U-001–003. | Użytkownik: „Wykonaj z porzade zgodnie z plane i pamietaj o celu glownym”. | Agent | Próba nawigacji 3/3, kontrola odnośników i testy śledzenia na kopii indeksu; szczegóły zamknięcia poniżej. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–6 zakończone; końcowa ocena i trzy rekomendacje są w [podsumowaniu](PRZEGLAD-SDLC-PILOTAZ.md#etap-6--podsumowanie-i-zakończenie-pilotażu). Przegląd zamknięty. PIL-U-007 naprawione i zweryfikowane 2026-10-29; PIL-U-001–006 pozostają otwarte. Następny proponowany przyrost: uporządkowanie instrukcji i stanu wznowienia (PIL-U-001–003), właściciel agent. Bieżąca kolejność i kryteria działań: [plan działań etapu 5](#etap-5--plan-działań-po-ocenie-dowodów). Pozostałe sześć otwartych ustaleń obejmuje dokumentację, kontrolę struktury oraz luki regresji notatek i statystyk zmian. Pierwsza naprawa: PIL-U-007; szczegóły zamknięcia na końcu rejestru.
+Etapy 1–6 zakończone; przegląd zamknięty. **Zamknięte: PIL-U-001–003 i PIL-U-007. Otwarte: PIL-U-004–006.** Bieżący stan produktu: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia). Następny przyrost: regresje cyklu notatki (PIL-U-006), właściciel agent; potem zakres/sumy liczników (PIL-U-004) i kontrola aktualności TRACE (PIL-U-005). Kryteria i kolejność: [plan działań etapu 5](#kolejność-i-minimalny-zakres). Poniższe ustalenia opisują stan z daty przeglądu; dowody zamknięcia są na końcu rejestru.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -134,7 +136,7 @@ Agent sprawdził treść testów, a nie tylko ID. `test_gitlog.py` weryfikuje `d
 
 ## Etap 5 — plan działań po ocenie dowodów
 
-Ocena agenta z 2026-10-29, na bazie dowodów etapów 2–4 dla `c19208d`. Zlecenie dotyczy oceny i zaplanowania działań, nie ich wdrożenia. Poniższy stan jest bieżący; opisy i priorytety w sekcjach wcześniejszych są historią ustaleń. Wszystkie siedem ustaleń pozostaje otwarte; nie ma jeszcze dowodów zamknięcia. Właścicielem przygotowania, wdrożenia i weryfikacji automatycznej jest agent. Użytkownik ocenia wyłącznie przygotowane próby ręczne i zmiany zakresu, które wymagają jego decyzji; nie przenosimy na niego utrzymania rejestru.
+Ocena agenta z 2026-10-29, na bazie dowodów etapów 2–4 dla `c19208d`. Zlecenie dotyczy oceny i zaplanowania działań, nie ich wdrożenia. Poniższy stan pochodzi z etapu 5; aktualne zamknięcia wskazano w „Ustalenia i działania”. Wszystkie siedem ustaleń pozostaje otwarte; nie ma jeszcze dowodów zamknięcia. Właścicielem przygotowania, wdrożenia i weryfikacji automatycznej jest agent. Użytkownik ocenia wyłącznie przygotowane próby ręczne i zmiany zakresu, które wymagają jego decyzji; nie przenosimy na niego utrzymania rejestru.
 
 ### Kolejność i minimalny zakres
 
@@ -192,3 +194,24 @@ Zmiana: `ui/widgets.py::draw_compact_counts` odróżnia konflikt od nieznanych d
 [Dowód po poprawce na kopii indeksu](experiments/conflict-label-20261029/index-tests.log): 44 testy przeszły (recent_changes, widgets, file_list_viewport, traceability). Obejmuje prezentację plików commita i wirtualizację 3000 plików; nie powtarzano pomiarów pamięci dla zmiany samej etykiety. TRACE wygenerowano po dodaniu testów. [Identyfikacja sprawdzonego kodu](experiments/conflict-label-20261029/version.json) zawiera SHA-256 modułu i testów oraz polecenie wykonania.
 
 Warunek zamknięcia spełniony: test odrzucał starą etykietę, teraz potwierdza „konflikt”, a binarne/brak danych i kompaktowe kolory pozostają poprawne. Zmiana nie jest dowodem zamknięcia PIL-U-004 ani pozostałych ustaleń. Ręczna ocena nowego zrzutu pozostaje opcjonalnym potwierdzeniem wyglądu; nie przypisano jej użytkownikowi. Historyczne raporty pilotażu zachowują wynik starej bazy.
+
+
+## Zamknięcie PIL-U-001–003 — 2026-10-29
+
+Realizacja przyrostu 2 zlecona przez użytkownika; właściciel i weryfikator: agent. Status: **zamknięte po kontroli dokumentów i próbie nawigacji**. Zmiana dotyczy instrukcji, nie zachowania produktu ani akceptacji UI.
+
+- PIL-U-001: PROMPT kieruje do jednej reguły WSPOLPRACA: commit po logicznym przyroście bez pytania, push tylko na wyraźne polecenie. Zachowano cytat i datę zgody, zakres oraz ochronę cudzych zmian.
+- PIL-U-002: prompt nie zawiera kopii progu, liczby zaliczonych testów ani zakresów ID. Praktyczne instrukcje pozostały. Usunięte wcześniej przez użytkownika pięć końcowych wierszy nie zostało przywrócone; zmiana promptu obejmuje ten uzgodniony stan. Osobny staging `.gitignore` nie należy do tego przyrostu.
+- PIL-U-003: SPEC ma tabelę stan–dowód–właściciel–następny krok; wcześniejsze wznowienia i wynik P21 są oznaczone jako historyczne. SLOWNIK odsyła do stanu, zamiast go powielać. Dawnych decyzji, pomiarów i wpisów kroniki nie usunięto.
+
+**Próba korzyści:** odczyt 2026-10-29 od promptu, bez rozmowy i kroniki; 3/3 odpowiedzi. Łączny czas od rozpoczęcia odczytu do zapisania odpowiedzi: **19,8 s** (czas zegarowy sesji agenta, nie pomiar pracy użytkownika). Wspólne miejsca odczytu: PROMPT „Zacznij od”, SPEC „Punkt wznowienia”; dodatkowo SPEC „Wymagania jakościowe” dla dokładnych progów. Wgląd w `existing-tests.json` był odczytem szczegółowego dowodu, liczonym osobno. Agent znał wcześniejszy kontekst i sam redagował dokumenty: to kontrola użyteczności ścieżki, nie niezależny test ani dowód procentowej oszczędności.
+
+| Pytanie | Odpowiedź uzyskana bez kroniki | Przejścia od promptu do stanu / reguły | Dowód / następny krok |
+|---|---|---|---|
+| Pamięć | Osobne scenariusze: REQ-VCS-100 ≤85 MiB, REQ-VCS-105 ≤100 MiB; podstawowy zaliczony na wskazanej bazie. | 1 do tabeli stanu, 2 do dokładnych progów | Tabela wskazuje JSON z wersją i próbkami; agent mierzy ponownie przy zmianie wpływającej na wydajność. |
+| Notatki | Wdrożone; luka trwałych regresji restartu/zamykania i ręczna próba 30 pozostają otwarte. | 1 | Tabela wskazuje próby i reguły P21; agent wykonuje PIL-U-006, użytkownik później ocenia przygotowany wygląd. |
+| Liczniki | Kompaktowe B/E/F wdrożone; konflikt naprawiony, sumy E wymagają regresji i konsolidacji zakresu. | 1 | Tabela wskazuje commit i log 44 testów; po notatkach agent wykonuje PIL-U-004, odbiór B/E/F osobno. |
+
+**Mniej utrzymania:** zmiana progu lub wyniku testów nie wymaga aktualizacji ich kopii w prompcie; nie ma ich tam. Przy następnej rzeczywistej zmianie sprawdzić, czy ten warunek nadal jest spełniony. Nie deklarujemy jeszcze oszczędności czasu/tokenów ani wzrostu satysfakcji użytkownika. Mierzalny wynik tego przyrostu to 3/3 ścieżki w limicie dwóch przejść i usunięta sprzeczność commit/push.
+
+Weryfikacja przygotowanej wersji: [wersja i kontrola dokumentów](experiments/resume-cleanup-20261029/verification.json), [pełny log testów śledzenia](experiments/resume-cleanup-20261029/index-tests.log). Nie uruchamiano pełnej suity ani pomiarów UI dla zmian redakcyjnych. Kroki ręczne 29/30 pozostają niepotwierdzone. Kolejny przyrost: PIL-U-006.

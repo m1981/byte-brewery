@@ -1,6 +1,6 @@
 # Wspólny język vcs-lite — ubiquitous language
 
-Wspólny słownik rozmów, makiet, wymagań i kodu. Używamy nazw poniżej zamiast niejednoznacznych „lewe okno” i „historia zmian”. Litery A–F oznaczają obszary makiety P21, nie identyfikatory wymagań. Notatnik P21 wdrożony 2026-10-28; wygląd czeka na próbę ręczną użytkownika.
+Wspólny słownik rozmów, makiet, wymagań i kodu. Używamy nazw poniżej zamiast niejednoznacznych „lewe okno” i „historia zmian”. Litery A–F oznaczają obszary makiety P21, nie identyfikatory wymagań. Stan wdrożenia, dowody i następne kroki: [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia).
 
 ## Obszary aplikacji
 

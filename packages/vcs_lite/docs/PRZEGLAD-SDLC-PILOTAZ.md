@@ -6,7 +6,7 @@ Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewan
 
 Historia zmian i rejestr działań: [PRZEGLAD-SDLC-REJESTR.md](PRZEGLAD-SDLC-REJESTR.md).
 
-**Bieżący stan (2026-10-29):** pilotaż zakończony; [wynik końcowy i trzy rekomendacje](#etap-6--podsumowanie-i-zakończenie-pilotażu) poniżej. Po pilotażu naprawiono i zweryfikowano PIL-U-007 (etykieta konfliktu). Sześć ustaleń pozostaje otwartych; następny proponowany przyrost: PIL-U-001–003, uporządkowanie wznowienia pracy. Dawne etapy są historią wyników.
+**Bieżący stan (2026-10-29):** pilotaż zakończony; [wynik końcowy i trzy rekomendacje](#etap-6--podsumowanie-i-zakończenie-pilotażu) poniżej. Po pilotażu zamknięto PIL-U-007 oraz PIL-U-001–003. Otwarte pozostają PIL-U-004–006; następny przyrost: regresje notatek (PIL-U-006). Dowody i kryteria w [rejestrze](PRZEGLAD-SDLC-REJESTR.md#ustalenia-i-działania). Dawne etapy są historią wyników.
 
 **Gdzie zajrzeć:** DoD poniżej określa odbiór całego przeglądu; [rejestr — etap 5](PRZEGLAD-SDLC-REJESTR.md#etap-5--plan-działań-po-ocenie-dowodów) zawiera kolejność, koszt i warunki zamknięcia działań. Szczegółowe logi czytać dopiero przy sprawdzaniu konkretnego dowodu.
 
@@ -480,4 +480,4 @@ Rekomendacja dalszego stosowania: przy przyszłym przyroście sprawdzać tylko z
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| PIL-U-001–006 — nadal otwarte | Agent | Realizacja według planu etapu 5 po zleceniu wdrożenia; sam przegląd nie zamyka ustaleń. |
+| PIL-U-004–006 — nadal otwarte | Agent | Realizacja według planu etapu 5 po zleceniu wdrożenia; sam przegląd nie zamyka ustaleń. |

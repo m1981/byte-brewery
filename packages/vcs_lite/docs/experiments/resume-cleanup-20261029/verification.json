@@ -1,0 +1,156 @@
+{
+  "parent_commit": "33a8bb7947b55a22859a0dc9ec7ea83978042d89",
+  "sha256": {
+    "PROMPT-STARTOWY.md": "95df2f9a11e9d0059b59ecb1bf3271067555fb329c8b485580237aab1ef414dc",
+    "WSPOLPRACA.md": "2850bc3effc1434c0e96ac62675077970e2adfe1b694f9a1f4d90a38b5e2bb77",
+    "SPEC.md": "a7fbb3b69c55f2e756a3021dd4179f88349e90cc2a972c62382327c0741a11f3",
+    "SLOWNIK.md": "2fb1f7d7892e8f31901faceca4ccd98a01a7a9c2b743fef68b58e34c6844dc4a",
+    "PRZEGLAD-SDLC-PILOTAZ.md": "5fc29d7428d7199ea18787dfb653415be344ab369e83cc6e15e5e2f267f75f12",
+    "PRZEGLAD-SDLC-REJESTR.md": "e839c6f41d59940e7ab2600ba713b7efcae768c9c8126353dedd071bac775918"
+  },
+  "checked_added_links": [
+    [
+      "PROMPT-STARTOWY.md",
+      "WSPOLPRACA.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "SPEC.md#punkt-wznowienia"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "SPEC.md#wymagania-jakościowe"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "SPEC.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "DESIGN.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "ACCEPTANCE.feature"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "TRACE.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "MANUAL-UI.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "ui-reference/UI-REFERENCE.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "SLOWNIK.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "RETROSPEKTYWA.md"
+    ],
+    [
+      "PROMPT-STARTOWY.md",
+      "WSPOLPRACA.md#obowiązujące-reguły-wykonania"
+    ],
+    [
+      "SPEC.md",
+      "WSPOLPRACA.md#obowiązujące-reguły-wykonania"
+    ],
+    [
+      "SPEC.md",
+      "#wymagania-jakościowe"
+    ],
+    [
+      "SPEC.md",
+      "experiments/sdlc-stage4-20261029/existing-tests.json"
+    ],
+    [
+      "SPEC.md",
+      "#notatnik-p21--przyjęte-2026-10-28"
+    ],
+    [
+      "SPEC.md",
+      "experiments/sdlc-stage4-20261029/probes.json"
+    ],
+    [
+      "SPEC.md",
+      "MANUAL-UI.md"
+    ],
+    [
+      "SPEC.md",
+      "PRZEGLAD-SDLC-REJESTR.md#kolejność-i-minimalny-zakres"
+    ],
+    [
+      "SPEC.md",
+      "SLOWNIK.md#liczby-zmian"
+    ],
+    [
+      "SPEC.md",
+      "experiments/conflict-label-20261029/index-tests.log"
+    ],
+    [
+      "SPEC.md",
+      "MANUAL-UI.md"
+    ],
+    [
+      "SPEC.md",
+      "PRZEGLAD-SDLC-REJESTR.md#ustalenia-i-działania"
+    ],
+    [
+      "SPEC.md",
+      "#punkt-wznowienia"
+    ],
+    [
+      "SLOWNIK.md",
+      "SPEC.md#punkt-wznowienia"
+    ],
+    [
+      "PRZEGLAD-SDLC-PILOTAZ.md",
+      "#etap-6--podsumowanie-i-zakończenie-pilotażu"
+    ],
+    [
+      "PRZEGLAD-SDLC-PILOTAZ.md",
+      "PRZEGLAD-SDLC-REJESTR.md#ustalenia-i-działania"
+    ],
+    [
+      "PRZEGLAD-SDLC-REJESTR.md",
+      "SPEC.md#punkt-wznowienia"
+    ],
+    [
+      "PRZEGLAD-SDLC-REJESTR.md",
+      "#kolejność-i-minimalny-zakres"
+    ],
+    [
+      "PRZEGLAD-SDLC-REJESTR.md",
+      "experiments/resume-cleanup-20261029/verification.json"
+    ],
+    [
+      "PRZEGLAD-SDLC-REJESTR.md",
+      "experiments/resume-cleanup-20261029/index-tests.log"
+    ]
+  ],
+  "checks": {
+    "links": 31,
+    "historical_resume_and_P21_results_preserved": true,
+    "user_removed_prompt_tail_not_restored": true,
+    "prompt_has_no_copied_threshold_or_test_count": true,
+    "tested_index_matches_documents": true,
+    "TRACE_unchanged_by_generator": true
+  },
+  "navigation": {
+    "answers": 3,
+    "cases": 3,
+    "max_transitions_to_state_or_rule": 2,
+    "wall_seconds": 19.8,
+    "limitation": "Author familiar with prior context; not independent user study or savings baseline."
+  },
+  "tests": {
+    "command": "python -m pytest -p no:cacheprovider -q /private/tmp/vcs-resume-index-20261029/packages/vcs_lite/tests/test_traceability.py",
+    "result": "22 passed in 0.51s"
+  }
+}

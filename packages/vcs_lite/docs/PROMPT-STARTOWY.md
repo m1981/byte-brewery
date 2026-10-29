@@ -1,19 +1,16 @@
 Kontynuujemy projekt vcs-lite (lekki panel gita w Tkinterze na macOS) w ~/PycharmProjects/byte-brewery/packages/vcs_lite.
 
-Zanim cokolwiek zrobisz, przeczytaj:
-1. docs/WSPOLPRACA.md: konwencja współpracy (BLUF, decyzje do podpisu z rekomendacją, lista spraw dla mnie (CCIR), jeden temat na wiadomość, tabela „Otwarte” z właścicielem). Ma pierwszeństwo nad pozostałymi zasadami.
-2. docs/SPEC.md: decyzje DEC-VCS-001–124 z cytatami, wymagania REQ-VCS-001–041 i REQ-VCS-100–104, rejestr pytań i sekcja „Punkt wznowienia” (stan i następne kroki).
-3. docs/DESIGN.md: DES-VCS-001–071.
-4. docs/ui-reference/UI-REFERENCE.md oraz E-01*.html, E-01.png, E-03*.html, E-04-szukaj.html, E-05-diff.html: wiążący wzorzec wyglądu (E-03 strona diffu Markdown, E-04 okno „Szukaj w plikach”, E-05 diff lewo–prawo w przeglądarce).
-5. docs/PROPOZYCJA-szukaj.md: analiza „Szukaj w plikach” (wykonane, REQ-VCS-033).
-6. docs/RETROSPEKTYWA.md: jak pracowaliśmy i czego unikać.
-7. docs/ACCEPTANCE.feature (AT-VCS-001–063), docs/TRACE.md (generowany), docs/MANUAL-UI.md (kroki 1–23 potwierdzone).
+Zacznij od:
+1. [WSPOLPRACA.md](WSPOLPRACA.md): obowiązujące reguły współpracy i wykonania, w tym zakres zgody na commit/push. Późniejsze polecenia użytkownika mają pierwszeństwo.
+2. [SPEC — Punkt wznowienia](SPEC.md#punkt-wznowienia): bieżący stan, dowód, właściciel i następny krok. To punkt wejścia do pracy, bez czytania kroniki. Progi pamięci są w [wymaganiach jakościowych](SPEC.md#wymagania-jakościowe), wyniki dotyczą konkretnych wersji wskazanych w tabeli stanu.
+3. Dla dotkniętego obszaru: [SPEC](SPEC.md), [DESIGN](DESIGN.md), [ACCEPTANCE](ACCEPTANCE.feature), [TRACE](TRACE.md) (generowany), [MANUAL-UI](MANUAL-UI.md) (odbiór ręczny) oraz [wzorzec wyglądu](ui-reference/UI-REFERENCE.md). Nie kopiuj tutaj zakresów ID ani liczby zaliczonych testów.
+4. [SLOWNIK](SLOWNIK.md): wspólne nazwy obszarów; [RETROSPEKTYWA](RETROSPEKTYWA.md): doświadczenia historyczne. Propozycje i makiety czytaj według odsyłaczy dla aktualnego zadania.
 
 Zasady pracy:
 - Po polsku, według docs/WSPOLPRACA.md.
-- Commit po każdym logicznym przyroście bez pytania (od 2026-10-26: „rob commity po kazdym logicznym przyroscie”); pushe robię sam albo na wyraźne polecenie. Commit tylko wskazanych plików (`git commit -- <ścieżki>`), bo w indeksie mogą czekać moje zmiany. Przed commitem: testy na samym stanie indeksu (git checkout-index do katalogu tymczasowego). Nigdy git add na całym katalogu (wpada .DS_Store), tylko wskazane pliki. Kolejność: najpierw commit ze specyfikacją, potem kod z testami i TRACE.md.
+- Commit/push i weryfikacja indeksu: [WSPOLPRACA — Obowiązujące reguły wykonania](WSPOLPRACA.md#obowiązujące-reguły-wykonania).
 - Specyfikacja przed kodem: decyzja (DEC z moim cytatem) → REQ/DES/AT → test, który oblewa z właściwego powodu → kod. Nazwy testów od ID (test_req_vcs_…, test_at_vcs_…, test_des_vcs_…); każdy moduł w src/ ma linię „Trace: …”. Wygląd: najpierw makieta HTML do akceptacji.
-- Testy w ~/PycharmProjects/byte-brewery: .venv/bin/python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests > <scratchpad>/log.txt 2>&1 i czytaj pełny log (nie ucinaj grepem treści błędów). Obecnie 650 testów przechodzi. Nazwy plików testów muszą być unikalne w całym katalogu tests/.
+- Testy w ~/PycharmProjects/byte-brewery: .venv/bin/python -m pytest -p no:cacheprovider -q packages/vcs_lite/tests > <scratchpad>/log.txt 2>&1 i czytaj pełny log (nie ucinaj grepem treści błędów). Wynik podawaj z wersją, zakresem i logiem; dobieraj testy do zmiany. Nazwy plików testów muszą być unikalne w całym katalogu tests/.
 - Zrzuty robię sam. Po zmianie UI uruchom okno i poproś o zrzut.
 - Aplikacja: /Applications/vcs-lite.app (python tools/make_app.py w packages/vcs_lite; przebudowa tylko przy zmianie logo). Okno do pracy: w byte-brewery `uv run vcs-lite` (moje ustawienia, ~/Library/Application Support/vcs-lite/settings.json; pakiet zainstalowany edytowalnie, więc restart okna wystarcza). Okno do prób: python tools/make_demo.py <pusty folder w scratchpadzie>, potem w packages/vcs_lite: PYTHONPATH=src ../../.venv/bin/python -m vcs_lite.ui.main --settings <folder>/settings.json (w tle).
 
@@ -22,15 +19,9 @@ Ustalenia techniczne:
 - W podklasach tk.Canvas nie używaj nazw pól, które ma Tkinter (np. self._options przesłania metodę i okno nie startuje).
 - Tk nie dostarcza zdarzeń myszy i klawiatury do ukrytego okna testowego: testuj, że zdarzenie jest przypięte, i wywołuj obsługę wprost. Po każdym przerysowaniu Canvas identyfikatory elementów są nowe: pobieraj je ponownie w teście.
 - tk_popup na macOS blokuje test: pozycje menu liczy FileList.prepare_menu, osobno od wyświetlenia.
-- Git uruchamia wyłącznie core/gitcli (DES-VCS-001); strumieniowo GitCli.stream. Strony w przeglądarce: core/pagekit (wspólne), core/mdpage (Markdown), core/textpage (lewo–prawo, tekst), core/pageview (adaptery na porcie ExternalDiffTool, at_line), core/filekind (typ pliku), core/browser (domyślna przeglądarka z macOS); okno nie importuje markdown_it (limit 60 MB). Beyond Compare usunięty (DEC-VCS-102); wtyczka CLI tylko przez external_diff_tool w settings.json (DEC-VCS-106). Na stronie surowy HTML jest tekstem poza <br> (DEC-VCS-088); CSP dopuszcza tylko Google Fonts.
+- Git uruchamia wyłącznie core/gitcli (DES-VCS-001); strumieniowo GitCli.stream. Strony w przeglądarce: core/pagekit (wspólne), core/mdpage (Markdown), core/textpage (lewo–prawo, tekst), core/pageview (adaptery na porcie ExternalDiffTool, at_line), core/filekind (typ pliku), core/browser (domyślna przeglądarka z macOS); okno nie importuje markdown_it (próg i scenariusz: REQ-VCS-100 w SPEC, osobny scenariusz dużej listy: REQ-VCS-105). Beyond Compare usunięty (DEC-VCS-102); wtyczka CLI tylko przez external_diff_tool w settings.json (DEC-VCS-106). Na stronie surowy HTML jest tekstem poza <br> (DEC-VCS-088); CSP dopuszcza tylko Google Fonts.
 - Atrapy w tests/world.py: tool (strona lewo–prawo), md_tool, md_reader i text_reader (at_line zapisuje linię), external (wtyczka, domyślnie None), browsed (pliki w przeglądarce), copies (kopie wersji spoza dysku), opened (polecenia open), timers (FakeTimers zamiast after), search_session(); ManualWorker.settle().
 - git grep -w jest błędne dla polskich liter (trafia „w” w „żółw”); -i działa (sprawdzone na git 2.47.1).
 - Testy nie ruszają schowka użytkownika: okno dostaje atrapę `clipboard`.
 - Testy nigdy nie otwierają prawdziwej przeglądarki: strony z --no-open albo atrapy; pomiar pamięci trzyma porównanie przez wtyczkę z atrapą.
 - git mv zapisuje w indeksie: przenoś pliki zwykłym mv (indeks rusza tylko użytkownik albo commit przyrostu).
-
-Następny krok według „Punktu wznowienia”:
-1. „Szukaj w plikach” (REQ-VCS-033) i przeglądarka zamiast Beyond Compare (REQ-VCS-023, REQ-VCS-034) gotowe i potwierdzone na ekranie (kroki 16, 6, 17).
-2. Adres zdalnego repo do schowka prawym przyciskiem na kafelku (REQ-VCS-035): gotowe i potwierdzone (krok 19). Katalog packages/vcs_lite/assets/ nie pochodzi od agenta; nie ruszaj bez pytania.
-3. Panel „Historia” (DEC-VCS-116–119): plan kroków 0–7 i reguły H-01–H-49 w docs/PROPOZYCJA-historia.md (czytaj przed pracą nad historią); stan w „Punkcie wznowienia” 2d.
-4. Na przyszłość (bez terminu): własne okno podglądu plików (Q-VCS-056).
