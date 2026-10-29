@@ -1,12 +1,12 @@
 # Przegląd SDLC — założenia i plan pilotażu
 
-Data: 2026-10-28. Wersja: 0.6. Status: etapy 1–5 zakończone; etap 6 niewykonany.
+Data: 2026-10-28. Wersja: 1.0. Status: etapy 1–6 zakończone; przegląd zamknięty, naprawy otwarte.
 
 Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewane korzysci do pliku (md) oraz drugi plik (md) jako rejestr zmian”. Metodę zaproponował agent; użytkownik zaakceptował pilotaż 2026-10-28. Dokument nie zmienia obowiązujących wymagań produktu ani zasad współpracy.
 
 Historia zmian i rejestr działań: [PRZEGLAD-SDLC-REJESTR.md](PRZEGLAD-SDLC-REJESTR.md).
 
-**Bieżący stan (2026-10-29):** przegląd wykonany do etapu 5; następny krok to podsumowanie etapu 6. Siedem ustaleń pozostaje otwartych, napraw nie wdrożono. Etapy poniżej są historią wyników, nie bieżącymi poleceniami.
+**Bieżący stan (2026-10-29):** pilotaż zakończony; [wynik końcowy i trzy rekomendacje](#etap-6--podsumowanie-i-zakończenie-pilotażu) poniżej. Następny krok: przyrost naprawczy 1 — etykieta konfliktu i regresja. Siedem ustaleń pozostaje otwartych, napraw nie wdrożono. Etapy poniżej są historią wyników, nie bieżącymi poleceniami.
 
 **Gdzie zajrzeć:** DoD poniżej określa odbiór całego przeglądu; [rejestr — etap 5](PRZEGLAD-SDLC-REJESTR.md#etap-5--plan-działań-po-ocenie-dowodów) zawiera kolejność, koszt i warunki zamknięcia działań. Szczegółowe logi czytać dopiero przy sprawdzaniu konkretnego dowodu.
 
@@ -68,8 +68,8 @@ Ocena każdego kryterium: **spełnione / niespełnione / brak dowodu / nie dotyc
 - [x] Każda z trzech zmian ma ocenę wszystkich sześciu kryteriów z dowodami albo jawnie wskazanym ich brakiem.
 - [x] Wszystkie ustalenia wymagające działania mają wpis, priorytet, właściciela, następny krok i warunek zamknięcia w rejestrze.
 - [x] Wynik rozróżnia: wdrożone, zweryfikowane i zaakceptowane. Nie przypisano użytkownikowi nieudzielonej akceptacji.
-- [ ] Wybrano najwyżej trzy rekomendacje z kosztem i sposobem oceny efektu; opisano ograniczenia próby i dalszy krok.
-- [ ] Zapisano rzeczywisty nakład pracy i oceniono, czy metoda jest warta powtarzania.
+- [x] Wybrano najwyżej trzy rekomendacje z kosztem i sposobem oceny efektu; opisano ograniczenia próby i dalszy krok.
+- [x] Zapisano rzeczywisty nakład pracy i oceniono, czy metoda jest warta powtarzania — nakład oszacowany, bez dokładnego pomiaru; ograniczenie w etapie 6.
 
 DoD dotyczy zakończenia **przeglądu**, nie usunięcia wszystkich usterek. Otwarte działania mogą pozostać, jeśli są jawne i przypisane. Działanie naprawcze jest zamknięte dopiero po sprawdzeniu jego warunku zamknięcia na wskazanej wersji. Odrzucenie lub odroczenie wymaga uzasadnienia; nie jest naprawą.
 
@@ -414,9 +414,70 @@ Sprawdzono także koszt samej dokumentacji: przed etapem 5 plan miał 402 wiersz
 
 **Odbiór etapu 5:** wszystkie 7 ustaleń sklasyfikowano; odróżniono potwierdzoną wadę, konflikt dokumentacji, lukę dowodu i usprawnienie; wskazano 5 przyrostów z kosztami i odbiorem; żaden wpis nie został zamknięty bez naprawy/dowodu ani uznany za zatwierdzony do wdrożenia. Wszystkie nadal otwarte. Następny etap 6 wybierze najwyżej trzy końcowe rekomendacje i oceni zakończenie pilotażu.
 
+### Etap 6 — podsumowanie i zakończenie pilotażu
+
+**Werdykt agenta, 2026-10-29:** zakończyć ten pilotaż na ustalonej próbie trzech zmian. Metoda jest użyteczna do kontroli znaczenia wymagań i wiarygodności dowodów, ale jej pełna sześciostopniowa forma jest zbyt ciężka jako obowiązek przy każdym drobnym przyroście. Następny krok to realizacja działań z rejestru, nie rozszerzanie audytu na całe repo. To rekomendacja po przeglądzie, nie przypisana użytkownikowi zgoda na wdrożenie.
+
+#### Co wiadomo po przeglądzie
+
+- Baza `c19208dd4ce797ec5183c3127e832c5282a30aba` ma poprawną strukturę w zakresie checkera: 22 testy przeszły; zapisany TRACE odpowiada generatorowi. Oddzielna próba wykazała, że sam zielony test generatora może ukryć wcześniejszą nieaktualność pliku.
+- 64 dobrane testy produktu przeszły. Pomiar 300 zmian: maks. 55,5 MiB przy limicie 85 MiB, odświeżenie 0,183 s, zero Git w bezczynności. To wynik jednego określonego scenariusza, nie gwarancja wszystkich warunków wydajności.
+- Dodatkowe próby: 28/29 zgodnych; wykryto wadę etykiety konfliktu. Pozostałe wyniki wspierają działanie notatek i liczników w sprawdzonym zakresie, lecz nie zastępują brakujących trwałych regresji ani odbioru ręcznego.
+- Siedem ustaleń ma właściciela, działania i warunki zamknięcia. **Żadnego nie zamknięto; napraw nie wdrożono.** Pozostały m.in. odbiór P21/krok 30 i pełny status oceny liczników/krok 29.
+
+Dowody i polecenia są w etapach 3–4; sprawdzono ich integralność i zgodność liczb podsumowania. Nie powtarzano testów produktu tylko na potrzeby podsumowania.
+
+#### Trzy końcowe rekomendacje
+
+Poniższe grupy obejmują wszystkie siedem ustaleń i pięć przyrostów z etapu 5. Nie dodają nowych prac. Kolejność wykonawcza pozostaje w rejestrze: najpierw mała naprawa konfliktu, potem uporządkowanie wznowienia pracy, następnie regresje i kontrola TRACE.
+
+| Rekomendacja | Zakres / koszt aktywnej pracy (szacunek) | Korzyść i sposób sprawdzenia | Ryzyko kosztu procesu |
+|---|---|---|---|
+| **1. Chronić zachowanie, nie tylko powiązania ID.** | PIL-U-007, PIL-U-006, PIL-U-004; przyrosty 1, 3, 4: **85–140 min**. Naprawa etykiety oraz minimalne regresje cyklu notatki, sum E i wspólnej prezentacji. | Stara wersja oblewa test konfliktu, poprawiona przechodzi; restart naprawdę czyta z dysku; sumy mają niezależne oczekiwane wartości. Odbiór UI zapisany osobno. | Bezrefleksyjne kopiowanie 29 prób do suity zwiększyłoby utrzymanie. Przenosić tylko niechronione warunki; nie powielać testu renderera dla każdej listy. |
+| **2. Jedno krótkie miejsce wznowienia i odnośniki zamiast kopii statusu.** | PIL-U-001–003; przyrost 2: **25–40 min**. Uzgodniona reguła commitów, prompt bez kopii progów/liczb, bieżący stan oddzielony od kroniki. | Z promptu odnajdujemy regułę, stan, dowód i krok dla 3/3 prób bez rozmowy/kroniki. Mierzymy odczyty i czas; następna zmiana progu nie wymaga poprawiania jego kopii w prompcie. | Kolejny dashboard byłby nowym duplikatem. Wykorzystać istniejące SPEC i rejestr; stare wyniki zachować jako historię. |
+| **3. Przy „gotowe” podawać wersję i dowód oraz sprawdzać artefakt generowany.** | PIL-U-005; przyrost 5: **10–20 min**. Porównanie TRACE w istniejącej kontroli indeksu i zachowanie odnośnika do wyniku. | Celowo nieaktualny TRACE jest jawnie wykrywany, aktualny nie daje różnicy; wynik dotyczy wersji przeznaczonej do commita. | Nie budować nowego frameworka/CI ani raportu przy każdym odczycie. Wystarczy istniejący generator, porównanie i jeden zapis dowodu. |
+
+Łącznie **120–200 min przyszłej realizacji**, bez oczekiwania na ręczny odbiór. Nie jest to koszt już wykonanego pilotażu. Przy małym budżecie pierwszy odcinek z etapu 5 (konflikt + wznowienie) kosztuje szacunkowo 40–65 min; reszta pozostaje otwarta, bez deklaracji pełnego odbioru.
+
+#### Ocena spodziewanych korzyści
+
+| Cel | Wykazany rezultat | Czego jeszcze nie wykazano |
+|---|---|---|
+| Mniej pomyłek | Przegląd treści odtworzył konkretną niezgodność REQ/AT z renderowaniem, niewidoczną dla checkera ID i dobranych istniejących testów. | Spadku liczby przyszłych błędów po wdrożeniu regresji. |
+| Łatwiejszy powrót | Jest mapa źródeł, opis trzech ścieżek i krótki bieżący stan; zidentyfikowano konflikt kroniki z listą zadań. | Poprawy mierzonej czasem lub odbiorem użytkownika. Użytkownik zgłosił zagubienie podczas samego pilotażu — dokumentacja nie gwarantuje czytelności. |
+| Wiarygodniejsze „gotowe” | Rozróżniono przyjęte wymaganie/makietę, wykonany kod, zaliczony pomiar, brak regresji i brak odbioru. | Pełnego odbioru dwóch funkcji UI; wyniki jednej próby nie uzasadniają takiej deklaracji. |
+| Niższy koszt dokumentowania | Wskazano konkretne duplikaty do usunięcia; dowody mają trwałe miejsce i skrypty odtworzenia. | Oszczędności czasu/tokenów. Przegląd sam powiększył dokumentację i wymagał ponownych odczytów. |
+| Skuteczniejsze naprawy | Każde ustalenie ma mierzalny warunek zamknięcia i opiekuna. | Skuteczności napraw i braku nawrotów, ponieważ żadnej jeszcze nie wykonano. |
+
+**Ocena opłacalności:** dodatnia wartość diagnostyczna, nieudowodniony zwrot ekonomiczny. Nie ma pomiaru porównawczego pracy bez przeglądu, więc nie wyliczamy ROI, oszczędności procentowej ani kosztu na wykryty błąd. Warto zachować sprawdzanie ścieżki potrzeba → asercja → wynik i krótką kontrolę bieżącego statusu. Nie warto powtarzać całej kroniki i inwentaryzacji przy każdej zmianie.
+
+#### Nakład i ograniczenia metody
+
+| Etap | Zapisany nakład aktywnej pracy |
+|---|---:|
+| 1 — podstawa | ok. 5 min |
+| 2 — mapa źródeł | ok. 15 min |
+| 3 — struktura | ok. 5 min |
+| 4 — ścieżki dowodowe | ok. 15 min |
+| 5 — działania | ok. 8 min |
+| 6 — podsumowanie | ok. 5 min |
+| **Razem** | **ok. 53 min, suma szacunków** |
+
+To oszacowania pracy faktycznie wykonanej, nie pomiary stopera. Brak pełnej telemetrii czasu i tokenów; nie można rygorystycznie potwierdzić dotrzymania limitu 90 minut. Odtwarzalne pomiary są w logach (m.in. testy produktu 15,00 s, testy struktury 0,53 s), lecz nie obejmują rozumowania, odczytów ani dokumentowania. Kryterium DoD dotyczące nakładu zamykamy z tym jawnym ograniczeniem, bez przedstawiania szacunku jako dokładnego pomiaru. Kolejny pilotaż powinien mierzyć czas aktywny od początku, jeśli koszt ma rozstrzygać o adopcji metody.
+
+Próba była celowa i mała: trzy zmiany, jedno repo, jedna bazowa wersja i środowisko macOS. Ten sam agent implementował i oceniał; nie jest to niezależny audyt. Nie zweryfikowano wszystkich scenariuszy ani aktualności lokalnych materiałów NASA w internecie. Nie stwierdzono zgodności z normą, bezpieczeństwa całej aplikacji ani przyczyn wszystkich wcześniejszych błędów. Po zmianie kodu trzeba ponownie sprawdzić właściwy zakres, a nie przenosić automatycznie wyniku z bazy.
+
+#### Odbiór końcowy i dalsza praca
+
+DoD przeglądu sprawdzone: baza i mapa źródeł są wskazane; struktura ma dowód; trzy przypadki mają 18 ocen; wszystkie ustalenia mają działania; rozdzielono wdrożenie/weryfikację/akceptację; wybrano trzy rekomendacje z kosztem i odbiorem; nakład i ograniczenia opisano. **Przegląd zakończony według DoD, z szacunkowym rozliczeniem czasu. Nie oznacza to akceptacji wyników przez użytkownika ani zakończenia siedmiu napraw.**
+
+Rekomendacja dalszego stosowania: przy przyszłym przyroście sprawdzać tylko zmienioną potrzebę, dotknięte zależności i dowód; pełniejszy przegląd powtarzać przy regresji mimo zielonych testów, sprzecznych instrukcjach lub braku możliwości ustalenia aktualnego statusu. To propozycja metody, nie nowy obowiązek w WSPOLPRACA. Po wdrożeniu działań powtórzyć test nawigacji trzech przypadków i warunki zamknięcia wpisów — bez ponawiania całego pilotażu.
+
+**Następny konkretny krok:** przyrost 1 z rejestru — naprawa etykiety konfliktu wraz z testem odtwarzającym błąd. Właściciel agent; realizacja po zleceniu wdrożenia. Rejestr pozostaje jedynym miejscem bieżącego śledzenia napraw, a ten raport jest zakończonym zapisem przeglądu.
+
+
 ## Otwarte
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| Etap 6 — podsumowanie pilotażu | Agent | Wybrać najwyżej trzy końcowe rekomendacje, ocenić koszt/korzyści i pełne DoD. |
 | PIL-U-001–007 — nadal otwarte | Agent | Realizacja według planu etapu 5 po zleceniu wdrożenia; sam przegląd nie zamyka ustaleń. |

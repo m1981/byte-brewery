@@ -16,11 +16,13 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 
 | PIL-Z-006 | 2026-10-29 | Etap 5: uporządkowano 7 ustaleń, dobrano 5 małych przyrostów, właścicieli, wyzwalacze i mierzalny odbiór korzyści. Priorytet PIL-U-005 obniżono do niskiego. | Użytkownik: „Wykonaj etap 5 rzetelnie i pamietaj o celu glownym”. | Agent | Zweryfikowano integralność dowodów etapu 4 i powiązanie każdego ustalenia z działaniem/odbiorem. Napraw nie wykonano. |
 
+| PIL-Z-007 | 2026-10-29 | Etap 6 zakończony; plan v1.0: trzy rekomendacje, ocena korzyści/kosztu i końcowe DoD. Przegląd zamknięty, wszystkie 7 ustaleń nadal otwarte. | Użytkownik: „wykonaj etap 6”. | Agent | Podsumowanie sprawdzone z dowodami etapów 3–4; koszt pracy jawnie szacunkowy. Napraw ani odbioru UI nie zadeklarowano jako wykonanych. |
+
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–5 mają wyniki w planie. Bieżąca kolejność i kryteria działań: [plan działań etapu 5](#etap-5--plan-działań-po-ocenie-dowodów). Siedem otwartych ustaleń obejmuje dokumentację, kontrolę struktury, lukę regresji notatek i odtworzoną wadę prezentacji konfliktu. Nie wykonano napraw.
+Etapy 1–6 zakończone; końcowa ocena i trzy rekomendacje są w [podsumowaniu](PRZEGLAD-SDLC-PILOTAZ.md#etap-6--podsumowanie-i-zakończenie-pilotażu). Przegląd zamknięty; wszystkie PIL-U-001–007 nadal otwarte, działania proponowane, brak dowodów zamknięcia. Najbliższy przyrost: PIL-U-007 — etykieta konfliktu i regresja; właściciel agent. Bieżąca kolejność i kryteria działań: [plan działań etapu 5](#etap-5--plan-działań-po-ocenie-dowodów). Siedem otwartych ustaleń obejmuje dokumentację, kontrolę struktury, lukę regresji notatek i odtworzoną wadę prezentacji konfliktu. Nie wykonano napraw.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
