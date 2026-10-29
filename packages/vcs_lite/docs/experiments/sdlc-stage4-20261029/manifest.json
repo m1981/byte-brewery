@@ -1,0 +1,13 @@
+{
+  "baseline": "c19208dd4ce797ec5183c3127e832c5282a30aba",
+  "verified_at": "2026-10-29T17:32:45.150083+01:00",
+  "all_source_and_test_files_match_git_baseline": true,
+  "source_and_tests_unchanged_after_probes": true,
+  "artifacts_sha256": {
+    "run_tests.py": "d36ae50170830d0cd7d8b401f8d010a8bfa548da6b350c91eea7961f9f9c9ae4",
+    "probes.json": "563dd13a1037e5c83413960751c05099db9a5847cfbe7641682b957f1c266749",
+    "probes.py": "74499959b6ca5e7159c9f845f9a072cd2d25d2d73ae93e5f5f707760240835c7",
+    "existing-tests.json": "76b2254010343c6286c70aa0f70a2e7ab0e48c5359371e90a2cc64d74e5f9adb",
+    "existing-tests.log": "7ff7bf3a5bf20294a43cf4d70ad05a0b12d792bd639111fb53b34c83ea4aa826"
+  }
+}

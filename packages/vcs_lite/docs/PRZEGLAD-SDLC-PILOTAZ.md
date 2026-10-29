@@ -1,6 +1,6 @@
 # Przegląd SDLC — założenia i plan pilotażu
 
-Data: 2026-10-28. Wersja: 0.4. Status: etapy 1–3 zakończone; etapy 4–6 niewykonane.
+Data: 2026-10-28. Wersja: 0.5. Status: etapy 1–4 zakończone; etapy 5–6 niewykonane.
 
 Zlecenie użytkownika: „Zapisz zalozenia i plan pilotazu oraz DoD i spodziewane korzysci do pliku (md) oraz drugi plik (md) jako rejestr zmian”. Metodę zaproponował agent; użytkownik zaakceptował pilotaż 2026-10-28. Dokument nie zmienia obowiązujących wymagań produktu ani zasad współpracy.
 
@@ -61,9 +61,9 @@ Ocena każdego kryterium: **spełnione / niespełnione / brak dowodu / nie dotyc
 - [x] Zidentyfikowano badany stan i źródła; wyniki można odnieść do konkretnej wersji.
 - [x] Mapa źródeł odróżnia obowiązujące reguły, historię i propozycje, wskazuje odpowiedzialność oraz wyzwalacze aktualizacji.
 - [x] Zachowano wynik kontroli struktury, zakres checkera i ewentualną różnicę TRACE.
-- [ ] Każda z trzech zmian ma ocenę wszystkich sześciu kryteriów z dowodami albo jawnie wskazanym ich brakiem.
-- [ ] Wszystkie ustalenia wymagające działania mają wpis, priorytet, właściciela, następny krok i warunek zamknięcia w rejestrze.
-- [ ] Wynik rozróżnia: wdrożone, zweryfikowane i zaakceptowane. Nie przypisano użytkownikowi nieudzielonej akceptacji.
+- [x] Każda z trzech zmian ma ocenę wszystkich sześciu kryteriów z dowodami albo jawnie wskazanym ich brakiem.
+- [x] Wszystkie ustalenia wymagające działania mają wpis, priorytet, właściciela, następny krok i warunek zamknięcia w rejestrze.
+- [x] Wynik rozróżnia: wdrożone, zweryfikowane i zaakceptowane. Nie przypisano użytkownikowi nieudzielonej akceptacji.
 - [ ] Wybrano najwyżej trzy rekomendacje z kosztem i sposobem oceny efektu; opisano ograniczenia próby i dalszy krok.
 - [ ] Zapisano rzeczywisty nakład pracy i oceniono, czy metoda jest warta powtarzania.
 
@@ -296,9 +296,107 @@ Pozostałe granice wynikają z odczytu implementacji: parser rozpoznaje określo
 Nakład aktywnej analizy i dokumentowania: około 5 minut (szacunek); tokenów nie zmierzono. Etap 3 zakończony. Następny: etap 4 — trzy ścieżki dowodowe. Kontrola dokumentów nowego przyrostu przed commitem jest oddzielna od powyższego przebiegu bazowego.
 
 
+### Etap 4 — trzy ścieżki dowodowe (wykonany)
+
+Wykonanie 2026-10-29. Zlecenie użytkownika: „czy masz zpiasany ten plan i kryteria oddbiodu ora rejestr zmian ktory utrzymujesz? Jak tak to kontynuuj rzetelnie”. Kontynuowano zapowiedziany etap 4, bez wdrażania napraw. Podstawa nadal `c19208dd4ce797ec5183c3127e832c5282a30aba`.
+
+**Wynik:** potrzeby można prześledzić do kodu; nie wszystkie istotne warunki mają trwałe testy regresji i akceptację użytkownika. 64 istniejące testy przeszły. Dodatkowe 29 prób dało 28 wyników zgodnych i jedną odtworzoną regresję: dla konfliktu renderer kompaktowych liczb wypisuje „—” zamiast „konflikt”. Zielona kontrola ID z etapu 3 nie wykryła tego problemu.
+
+#### Dowody, wersja i zakres
+
+Zbudowano osobne archiwum Git bazy w `/private/tmp/vcs-stage4-base-20261029`. Porównano surową zawartość wszystkich plików Python w src i tests z bazą Git przed zamknięciem etapu; po testach i próbach pozostały niezmienione. Ustawienia, repo i notatki prób były tymczasowe; schowek zastąpiony atrapą. Bez screenshotów i zmian produktu.
+
+| Dowód w repo | Co potwierdza |
+|---|---|
+| [existing-tests.log](experiments/sdlc-stage4-20261029/existing-tests.log) | Pełny przebieg 64 istniejących testów, **64 passed in 15.00s**, bez skip/xfail. Moduły: footprint, repo_notes, gitlog, change_details, recent_changes, file_list_viewport, history_session. |
+| [existing-tests.json](experiments/sdlc-stage4-20261029/existing-tests.json) | Wynik każdego testu, udany pomiar pamięci, środowisko, argumenty, SHA-256 plików źródłowych i testowych. Python 3.12.11, pytest 9.0.2, macOS 26.2 arm64. |
+| [probes.json](experiments/sdlc-stage4-20261029/probes.json) | Oczekiwany i rzeczywisty wynik 29 dodatkowych prób diagnostycznych. Nie są to testy obecne w bazie ani potwierdzenia użytkownika. |
+| [manifest.json](experiments/sdlc-stage4-20261029/manifest.json) | Sumy kontrolne dowodów/skryptów, zgodność kodu z bazą oraz brak zmian w src/tests po próbach. |
+| [run_tests.py](experiments/sdlc-stage4-20261029/run_tests.py), [probes.py](experiments/sdlc-stage4-20261029/probes.py) | Skrypty pozwalające odtworzyć wykonanie na rozpakowanej bazie. Drugi zapisuje także wyniki negatywne; jego kod wyjścia sam nie jest werdyktem zgodności — sprawdzić `failed` w JSON. |
+
+Odtworzenie: rozpakować `git archive c19208dd4ce797ec5183c3127e832c5282a30aba` do nowego pustego katalogu, następnie uruchomić oba skrypty Pythonem `.venv` z argumentami `--base <katalog archiwum> --output <nowy katalog wyników>`. Nie nadpisywać pierwotnych dowodów. Pomiar pokazuje tymczasowe okno topmost i używa systemowego `footprint`; próby notatek pokazują okno z danymi tymczasowymi. Skrypty nie instalują zależności.
+
+Starszy `/private/tmp/vcs-85-tests.log` zawiera jedynie wynik 25 testów, bez surowych próbek i identyfikacji wersji wewnątrz logu. `c9775b2` różni się od bazy jedynie dwoma plikami planu pilotażu, co potwierdza zgodność kodu, lecz nie uzupełnia metadanych dawnego uruchomienia. Zamiast uznawać stary log za pełny dowód wykonano jeden nowy pomiar; zachowano także jego wartości sukcesu, których zwykły test nie wypisuje.
+
+#### A. Limit pamięci 85 MiB
+
+**Łańcuch:** cytat „zwiekszymy limit do 85MiB” → DEC-VCS-134 (zastępuje wyłącznie próg, zachowuje zakres DEC-VCS-042) → REQ-VCS-100 → DES-VCS-034 i VER-VCS-006 → `tests/measure_footprint.py::measure/run_child/footprint_mib` → AT-VCS-016 i `test_at_vcs_016_vcs_lite_stays_within_85_mib_with_an_open_compare` → nowy wynik w JSON. Commity: specyfikacja `3962daa`, test/TRACE `c9775b2`; weryfikacja bazowej wersji nie zmienia historycznych pomiarów przy 60 MiB.
+
+Test wymaga pięciu próbek, widocznego topmost, co najmniej 4000 commitów historii, 500 wczytanych i maksimum ≤85. Wspólny pomiar buduje trzy repo, 300 zmian, otwiera atrapę zewnętrznego diffu i mierzy tylko PID aplikacji przez pięć sekund. Przelicza bajty przez `2**20`, więc porównuje MiB. W module osobne asercje kontrolują medianę odświeżenia i brak Git w bezczynności. Zakres 3000 plików i 100 MiB pozostaje oddzielny; nie powtarzano jego pomiaru, bo ten przyrost nie zmienił jego progu ani kodu.
+
+**Nowy pomiar:** 55,4 / 55,5 / 55,5 / 55,4 / 55,4 MiB, maksimum **55,5 MiB**; mediana odświeżania **0,183 s**; Git w bezczynności **0**, przed gotowością **80**. Historia 4000/500, 300 zmian, topmost/viewable = true. Pole `commit` wewnątrz pomiaru jest puste, ponieważ archiwum nie ma `.git`; identyfikację zapewniają baza i zweryfikowane hashe w otaczającym raporcie. Pole `tk` skrypt mierzy przez `info patchlevel` (8.6.14), czyli wersję Tcl, nie niezależny odczyt pakietu Tk — ograniczenie metadanych, nie wynik testu zgodności Tk.
+
+| Kryterium | Ocena | Uzasadnienie |
+|---|---|---|
+| 1. Intencja i aktualność | spełnione | Jawna zgoda, zmieniony próg i zachowany odrębny limit 100 MiB. |
+| 2. Spójność | spełnione | REQ, DES, scenariusz i asercja stosują 85 MiB w tym samym scenariuszu; historyczny pomiar P21 nie jest nowym kryterium. |
+| 3. Powiązania | spełnione | Wskazany łańcuch umożliwia dojście w obie strony; stare DEC-VCS-013 nadal występuje jako odnośnik, ale REQ i DEC-VCS-134 jawnie rozstrzygają zmianę. |
+| 4. Weryfikacja | spełnione | Oceniono asercje i przygotowanie środowiska; dotyczą zdefiniowanego pomiaru, nie wszystkich możliwych warunków użycia aplikacji. |
+| 5. Dowód wykonania | spełnione | Zachowany sukces wraz z próbkami, środowiskiem i identyfikacją bazy. Jedno wykonanie nie dowodzi trwałego usunięcia wcześniejszej zmienności. |
+| 6. Obsługa zmiany | niespełnione | Prompt nadal podaje 60 MB, a status bieżącego wyniku był rozproszony: PIL-U-002 i PIL-U-003. Obecny raport uzupełnia dowód, nie naprawia dokumentów wejściowych. |
+
+Status: **próg zaakceptowany, zmiana testu wdrożona, pomiar bazowej wersji zweryfikowany**. Nie deklarujemy, że zmiana progu naprawiła pamięć ani że próba potwierdza wszystkie scenariusze wydajności.
+
+#### B. Notatki repozytorium
+
+**Łańcuch:** potrzeba przechowywania promptów/notatek per repo + korekty układu → akceptacja P21 „switnie, wykonaj” → DEC-VCS-133 → REQ-VCS-046 → DES-VCS-080 → `NoteStore`, `NotesPanel`, integracja `ui/main.py::build` i `MainWindow` → AT-VCS-070, VER-VCS-025, `tests/ui/test_repo_notes.py`, MANUAL-UI krok 30. Commity: `296a052` przed implementacją `c54929c`.
+
+Odczyt kodu potwierdza tożsamość notatki przez pełną rozwiązaną ścieżkę repo, atomowy zapis przez tempfile + fsync + replace, katalog notes obok użytego settings.json, zapis po 700 ms, FocusOut, zmianie repo i zamykaniu. Callback zamknięcia aplikacji wywołuje flush, a po porażce zachowuje okno, odsłania edytor i kieruje do niego fokus. NotesPanel przechowuje pozycję kursora/przewinięcia i przyjmuje funkcję kopiowania; MainWindow wiąże notatnik z repo, nie z wybranym commitem.
+
+**Co faktycznie sprawdzały cztery istniejące testy:** przełączenie repo i powrót w tym samym panelu, brak pliku przed edycją, zachowanie tekstu po błędzie flush, rozróżnienie ścieżek o tej samej nazwie repo, UTF-8, atomowość przy błędzie replace, ochrona pliku o błędnym kodowaniu. Test `…save_switch_and_reopen` nie tworzy nowego panelu/procesu. Żaden z tych czterech testów nie sprawdza callbacku zamknięcia aplikacji ani uruchomienia timera/FocusOut. To luka automatycznej regresji, nie dowód, że funkcja nie działa.
+
+**Nowe próby diagnostyczne:** timer, syntetyczne FocusOut w widocznym oknie, kopiowanie fragmentu/całości przez atrapę, kursor/przewinięcie przy zmianie repo, odczyt przez nowy NotesPanel z nowym NoteStore, sąsiedztwo katalogu settings, wyrównanie współrzędnej X notatnika i szczegółów commita, zablokowane zamknięcie po OSError z widocznym komunikatem i zachowaniem tekstu, udany zapis przy ponowionej próbie zamknięcia — zgodne. To nie jest ponowny start całej aplikacji ani ocena wyglądu przez użytkownika; nie wnioskujemy z samej równości X o pełnej zgodności UI.
+
+| Kryterium | Ocena | Uzasadnienie |
+|---|---|---|
+| 1. Intencja i aktualność | spełnione | Decyzja i REQ obejmują notatnik domyślny, zapis obok settings i zaakceptowane korekty układu. |
+| 2. Spójność | spełnione | Odczyt kodu i wykonane próby nie wykazały sprzeczności z opisanym mechanizmem. Pełny wygląd pozostaje poza tym potwierdzeniem. |
+| 3. Powiązania | spełnione | Łańcuch REQ/DES/AT/moduł istnieje; integrację main/main_window i ręczną próbę 30 wskazano dodatkowo, bo sam TRACE dla REQ-VCS-046 pokazuje notes.py. |
+| 4. Weryfikacja | brak dowodu | Nowe próby rozszerzyły sprawdzenie, lecz brak trwałych regresji części ścieżek oraz próby pełnego restartu aplikacji. PIL-U-006. |
+| 5. Dowód wykonania | brak dowodu | Są wyniki automatyczne i diagnostyczne dla wymienionych warunków; brak końcowej akceptacji wyglądu P21 i pełnej próby ręcznej 30. |
+| 6. Obsługa zmiany | niespełnione | Plan ręczny uczciwie pozostaje otwarty, ale suite nie chroni całości krytycznych ścieżek deklarowanych przez AT-VCS-070; zapisano PIL-U-006, nie zamykamy go udanym smoke testem. |
+
+Status: **wdrożone; mechanizmy zweryfikowane w wymienionym zakresie; makieta zaakceptowana; wykonanie całej próby 30 i wygląd aplikacji niepotwierdzone**. Z ogólnych pochwał wcześniejszych funkcji nie wyprowadzono akceptacji P21.
+
+#### C. Kompaktowe kolorowe liczniki
+
+**Łańcuch:** początkowa prośba o +/− w plikach commita → DEC-VCS-132, REQ-VCS-040, DES-VCS-079 → doprecyzowanie lewej listy i cytat „w obu oknach chce wersji kompaktowej z lewego okna ale z kolorami” w SPEC, Punkt wznowienia 13–14 → SLOWNIK „Liczby zmian” i późniejszy P21 rozszerzający wygląd na B → `GitLog.details/commit_totals`, `HistorySession._page_with_totals`, `draw_compact_counts`, FileList/CommitList/CommitView. Statystyka pliku i suma commita są różnymi danymi, choć używają wspólnego renderera.
+
+Backend plików ma asercje root/merge względem pierwszego rodzica/rename/binarne/nietypowe ścieżki/błąd. Test dużego CommitView sprawdza tekst liczb, sumę, przewijanie i liczbę obiektów. Testy FileList sprawdzają tekst, położenie i duże wartości. Odczyt testów i wyszukanie wywołań nie wykazały dedykowanych asercji wyniku `GitLog.commit_totals`, kompaktowego odstępu ani kolorów. Istniejące testy historii mogą przejść także z czytnikiem bez `commit_totals`, bo kod używa opcjonalnego `getattr`. Commity dodające sumy do E (`769b966`) i kompaktowe kolory (`cbeb5ff`) nie zmieniały plików testów — brak nowych regresji jest zgodny z historią, nie tylko domysłem z nazw testów.
+
+Nowe próby sum porównały E z sumą szczegółów F dla root, zwykłej zmiany, obu gałęzi, merge, pustego commita, pliku binarnego, rename oraz nazwy z separatorem rekordu ASCII RS — zgodne. Jest to porównanie dwóch ścieżek opartych o Git, nie niezależny dowód poprawności wszystkich przypadków parsera. Nie przetestowano tu SHA-256 Git ani wszystkich ustawień Git. Renderer poprawnie pokazał +334/−34, kolory, szare zera, odstęp 5 i etykiety binarne/brak danych.
+
+**Odtworzona regresja:** `draw_compact_counts(LineStats(kind='conflict'))` daje „—”. REQ-VCS-043 oraz AT-VCS-065 wymagają „konflikt”; FileList używa właśnie tego renderera w kolumnie linii. Stary `draw_line_counts` miał osobną etykietę konfliktu, a nowy rozróżnia jedynie binary i pozostałe rodzaje nietekstowe. Test core sprawdza rodzaj danych, ale nie tekst na Canvas. Próba potwierdza wadę etykiety, nie błąd operacji scalania ani utratę danych. PIL-U-007.
+
+| Kryterium | Ocena | Uzasadnienie |
+|---|---|---|
+| 1. Intencja i aktualność | spełnione | Cytaty rozróżniają E i F, P21/SLOWNIK także B; intencję można odtworzyć mimo rozproszenia. |
+| 2. Spójność | niespełnione | Renderer konfliktu nie realizuje zachowanego warunku REQ-VCS-043 i AT-VCS-065. |
+| 3. Powiązania | niespełnione | Dalsze rozszerzenia zakresu opisano prozą; powiązania strukturalne nie zapewniają znalezienia testu chroniącego sumy E i kolory. PIL-U-004. |
+| 4. Weryfikacja | niespełnione | 64 testy przeszły mimo odtworzonej regresji; brak dedykowanych regresji sum E/kolorów, dodatkowe próby są dopiero dowodem audytu. |
+| 5. Dowód wykonania | brak dowodu | Nowy log i próby dowodzą określonych zachowań i wady. MANUAL-UI 29 nie zamyka pełnej oceny wszystkich trzech list; brak podstaw do zbiorczej akceptacji wyglądu. |
+| 6. Obsługa zmiany | niespełnione | Rozszerzenie renderera na B zmieniło również etykietę konfliktu, której regresja nie ochroniła. PIL-U-004 uzupełnione, PIL-U-007 dodane. |
+
+Status: **wdrożone; podstawowe dane i prezentacja liczb sprawdzone; jedna potwierdzona wada prezentacji; brak pełnego odbioru wyglądu i trwałych regresji rozszerzonego zakresu**. Szare podsumowanie nagłówka F nie zostało samoistnie uznane za wadę — prośba dotyczyła list, a zakres nagłówka wymagałby osobnej interpretacji.
+
+#### Bilans korzyści i kosztu
+
+| Korzyść | Dowód z etapu 4 | Granica wniosku |
+|---|---|---|
+| Mniej błędnej interpretacji | Rozdzielono sumy E i liczby plików B/F oraz zgodę na makietę od odbioru programu. | Nie udowodniono jeszcze spadku liczby przyszłych pomyłek. |
+| Łatwiejszy powrót | Każda z trzech prób ma teraz łańcuch i aktualny krok: pamięć — aktualizacja starych instrukcji; notatki — regresje/restart i próba 30; liczniki — naprawa etykiety i uzupełnienie regresji/statusu. | To wynik nawigacji w raporcie, nie naprawa wszystkich dokumentów wejściowych. |
+| Wiarygodniejsze „gotowe” | Próg 85 MiB ma kompletny nowy dowód pomiaru; dwóch funkcji UI nie oznaczono jako w pełni odebrane. 1 z 29 nowych prób wykryła wadę niewidoczną dla zielonej struktury i dobranych istniejących testów. | Liczba usterek nie jest celem przeglądu ani oszacowaniem ich liczby w aplikacji. |
+| Niższy koszt dokumentowania | Użyto 7 istniejących modułów zamiast pełnej suity; dowody zapisano raz, a raport/rejestr odsyłają do nich. | Nie ma porównania kosztu z procesem bez przeglądu. Część szerokich odczytów nadal wymagała zawężenia; nie deklarujemy oszczędności tokenów. |
+| Skuteczniejsze naprawy | PIL-U-006 i PIL-U-007 mają warunki zamknięcia; PIL-U-004 otrzymuje dowody pokrycia testami. | Nie wykonano napraw, więc skuteczność i nawroty pozostają niezmierzone. |
+
+Nakład etapu 4: około 15 minut aktywnej analizy, prób i zapisu (szacunek, bez pomiaru tokenów). Istniejące testy: 15,00 s. Nie powtarzano pomiaru w celu uzyskania lepszego wyniku i nie badano dalej historycznej niestabilności, zgodnie z DEC-VCS-077. Użyto próby mierzącej aktualny stan, nie twierdzenia o poprawie pamięci.
+
+**Przekazanie:** etap 4 zakończony; wszystkie trzy zmiany oceniono według sześciu kryteriów. Etapy 5–6 pozostają otwarte. W kolejnym kroku należy ocenić łącznie PIL-U-001–007 i wybrać kolejność działań oraz najwyżej trzy rekomendacje; nie wykonywać napraw tylko po to, aby wynik przeglądu wyglądał na pozytywny.
+
+
 ## Otwarte
 
 | Temat | Właściciel | Następny krok |
 |---|---|---|
-| Etap 4 — trzy ścieżki dowodowe | Agent | Sprawdzić treść wymagań, kod, asercje i dowody wykonania po zleceniu kontynuacji. |
-| PIL-U-001–005 | Agent | Przygotować rozwiązania po dalszej weryfikacji; warunki zamknięcia w rejestrze. |
+| Etap 5 — działania naprawcze | Agent | Ocenić wpływ, koszty i kolejność rozwiązań dla otwartych ustaleń. |
+| PIL-U-001–007 | Agent | Przygotować rozwiązania po dalszej weryfikacji; warunki zamknięcia w rejestrze. |

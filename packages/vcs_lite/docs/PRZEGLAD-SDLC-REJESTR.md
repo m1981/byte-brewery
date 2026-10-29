@@ -9,18 +9,16 @@ Rejestr obejmuje historię metody oraz wynikające z przeglądu działania. Nie 
 | ID | Data | Zmiana | Powód / źródło | Autor | Weryfikacja |
 |---|---|---|---|---|---|
 | PIL-Z-001 | 2026-10-28 | Utworzenie planu v0.1 i rejestru; trzy przypadki, kryteria, DoD oraz hipotezy korzyści. | Zlecenie użytkownika zapisania projektu przeglądu na podstawie krytycznej oceny SWE-052 i SWE-054. | Agent | Kontrola kompletności dokumentów; wynik kontroli repozytorium w commicie. Pilotaż nie został wykonany. |
-
 | PIL-Z-002 | 2026-10-28 | Akceptacja pilotażu i wykonanie etapu 1; plan v0.2, ustalona baza, zapisane różnice użytkownika, środowisko i SHA-256 źródeł. | Użytkownik: „akceptuje pilotarz wykonaj etap 1 (chyba ze cos przeoczylem)”. | Agent | Bezpośredni odczyt Git, wersji i sum plików; dowody w sekcji wyników planu. Etapy 2–6 niewykonane. |
-
 | PIL-Z-003 | 2026-10-28 | Plan v0.3: wykonany etap 2, mapa źródeł i ról, próba nawigacji trzech zmian, ocena korzyści; otwarte PIL-U-001–004. | Polecenie użytkownika wykonania etapu 2 z uwzględnieniem korzyści. | Agent | Odczyt bazy c19208d i roboczego promptu; sumy źródeł zgodne z etapem 1. Szczegóły i ograniczenia w planie. |
-
 | PIL-Z-004 | 2026-10-28 | Plan v0.4: etap 3 wykonany na bazie c19208d; pełne dowody w experiments, aktualność TRACE i granice checkera. Dodano PIL-U-005. | Użytkownik: „wykonaj 3 rzetelnie”. | Agent | 22 testy bazowe przeszły; różnica TRACE pusta; próba nieaktualnego TRACE: 1 test przeszedł i odtworzył plik w kopii tymczasowej. |
+| PIL-Z-005 | 2026-10-29 | Plan v0.5: etap 4, oceny 18 kryteriów, dowody 64 testów i 29 prób. Uzupełniono PIL-U-004; dodano PIL-U-006–007. | Użytkownik potwierdził kontynuację rzetelnego przeglądu po wskazaniu etapu 4. | Agent | 64 testy przeszły; 28/29 prób zgodnych; odtworzona wada etykiety konfliktu. Kod/testy zgodne z bazą i niezmienione. |
 
 Każda kolejna zmiana metody lub decyzja o działaniu otrzymuje nowy wiersz: co zmieniono, dlaczego, na czyjej podstawie i jak sprawdzono. Nie usuwamy historii; korekta wskazuje korygowany wpis. SHA zapisujemy dla dowodu lub badanej wersji, nie wymagamy samoodwołania do commita zawierającego dany wpis.
 
 ## Ustalenia i działania
 
-Etapy 1–3 mają wyniki w planie. Pięć otwartych ustaleń poniżej wynika z analizy dokumentów i kontroli struktury; nie są oceną poprawności implementacji. Nie wykonano napraw.
+Etapy 1–4 mają wyniki w planie. Siedem otwartych ustaleń obejmuje dokumentację, kontrolę struktury, lukę regresji notatek i odtworzoną wadę prezentacji konfliktu. Nie wykonano napraw.
 
 Dla każdego ustalenia dopisać sekcję według poniższego szablonu:
 
@@ -99,3 +97,31 @@ Wspólne metadane: autor agent, data 2026-10-28, baza `c19208dd4ce797ec5183c3127
 - **Propozycja / następny krok:** w etapie 5 rozważyć tani warunek porównania TRACE po generacji albo osobny tryb weryfikacji bez zapisu. Zachować możliwość jawnego generowania. Nie zmieniać automatycznie REQ ani testu w ramach tego etapu.
 - **Warunek zamknięcia:** po przyjęciu rozwiązania celowo nieaktualna macierz jest jawnie raportowana jako różnica stanu wejściowego (lub powoduje błąd weryfikacji), a aktualna przechodzi bez zmian. Oba wyniki mają SHA, polecenie i log; generowanie nadal możliwe osobno. Przy odrzuceniu propozycji zapisać uzasadnienie i sposób uwzględniania ograniczenia przy deklarowaniu zgodności.
 - **Dowód zamknięcia:** brak; dotychczasowa próba potwierdza ograniczenie, nie jego naprawę. Termin/wyzwalacz: ocena usprawnień w etapie 5; nie blokuje etapu 4.
+
+## Uzupełnienia po etapie 4
+
+### PIL-U-004 — dodatkowy dowód z 2026-10-29
+
+Agent sprawdził treść testów, a nie tylko ID. `test_gitlog.py` weryfikuje `details`, lecz nie `commit_totals`; FileList/CommitView mają asercje tekstu, geometrii i przewijania, ale nie kompaktowego odstępu/kolorów. Commity `769b966` i `cbeb5ff` dodające odpowiednio sumy E i kolorowy zapis nie zawierają zmian testów. Nowe [próby audytu](experiments/sdlc-stage4-20261029/probes.json) potwierdziły sumy dla dziewięciu przypadków i podstawowe kolory/odstęp; nie zmienia to pokrycia trwałą regresją. Osobna wada etykiety konfliktu otrzymuje PIL-U-007. Status PIL-U-004 nadal otwarty; następny krok w etapie 5: przygotować spójne uzupełnienie zakresu i dedykowanych regresji, bez ponownego żądania już udzielonych zgód. Warunek zamknięcia rozszerzony: trwałe asercje sum E, kolorów i istotnych błędów odczytu, powiązane z istniejącymi wymaganiami, oraz jawny status oceny B/E/F. Nie uznawać samego raportu audytu za zabezpieczenie kolejnych zmian.
+
+### PIL-U-006 — brak regresji pełnego cyklu notatki
+
+- **Metadane:** 2026-10-29, agent; baza c19208dd4ce797ec5183c3127e832c5282a30aba. Właściciel agent, status otwarte; działanie proponowane. Historia: ustalenie etapu 4, brak wdrożenia naprawy.
+- **Rodzaj / kryterium:** luka weryfikacji; REQ-VCS-046, AT-VCS-070, DES-VCS-080 oraz kryteria 4–6 pilotażu.
+- **Dowód:** bazowy `tests/ui/test_repo_notes.py` zawiera cztery testy. `test_at_vcs_070_notes_save_switch_and_reopen` wraca do repo w tym samym panelu; nie tworzy nowego panelu ani aplikacji. Test błędu wywołuje `flush`, nie callback WM_DELETE_WINDOW. Timer, FocusOut i kopiowanie nie mają w tych testach asercji wykonania. MANUAL-UI 30 pozostaje otwarte.
+- **Oczekiwane / zaobserwowane:** nazwa i powiązanie AT sugerują szerszą ochronę, niż dają asercje. Dodatkowe [próby](experiments/sdlc-stage4-20261029/probes.json) potwierdziły timer, FocusOut, nowy panel odczytujący dysk, stan edycji, kopiowanie i callback zamknięcia przy błędzie. Nie stwierdzono utraty notatek; nie wykonano pełnego restartu aplikacji z odtworzeniem wybranego repo.
+- **Skutek / priorytet:** średni; przyszła regresja zapisu/zamykania mogłaby przejść mimo zielonego AT, a ewentualna utrata tekstu miałaby istotny skutek. To ryzyko, nie potwierdzona utrata danych.
+- **Propozycja / następny krok:** etap 5 — dobrać minimalny zestaw trwałych regresji: niezależny odczyt po nowym uruchomieniu, zdarzenie/timer, błąd i udane ponowienie zamknięcia. Osobno zachować ręczną ocenę P21; nie utożsamiać geometrii z akceptacją wyglądu. Właściciel prób automatycznych agent; ręcznego odbioru użytkownik po przygotowaniu przez agenta.
+- **Warunek zamknięcia:** powtarzalne testy sprawdzają te ścieżki przy ustawieniach i repo tymczasowych, schowku-atrapie; wiążą się z istniejącymi ID. Raport wskazuje wersję, wynik i ograniczenia. Status próby 30 pozostaje jawny nawet jeśli zamknięto samą lukę automatycznej regresji.
+- **Decyzja / dowód zamknięcia:** proponowane, bez wdrożenia i bez dowodu zamknięcia. Wyzwalacz: priorytetyzacja w etapie 5.
+
+### PIL-U-007 — konflikt pokazany jak brak danych w kolumnie linii
+
+- **Metadane:** 2026-10-29, agent; baza c19208dd4ce797ec5183c3127e832c5282a30aba. Właściciel agent, status otwarte; działanie proponowane. Historia: odtworzono w etapie 4.
+- **Rodzaj / kryterium:** potwierdzona niespójność produktu; REQ-VCS-043 i AT-VCS-065 wymagają słowa „konflikt” dla konfliktu.
+- **Dowód:** `ui/widgets.py::draw_compact_counts` dla rodzaju innego niż text wybiera „binarne” lub „—”; `FileList._draw_counts` używa tej funkcji. Próba `renderer_conflict` w [probes.json](experiments/sdlc-stage4-20261029/probes.json): oczekiwane `["konflikt"]`, otrzymane `["—"]`. Bazowy `draw_line_counts` zawierał osobny wariant konfliktu. 64 dobrane testy istniejące przeszły, bo test danych konfliktu nie weryfikuje etykiety Canvas.
+- **Oczekiwane / zaobserwowane:** konflikt ma opis odróżniający go od błędu/braku statystyk; obecnie te stany mają tę samą etykietę. Brak dowodu wpływu na samo scalanie lub dane Git.
+- **Skutek / priorytet:** średni; myląca informacja w kolumnie, regresja istniejącego zachowania po współdzieleniu renderera. Nie jest to zgłoszenie utraty danych.
+- **Propozycja / następny krok:** etap 5 — zaplanować przywrócenie etykiety i minimalną regresję obejmującą wywołanie w FileList oraz zachowanie text/zero/binary/unknown; nie osłabiać wymagania, aby dopasować je do renderera.
+- **Warunek zamknięcia:** test pokazuje niepowodzenie dla obecnej bazy i sukces po naprawie: konflikt ma właściwą etykietę, brak danych nadal „—”, zwykłe liczby zachowują kompaktowe kolory. Zachować commit, polecenie i wynik. Próba audytu nie jest jeszcze testem regresji produktu.
+- **Decyzja / dowód zamknięcia:** propozycja niezatwierdzona do wdrożenia; brak dowodu zamknięcia. Wyzwalacz: ocena działań etapu 5.

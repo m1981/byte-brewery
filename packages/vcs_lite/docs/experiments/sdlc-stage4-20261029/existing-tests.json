@@ -1,0 +1,571 @@
+{
+  "baseline": "c19208dd4ce797ec5183c3127e832c5282a30aba",
+  "date": "2026-10-29T17:29:28.345345+01:00",
+  "python": "3.12.11 (main, Aug 18 2025, 19:02:39) [Clang 20.1.4 ]",
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "pytest": "9.0.2",
+  "args": [
+    "-p",
+    "no:cacheprovider",
+    "-vv",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/test_footprint.py",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/ui/test_repo_notes.py",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/core/test_gitlog.py",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/core/test_change_details.py",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/ui/test_recent_changes.py",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/ui/test_file_list_viewport.py",
+    "/private/tmp/vcs-stage4-base-20261029/packages/vcs_lite/tests/app/test_history_session.py"
+  ],
+  "exit_code": 0,
+  "elapsed_s": 15.157336124684662,
+  "results": [
+    {
+      "id": "tests/test_footprint.py::test_at_vcs_016_vcs_lite_stays_within_85_mib_with_an_open_compare",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/test_footprint.py::test_req_vcs_102_refreshing_300_changes_takes_under_a_second",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/test_footprint.py::test_req_vcs_101_no_git_calls_while_idle_with_an_open_compare",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_repo_notes.py::test_at_vcs_070_notes_save_switch_and_reopen",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_repo_notes.py::test_req_vcs_046_notes_keep_text_on_save_failure",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_repo_notes.py::test_req_vcs_046_atomic_save_and_repo_identity",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_repo_notes.py::test_req_vcs_046_bad_encoding_does_not_overwrite_note",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_commits_newest_first_with_parents_authors_and_labels",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_057_stash_and_notes_are_not_history_and_labels_tell_their_kind",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_no_upstream_or_a_detached_head_has_nothing_unpushed",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_the_current_branch_leaves_other_branches_out",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_a_child_stays_above_a_parent_with_a_later_date",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_pages_of_commits",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_058_a_fresh_repository_has_no_history_and_no_error",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_054_a_shallow_clone_ends_on_a_grafted_root",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_unicode_and_an_empty_message",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_065_git_errors_are_raised",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_059_the_filter_finds_message_author_and_hash",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_060_files_of_a_commit_a_merge_and_the_root",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_061_a_file_history_follows_renames_and_knows_the_name_in_each_commit",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_at_vcs_062_a_folder_history_and_a_path_with_the_text_filter",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_des_vcs_071_special_characters_in_a_path_are_literal",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_gitlog.py::test_req_vcs_040_commit_counts_binary_unusual_paths_and_failure",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_at_vcs_064_orders_ties_missing_and_splits_gap_and_span",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[0-przed chwil\\u0105]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[59-przed chwil\\u0105]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[60-1 min temu]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[3599-59 min temu]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[3600-1 h temu]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[86399-23 h temu]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[86400-1 dzie\\u0144 temu]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[518400-6 dni temu]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[604800-19.10]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_042_relative_age_boundaries[-1-czas z przysz\\u0142o\\u015bci]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_des_vcs_073_numstat_handles_tabs_newlines_renames_and_binary",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_at_vcs_065_counts_each_diff_side_and_preserves_index",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_043_initial_repo_binary_attributes_mode_and_intent_to_add",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_043_conflicts_and_errors_are_never_zero",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_des_vcs_073_external_diff_and_textconv_are_not_executed",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/core/test_change_details.py::test_req_vcs_043_disappearing_untracked_file_keeps_other_results",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_recent_changes.py::test_at_vcs_066_sorted_rows_headers_counts_and_nonselectable_separators",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_recent_changes.py::test_req_vcs_042_refresh_preserves_selection_and_other_views",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_recent_changes.py::test_req_vcs_043_columns_stay_aligned_and_narrow_hints_move_to_tooltip",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_recent_changes.py::test_des_vcs_073_model_publishes_details_with_status_only_after_worker",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_recent_changes.py::test_des_vcs_074_large_counts_fit_cells_with_full_value_in_tooltip",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_file_list_viewport.py::test_des_vcs_075_viewport_preserves_all_rows_and_selection[changes]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_file_list_viewport.py::test_des_vcs_075_viewport_preserves_all_rows_and_selection[folders]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_file_list_viewport.py::test_des_vcs_075_viewport_preserves_all_rows_and_selection[project]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_file_list_viewport.py::test_req_vcs_105_scroll_resize_and_shrink_repaint_the_current_view",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/ui/test_file_list_viewport.py::test_des_vcs_075_commit_with_3000_files_only_draws_visible_names",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_req_vcs_037_the_selected_repository_is_read_with_its_graph_count_and_unpushed",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_058_a_new_commit_reads_again_and_keeps_the_selection_an_amend_does_not",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_058_reading_history_never_holds_the_repository",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_des_vcs_067_a_result_for_an_older_selection_is_dropped",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_058_a_fresh_repository_and_one_that_is_gone",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_des_vcs_067_a_git_error_replaces_the_list",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_059_the_filter_waits_for_a_pause_and_shows_a_flat_list",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_req_vcs_039_the_scope_reads_again_at_once",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_055_more_reads_the_next_page_and_extends_the_graph",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_des_vcs_067_dates_and_counts_in_polish",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_des_vcs_067_the_commit_address_on_github_gitlab_and_bitbucket",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_060_the_session_knows_the_commit_address_from_the_remote",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_061_show_path_narrows_the_list_and_clearing_brings_the_graph_back",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "id": "tests/app/test_history_session.py::test_at_vcs_062_another_repository_drops_the_path_and_a_folder_opens_no_diff",
+      "phase": "call",
+      "outcome": "passed"
+    }
+  ],
+  "measurements": {
+    "tests/test_footprint.py::test_at_vcs_016_vcs_lite_stays_within_85_mib_with_an_open_compare": {
+      "date": "2026-10-29T17:29:36+01:00",
+      "python": "3.12.11",
+      "tk": "8.6.14",
+      "macos": "26.2",
+      "git": "git version 2.47.1",
+      "commit": "",
+      "diff_tool": "wtyczka external_diff_tool z atrapą (tests/waiting_difftool.py)",
+      "changes": 300,
+      "idle_s": 5,
+      "history_loaded": 500,
+      "history_total": 4000,
+      "topmost": true,
+      "viewable": true,
+      "heartbeat_max_s": 0.0339,
+      "heartbeat_count": 51,
+      "interaction_s": {},
+      "canvas_items_max": 0,
+      "operation_s": {},
+      "history_detail_items_max": 0,
+      "footprint_mib": [
+        55.4,
+        55.5,
+        55.5,
+        55.4,
+        55.4
+      ],
+      "footprint_mib_max": 55.5,
+      "refresh_s": [
+        0.211,
+        0.183,
+        0.207,
+        0.181,
+        0.18
+      ],
+      "refresh_s_median": 0.183,
+      "git_calls_before_ready": 80,
+      "git_calls_while_idle": 0,
+      "git_calls_while_idle_detail": []
+    },
+    "tests/test_footprint.py::test_req_vcs_102_refreshing_300_changes_takes_under_a_second": {
+      "date": "2026-10-29T17:29:36+01:00",
+      "python": "3.12.11",
+      "tk": "8.6.14",
+      "macos": "26.2",
+      "git": "git version 2.47.1",
+      "commit": "",
+      "diff_tool": "wtyczka external_diff_tool z atrapą (tests/waiting_difftool.py)",
+      "changes": 300,
+      "idle_s": 5,
+      "history_loaded": 500,
+      "history_total": 4000,
+      "topmost": true,
+      "viewable": true,
+      "heartbeat_max_s": 0.0339,
+      "heartbeat_count": 51,
+      "interaction_s": {},
+      "canvas_items_max": 0,
+      "operation_s": {},
+      "history_detail_items_max": 0,
+      "footprint_mib": [
+        55.4,
+        55.5,
+        55.5,
+        55.4,
+        55.4
+      ],
+      "footprint_mib_max": 55.5,
+      "refresh_s": [
+        0.211,
+        0.183,
+        0.207,
+        0.181,
+        0.18
+      ],
+      "refresh_s_median": 0.183,
+      "git_calls_before_ready": 80,
+      "git_calls_while_idle": 0,
+      "git_calls_while_idle_detail": []
+    },
+    "tests/test_footprint.py::test_req_vcs_101_no_git_calls_while_idle_with_an_open_compare": {
+      "date": "2026-10-29T17:29:36+01:00",
+      "python": "3.12.11",
+      "tk": "8.6.14",
+      "macos": "26.2",
+      "git": "git version 2.47.1",
+      "commit": "",
+      "diff_tool": "wtyczka external_diff_tool z atrapą (tests/waiting_difftool.py)",
+      "changes": 300,
+      "idle_s": 5,
+      "history_loaded": 500,
+      "history_total": 4000,
+      "topmost": true,
+      "viewable": true,
+      "heartbeat_max_s": 0.0339,
+      "heartbeat_count": 51,
+      "interaction_s": {},
+      "canvas_items_max": 0,
+      "operation_s": {},
+      "history_detail_items_max": 0,
+      "footprint_mib": [
+        55.4,
+        55.5,
+        55.5,
+        55.4,
+        55.4
+      ],
+      "footprint_mib_max": 55.5,
+      "refresh_s": [
+        0.211,
+        0.183,
+        0.207,
+        0.181,
+        0.18
+      ],
+      "refresh_s_median": 0.183,
+      "git_calls_before_ready": 80,
+      "git_calls_while_idle": 0,
+      "git_calls_while_idle_detail": []
+    }
+  },
+  "source_hashes": {
+    "src/vcs_lite/__init__.py": "9208a10398586d36ac2222dbe4a5212a0aaa3c717440240b74cebedb0d896dcd",
+    "src/vcs_lite/ui/file_list.py": "e64a3aa848983532414bd7ade91ca781c20d89a4859460f05832b791b26bd6ab",
+    "src/vcs_lite/ui/main_window.py": "cbf88183fa29fe1038fceca04c7723a6afac17970b00150399bb7ce34703562c",
+    "src/vcs_lite/ui/sidebar.py": "c73d7c23860021cf57f2ece98d89d63e26b92685306ee2cacca935acf353236e",
+    "src/vcs_lite/ui/history_panel.py": "369ce4b634718527469b499b235d37daa689c3cb8031945383b0b3358b76615e",
+    "src/vcs_lite/ui/tkenv.py": "e681c43c907588bd13eeb7920be5b36a46c387568a79fb9c92d4b5a4bf0e6a61",
+    "src/vcs_lite/ui/pump.py": "4d4c8d287a15d46981713df68409e894eb6496b7e89a7911742d021aa60b23c6",
+    "src/vcs_lite/ui/theme.py": "b266a830197e1359b9bc9a076cff3f7cdce6faf7cbd122d3830057c1fa6778a1",
+    "src/vcs_lite/ui/__init__.py": "500b837d16c4705f7259b5fcb1c425a586583da3d8e1f2809d8f22f12085ad62",
+    "src/vcs_lite/ui/keys.py": "2a2aa4d6a463ae86e1f2a3f7ffe128bcb1b8b1070d71c06c2c5c86612abcb442",
+    "src/vcs_lite/ui/notes.py": "2eae15f48b4193c892fdec7a4d6afb6b38760477eb54ee293dbeebd7c57fc103",
+    "src/vcs_lite/ui/widgets.py": "f94e88aa4e244097fc6c69f43a954b6fca90be17d89df27257245182e2beddc4",
+    "src/vcs_lite/ui/settings_dialog.py": "4ba2986361b5de13d3efcc5a32a215775dca707110899e325e301e7e794934ca",
+    "src/vcs_lite/ui/main.py": "d424c9decf00a3d220538ef6cbc7d4edbbc2320caac448abbec505b69c8c981e",
+    "src/vcs_lite/ui/scrolling.py": "289ecbce07ed194e3bf0aced3d8c3a862bc597717b21d5821f99b643540e6c5e",
+    "src/vcs_lite/ui/search_dialog.py": "8ad95cdefd83b58e0ad9e7d3a79d997f9131804b65bcd1e3f9859cb971c6f459",
+    "src/vcs_lite/core/changes.py": "5029519dbd351021fe5c1ece8b1fe116f3dbbf22e0b6d59b232561b9cc79a5f7",
+    "src/vcs_lite/core/gitgrep.py": "b254535b4f5eedc6f45e48ff420df4d14d6327fe8c204fe78491ca66bb01ccd5",
+    "src/vcs_lite/core/gitdetails.py": "a0b9af308cccfb50b0b8918327a3e7e53695f57b6370a4488b7e509f6ecbf1c3",
+    "src/vcs_lite/core/gitcli.py": "df23b815a033ad092a85c48fe558e1db4aa93f494b1acea07f3c026a56102acd",
+    "src/vcs_lite/core/filekind.py": "e0994d0ced5533c6e59241d7efbbddfbf40f49542e50efed665b7a35a3400284",
+    "src/vcs_lite/core/log.py": "2b09a7a4a24225b36d47d5f91061a6852108799d223c16c50b03ff1c9d8e648c",
+    "src/vcs_lite/core/graph.py": "200aa01f8076763641e50c22a10531176e9ce6661c2be163a4abf888a7efd4d7",
+    "src/vcs_lite/core/mdpage.py": "58f34757f553c268740b844021cd9f44e2b2d5b13630ca59b9f83c47e1e62dc8",
+    "src/vcs_lite/core/__init__.py": "da579d8b83973fc908516c0e798ca01977baec0531e68ebf361ae27df30169c5",
+    "src/vcs_lite/core/browser.py": "04b698b590b7d5b26fe6990f0c2aaa30b37702fac0fd320ce3a2f283edacf930",
+    "src/vcs_lite/core/pagekit.py": "b3ba4afabcb859f791d0ddd24f86e25c89942e3014b98e46a6dd72f878338acc",
+    "src/vcs_lite/core/gitlog.py": "151187c51d1eebc9cc05ecd9e573f840b1d3f86b0438bdd06b1720032dd0353b",
+    "src/vcs_lite/core/mddiff.py": "83054c06ddf1faefde18cdb4831cb69d5bc1f1216853eebb58fbe157889a8409",
+    "src/vcs_lite/core/textpage.py": "92e59f12aaf051dfc47a7738cfa13e7209e5f79fba5398bb0c8300dc815a059c",
+    "src/vcs_lite/core/difftool.py": "16d5821ac0e4bf39a9a52e5e10d0962ca098383868b8c6ca232db52c57947b5b",
+    "src/vcs_lite/core/pageview.py": "ee52145ecb4381f3f9152d6e243414170a6d2d19ab0b3ab30f6cdbf77334f9f5",
+    "src/vcs_lite/core/repo.py": "87ef905cafb658c32554f17eea647869cae4d3e02979c2d61d363c0fd4cba620",
+    "src/vcs_lite/core/settings.py": "af5ad3db3aedabe7863f7fc09487aeb64e874204bb6bf11c606d73e43aa954c1",
+    "src/vcs_lite/core/search.py": "b80be70c52c785b3d900d464810e68fa4963fe3ae60e69e16168edee99e63ff5",
+    "src/vcs_lite/core/status.py": "e35a9420860da1aa26b639922fa1c92760578383c2a52a51f0c7d40d713593da",
+    "src/vcs_lite/app/worker.py": "866fdeb98178055fb83c8b45bb89d5a8e20985b8b0c012e2c909181fa1bf110e",
+    "src/vcs_lite/app/opening.py": "9a63871203c36ee6bcfe7763d71f5777aeeb699133f4dc9500b9ff44eb8beed1",
+    "src/vcs_lite/app/__init__.py": "df6f82c0618a84b5f1aee7d63e93d731a9f8d35bdc71739a8f132f5ed1a02aac",
+    "src/vcs_lite/app/model.py": "dd842f7046cc1fb6f6e1076a6d1302192a596238d56000516f28abe2b26781ec",
+    "src/vcs_lite/app/search.py": "d2b62fbc11bd2e9fa5f1e6355553da70c270ff1e20591573c56470c007794640",
+    "src/vcs_lite/app/history.py": "b092997d2576000b311a600c3cae00ccec2751bb189bfd33dc8b80ac7f744ee2",
+    "tests/test_traceability.py": "a53a39f7377ebc5c3c430b255fe2a20f7d8164086783fc1505084f40615e2e49",
+    "tests/world.py": "7f71435fdda788c982c7cddee440e8c32637ec0e43363d380ca51d1bbfa32895",
+    "tests/test_make_app.py": "807f64c3bd052133077901203a846150778666cf9af8280c34c0e38972badd4a",
+    "tests/conftest.py": "dd33ed529399fa4ee5e77b0a5f9d6d09e424e4041c6718d87b00555d9912b566",
+    "tests/waiting_difftool.py": "8712ebf5b85e7da8ad515a08117eb256376329435f1ee1db2716d36009e0fb77",
+    "tests/test_footprint.py": "7ff5acaaf5d7e253eb81c79ae952e069081d44ac9ec634bc59d4f15818960524",
+    "tests/measure_footprint.py": "d9caa88f34842bb4b88251d73babfe28c89f575a79792140810fdc3d2ef81af4",
+    "tests/fakes.py": "d7dc506a68bacc33754491ef6377b137f7972da3c1b2763ee54d93858e22829d",
+    "tests/traceability.py": "80a7177b65eff808401d09a16eeec63b45b84141651d347117e83ac66adecf34",
+    "tests/test_large_changes_performance.py": "582fd3f187a7aeed945811fbd3ca613a0711efde041aa298b5d01616eefc19b8",
+    "tests/ui/test_commit_file_selection.py": "89b1270c5f4a7a06b117be38eb06c22c05f0d1991cf35650547ab97cae031dd3",
+    "tests/ui/test_multi_selection.py": "c390be996e7dbff37f16ed9e9996472feafa25e0e706d2ecfbd67f95ae7c8df3",
+    "tests/ui/test_window_layout.py": "b130e203b7ec69f3fcedfd9650d5d7e9cd325a25d688e95206061e72db3866a9",
+    "tests/ui/test_history_panel.py": "7f49150f88c8b209dc7f60789d507d6339b10b770747854461cbaec1db5dac3e",
+    "tests/ui/test_repo_notes.py": "4987b9d1b0118cfa8495cb61203f284cd2455b9ccb46a480a9efe8d4b8310ba9",
+    "tests/ui/test_main_window.py": "660df903a6b72fdacbf01aec85b36c0f9f7e9a6ba806ea8dc7c2c15f23a0c8ea",
+    "tests/ui/test_keys.py": "b9f924767c2dd749312c49d02ac272653d39a9dad9a61ee398c8ebe9f98f4326",
+    "tests/ui/test_scrollbars.py": "0cbc5c74563fc9265ef3236e5a9d07fad7a5e85dceed9e4094726641f9b089f1",
+    "tests/ui/test_settings_dialog.py": "7513c37c91af6c0f630c0e899568e4c921696bf69fae02d8affe337614056dee",
+    "tests/ui/test_review_selection.py": "bc59b4904a639b8c0da29aa0ab161c64c8aa3ad314ab6e19b585dd65556a7bf1",
+    "tests/ui/test_recent_changes.py": "6ac2a8968198a188d877cee1e98cb9741541c81c24681c6e6199593fdee83a08",
+    "tests/ui/test_file_list_viewport.py": "698ccf7d885b4d66eaae0021fbf6f15ea1eb73c5e897e17059630bee2ba3d471",
+    "tests/ui/test_shortcuts.py": "db0d48be8bcabeb1e2ead9fccf45c6e1dea49ad0b870bd648b8332ea4265cd86",
+    "tests/ui/test_operation_feedback.py": "b8193b834460461b74d3c57f342a5ba69e75173748e7a7d33424eb4b73e6739b",
+    "tests/ui/test_tkenv.py": "4dba0ffa6214d4feef4f0a4931c678a47fa91bec36ba5a109b66c242b7274d1a",
+    "tests/ui/test_copy_remote.py": "097bef22cb9b519511495e5659e7bed94bc75d66bcabfc892798523af30b58a3",
+    "tests/ui/test_context_menu.py": "f74ec8ba0ed549997a54ce9080dddc7514126c611c008e4403256f7ad819a44a",
+    "tests/ui/test_view_switch.py": "c420349b7df711c957870f70f22507fb28d9267594657a7cc9ab265c10fcbd35",
+    "tests/ui/test_resize_cursor.py": "09939d0af71f5156af48f739d8949d942b7e277023b49f15dfdb4d9b2d70f3f2",
+    "tests/ui/test_widgets.py": "ce7a51945aba4be35d5e22819b49f9be2a077d5e0183a2bc368e4d479c68de52",
+    "tests/ui/test_file_list.py": "7f8d6cfbf45e8fd88992b74d60a72ca2722026ff075a2c9cb628f2fb3d35f946",
+    "tests/ui/test_theme.py": "d8cf5e8375fa5c16b5b8fa95b6610574ca666b45206fd1c0d6198943d40fd892",
+    "tests/ui/test_focus_refresh.py": "02ffe79c2ca49b71b4c8bde03cba00d61450252ea23cc1c43c27c99e131f7a47",
+    "tests/ui/test_window_icon.py": "6f739bdae3d4b626f349eab945c9acbef2b5d14ff50268b88a845d2c011d9263",
+    "tests/ui/test_search_dialog.py": "f048ea73db4514052f070754504141442d78d6d91a3f74d5d127cc59550e0b78",
+    "tests/ui/test_project_view.py": "b9307e1a1f9e929539aa77a96c6fceca9c0e00af44fa66b60ba13db077cea382",
+    "tests/ui/test_theme_menu.py": "68001cdbd2666340e543bcbfef99c7d62a233aaa59b5d1e496f8efe12728910e",
+    "tests/core/test_mddiff.py": "eaa589f57a8b5aeaa473bd963b5c964d773a7b71a8a7ce8ddb95a3fff4d3c4af",
+    "tests/core/test_gitlog.py": "f6485645b80c6aa892bdc1974de7699d7c27bfe51ca03c16472f7fbc5bb15a53",
+    "tests/core/test_gitignore.py": "e5bc208d91f14a3efded344a19cdf13eb37d6b4da2c38bf20d5fc53a336e1110",
+    "tests/core/test_gitgrep.py": "26f36aa1113a71b8b4806d8a34db04b49aca76bc1643dd8cd6f33e4d76589459",
+    "tests/core/test_change_details.py": "3cca26e431db5d5ce11bea6ad3241cfdb758155417c178b7a6f63f7b2fcc8924",
+    "tests/core/test_status.py": "2a1aa3adbf0900fe15e3558bb0bb757b1fd2fd164368f53acbb4e571695b9582",
+    "tests/core/test_filekind.py": "34dea25739a7533e99363983e62ff3ac79c05a1b4494a728d9a8b501e3cc14d5",
+    "tests/core/test_repo.py": "b860b1146eb6c2e830f0684abf7e66234a2f87aadd8c5ac1d4c6c1603ef7d748",
+    "tests/core/test_log_values.py": "01d8bbc3d87aac80eec5fcfdbb19aa37270777aadf086dc02e092d058d0626d6",
+    "tests/core/test_browser.py": "f9ad8db4871e0b514982e8546596f25bed1943d6cd677c04aaeaad3e3d7a36b0",
+    "tests/core/test_pagekit.py": "ae7288cc536a77915a9cf937d636adfb4a0f5b7f819778f47c87876e0f6e7420",
+    "tests/core/test_gitcli.py": "a8028587340c46f9a128fe0f0626b41f7e0631b494312fc5af1870185da6d6ba",
+    "tests/core/test_search_values.py": "2b3adf73b397d4f89992f071f58843c17d2c5bcb73612895417367188d4fe07d",
+    "tests/core/test_textpage.py": "87ffd639cc10b0b9de6b19047089b4093ed81011d44b9893fcfe02eb0c483dc8",
+    "tests/core/test_mdpage.py": "c90b6d50a0f3e16995ac1a8620d44e0e2ff0cbcba7d47b7a4d62f6da94c2ce69",
+    "tests/core/test_graph.py": "c06536fed028590fb53f9ba7def76b91141d2ac269d15dcf8d7c1fb1fb151c56",
+    "tests/core/test_pageview.py": "e83e7a80e22d076578ddca24909880511763e0d018689e128cdf2f04d9908942",
+    "tests/core/test_difftool.py": "71d9120265020072adcad18e84bb7ce52e4ee16d3477ef49df0c99cf6a909f61",
+    "tests/core/test_settings.py": "0651d107621f880497d27fee5413514bed55236568724af3ee16dd3d5cd72989",
+    "tests/app/test_model.py": "ffe4d93d6681782320af34fbb002afffabf42594a5831d4c849e789df2d1afe6",
+    "tests/app/test_search_session.py": "c7e1359005134e60f9289b122c4f1a793293b2252d60259a7c75d3af86d43015",
+    "tests/app/test_history_session.py": "332db01c8acb0852cb91a02511df7f80bd8152fce92b7381b3df892120827e7a",
+    "tests/app/test_worker.py": "b9b3098e6f59e8f5ef836cbede2dd775a0833c10e20a9992b197d648d49dbac7"
+  },
+  "source_unchanged": true,
+  "note": "Archive has no .git: measurement commit may be empty. Baseline and source hashes above identify the measured code."
+}
