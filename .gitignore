@@ -41,3 +41,4 @@ frontend/.streamlit/secrets.toml
 /bin/node_modules/.package-lock.json
 /bin/package-lock.json
 /my-chats/
+/packages/vcs_lite/assets/.DS_Store
